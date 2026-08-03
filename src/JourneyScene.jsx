@@ -409,16 +409,19 @@ float journeyFine = 0.5 + 0.5 * sin(
   sin(vJourneyWorldPosition.y * 0.29) * 1.6
 );
 float journeyWash = mix(journeyMacro, journeyFine, 0.22);
-vec3 journeyForest = vec3(0.105, 0.255, 0.165);
-vec3 journeySummer = vec3(0.255, 0.445, 0.245);
-vec3 journeyRock = vec3(0.305, 0.345, 0.335);
-vec3 journeySnow = vec3(0.73, 0.76, 0.71);
+vec3 journeyForest = vec3(0.072, 0.19, 0.125);
+vec3 journeySummer = vec3(0.19, 0.355, 0.205);
+vec3 journeyRock = vec3(0.245, 0.285, 0.275);
+vec3 journeySnow = vec3(0.62, 0.66, 0.63);
 float journeyRockMask = smoothstep(0.48, 0.94, journeySteepness + journeyAltitude * 0.24 + journeyMacro * 0.045);
-float journeySnowMask = smoothstep(0.93, 1.0, journeyAltitude) * smoothstep(0.58, 0.91, 1.0 - journeySteepness) * smoothstep(0.76, 0.96, journeyFine);
+float journeySnowMask = smoothstep(0.955, 1.0, journeyAltitude) * smoothstep(0.66, 0.94, 1.0 - journeySteepness) * smoothstep(0.82, 0.98, journeyFine);
 vec3 journeyPaint = mix(journeyForest, journeySummer, smoothstep(0.08, 0.58, journeyAltitude));
 journeyPaint = mix(journeyPaint, journeyRock, journeyRockMask * 0.67);
-journeyPaint = mix(journeyPaint, journeySnow, journeySnowMask * 0.42);
-${isFarRidge ? 'journeyPaint = mix(journeyPaint, vec3(0.39, 0.49, 0.50), 0.42);' : ''}
+journeyPaint = mix(journeyPaint, journeySnow, journeySnowMask * 0.24);
+${isFarRidge ? 'journeyPaint = mix(journeyPaint, vec3(0.32, 0.42, 0.43), 0.36);' : ''}
+float journeyLowerValley = 1.0 - smoothstep(7.0, 30.0, vJourneyWorldPosition.y);
+float journeyValleyPigment = mix(0.79, 1.07, journeyMacro * 0.72 + journeyFine * 0.28);
+journeyPaint *= mix(1.0, journeyValleyPigment, journeyLowerValley * 0.58);
 vec3 journeyLightDirection = normalize(vec3(-0.46, 0.72, 0.38));
 float journeyFacing = dot(normalize(vJourneyWorldNormal), journeyLightDirection) * 0.5 + 0.5;
 float journeyRidgeLight = smoothstep(0.40, 0.86, journeyFacing);
@@ -442,8 +445,8 @@ float journeyFracture = 0.5 + 0.5 * sin(
 float journeyRockDetail = smoothstep(0.74, 0.96, journeyStrata * 0.58 + journeyFracture * 0.42);
 journeyRockDetail *= journeyRockMask * (0.38 + journeySteepness * 0.62);
 vec3 journeyShadow = mix(vec3(0.055, 0.13, 0.14), vec3(0.10, 0.16, 0.25), uJourneyNight);
-journeyPaint = mix(journeyPaint, journeyShadow, journeyValleyShade * 0.34);
-journeyPaint += vec3(0.12, 0.15, 0.11) * journeyRidgeLight * (0.075 + uJourneySunset * 0.09);
+journeyPaint = mix(journeyPaint, journeyShadow, journeyValleyShade * 0.46);
+journeyPaint += vec3(0.10, 0.125, 0.095) * journeyRidgeLight * (0.052 + uJourneySunset * 0.065);
 journeyPaint -= vec3(0.032, 0.046, 0.041) * journeyContour * 0.46;
 journeyPaint -= vec3(0.034, 0.049, 0.052) * journeyRockDetail * (0.66 + uJourneyNight * 0.24);
 vec2 journeyWatercolorUv = vec2(
@@ -453,8 +456,8 @@ vec2 journeyWatercolorUv = vec2(
 vec3 journeyWatercolor = texture2D(uJourneyWatercolor, fract(journeyWatercolorUv)).rgb;
 float journeyPigment = dot(journeyWatercolor, vec3(0.28, 0.52, 0.20));
 journeyPaint *= mix(0.94, 1.07, journeyPigment);
-journeyPaint = mix(journeyPaint, journeyPaint * journeyWatercolor * 1.22, 0.14);
-diffuseColor.rgb = journeyPaint * mix(0.94, 1.055, journeyWash);
+journeyPaint = mix(journeyPaint, journeyPaint * journeyWatercolor * 1.16, 0.10);
+diffuseColor.rgb = journeyPaint * mix(0.955, 1.035, journeyWash);
 float journeyMysticRidge = smoothstep(0.64, 0.97, journeyAltitude) * smoothstep(0.68, 0.96, journeyWash);
 vec3 journeyMysticColor = mix(vec3(0.24, 0.58, 0.46), vec3(0.96, 0.54, 0.28), uJourneySunset);
 journeyMysticColor = mix(journeyMysticColor, vec3(0.26, 0.45, 0.78), uJourneyNight);
@@ -471,7 +474,7 @@ vec3 journeyTexY = texture2D(map, vJourneyWorldPosition.xz * journeyTextureScale
 vec3 journeyTexZ = texture2D(map, vJourneyWorldPosition.xy * journeyTextureScale).rgb;
 vec3 journeyTriplanar = journeyTexX * journeyBlend.x + journeyTexY * journeyBlend.y + journeyTexZ * journeyBlend.z;
 journeyTriplanar = pow(max(journeyTriplanar, vec3(0.04)), vec3(0.91));
-vec3 journeyTextureValue = mix(vec3(1.0), journeyTriplanar * 1.32, 0.44);
+vec3 journeyTextureValue = mix(vec3(1.0), journeyTriplanar * 1.06, 0.14);
 diffuseColor.rgb *= journeyTextureValue;`,
       )
     }
@@ -600,12 +603,12 @@ diffuseColor.rgb = mix(
 diffuseColor.rgb += vec3(0.18, 0.34, 0.50) * journeyMountainReflection * journeyWaterCrossRipple * journeyReflectionReveal * 0.22;
 diffuseColor.rgb += vec3(0.70, 0.84, 0.94) * journeyReflectedStar * journeyReflectionReveal * 1.15;
 diffuseColor.rgb += vec3(0.28, 0.46, 0.72) * journeyMilkyReflection * journeyReflectionReveal * smoothstep(0.12, 1.0, uJourneySkyConnect) * 0.38;
-diffuseColor.rgb += vec3(0.28, 0.68, 0.78) * journeyRiverMask * journeyRiverCurrent * 0.82;`,
+diffuseColor.rgb += vec3(0.16, 0.44, 0.58) * journeyRiverMask * journeyRiverCurrent * 0.54;`,
       )
       .replace(
         '#include <emissivemap_fragment>',
         `#include <emissivemap_fragment>
-totalEmissiveRadiance += vec3(0.18, 0.58, 0.72) * journeyRiverMask * journeyRiverCurrent * (1.7 + journeyConnectionPulse * 0.35);`,
+totalEmissiveRadiance += vec3(0.10, 0.34, 0.48) * journeyRiverMask * journeyRiverCurrent * (0.92 + journeyConnectionPulse * 0.22);`,
       )
   }
   material.customProgramCacheKey = () => 'journey-water-reflection-v7'
@@ -642,10 +645,10 @@ function createRiverHaloMaterial() {
           vJourneyHaloWorldPosition.z * 0.2 -
           uJourneyTime * 1.45
         );
-        vec3 color = mix(vec3(0.08, 0.42, 0.92), vec3(0.52, 0.94, 1.0), current);
+        vec3 color = mix(vec3(0.06, 0.28, 0.62), vec3(0.34, 0.72, 0.84), current);
         gl_FragColor = vec4(
           color * (0.72 + current * 0.46 + connectionPulse * 0.2),
-          reveal * (0.08 + current * 0.12 + connectionPulse * 0.035)
+          reveal * (0.045 + current * 0.072 + connectionPulse * 0.022)
         );
       }
     `,
@@ -758,7 +761,7 @@ function prepareWorld(source) {
         material.transparent = false
         material.opacity = 1
         material.depthWrite = true
-        material.color?.lerp(new THREE.Color('#aeb19e'), 0.5)
+        material.color?.lerp(new THREE.Color('#89958a'), 0.72)
         if ('roughness' in material) material.roughness = 0.94
         if ('metalness' in material) material.metalness = 0
       })
@@ -773,10 +776,10 @@ function prepareWorld(source) {
         material.transparent = true
         material.opacity = 0.88
         material.depthWrite = false
-        material.color?.set('#4fc8bc')
+        material.color?.set('#3ba8a2')
         if ('emissive' in material) {
           material.emissive.set('#174f50')
-          material.emissiveIntensity = 0.16
+          material.emissiveIntensity = 0.09
         }
         if (material.isMeshPhysicalMaterial) {
           material.ior = 1.333
@@ -834,7 +837,7 @@ function prepareWorld(source) {
         if ('emissive' in material) {
           material.emissiveMap = null
           material.emissive.set(isFarRidge ? '#33474c' : '#2c4b2c')
-          material.emissiveIntensity = 0.12
+          material.emissiveIntensity = 0.06
         }
         applyAlpineIllustration(material, isFarRidge)
       })
@@ -1246,6 +1249,8 @@ export default function JourneyScene({
         VISUAL_TIMING.endingWideEnd,
         cameraProgress,
       )
+      const openVista = smoothstep(18, 25, cameraProgress) *
+        (1 - smoothstep(82, 90, cameraProgress))
       pointerLookRef.current.x = THREE.MathUtils.damp(
         pointerLookRef.current.x,
         state.pointer.x * pointerStrength,
@@ -1293,6 +1298,7 @@ export default function JourneyScene({
       camera.lookAt(cameraScratch.target)
       const desiredFov =
         camera.userData.journeyBaseFov +
+        openVista * 4.5 +
         endingWide * 14 +
         (presentationMode ? 15 : 0)
       if (Math.abs(camera.fov - desiredFov) > 0.001) {
@@ -1311,16 +1317,20 @@ export default function JourneyScene({
       VISUAL_TIMING.sunsetEnd,
       progress,
     )
+    const sunsetColorMix = smoothstep(0, 0.72, sunset)
     const night = smoothstep(
       VISUAL_TIMING.nightStart,
       VISUAL_TIMING.nightEnd,
       progress,
     )
     const caveRelease = smoothstep(7, 20, progress)
-    const daySky = new THREE.Color('#8dcbd3')
-    const sunsetSky = new THREE.Color('#d99182')
+    const daySky = new THREE.Color('#78bdc8')
+    const sunsetSky = new THREE.Color('#d66e5f')
     const nightSky = new THREE.Color('#10264c')
-    const skyColor = daySky.clone().lerp(sunsetSky, sunset).lerp(nightSky, night)
+    const skyColor = daySky
+      .clone()
+      .lerp(sunsetSky, sunsetColorMix)
+      .lerp(nightSky, night)
     state.scene.background = skyColor
 
     if (cloudGroupRef.current) {
@@ -1352,26 +1362,26 @@ export default function JourneyScene({
 
     const daylightExposure = THREE.MathUtils.lerp(
       CAVE_LOOK.exposure,
-      1.12,
+      1.02,
       caveRelease,
     )
     state.gl.toneMappingExposure = THREE.MathUtils.lerp(
       daylightExposure,
-      1.18,
+      1.14,
       night,
     ) + outroFramingRef.current * 0.16
 
     const entranceFog =
-      progress < 13
-        ? 0.011 + smoothstep(9, 13, progress) * 0.0045
-        : 0.0085 * (1 - smoothstep(15, 20, progress)) + 0.00175
+      progress < 15
+        ? THREE.MathUtils.lerp(0.0105, 0.00105, smoothstep(10, 15, progress))
+        : 0.0007 * (1 - smoothstep(15, 20, progress)) + 0.00035
     if (state.scene.fog) {
       const openAirFog = skyColor.clone().multiplyScalar(night > 0.5 ? 0.7 : 0.88)
       state.scene.fog.color
         .set('#050909')
         .lerp(openAirFog, caveRelease)
       state.scene.fog.density = Math.max(
-        0.0017,
+        0.00035,
         entranceFog * (1 - travelWindRef.current * 0.11),
       )
     }
@@ -1379,35 +1389,45 @@ export default function JourneyScene({
     if (sunRef.current) {
       const dayIntensity = THREE.MathUtils.lerp(
         CAVE_LOOK.sunIntensity,
-        3.2,
+        2.65,
         caveRelease,
       )
       sunRef.current.intensity = THREE.MathUtils.lerp(dayIntensity, 0.52, night)
-      sunRef.current.color.set('#fff0ce').lerp(new THREE.Color('#8ca9d8'), night)
+      sunRef.current.color
+        .set('#fff0ce')
+        .lerp(new THREE.Color('#ffad78'), sunset * 0.86)
+        .lerp(new THREE.Color('#8ca9d8'), night)
       sunRef.current.position.x = THREE.MathUtils.lerp(-90, 40, sunset)
       sunRef.current.position.y = THREE.MathUtils.lerp(130, 30, sunset)
     }
     if (skyLightRef.current) {
       const dayIntensity = THREE.MathUtils.lerp(
         CAVE_LOOK.skyIntensity,
-        1.72,
+        1.2,
         caveRelease,
       )
       skyLightRef.current.intensity = THREE.MathUtils.lerp(dayIntensity, 0.78, night)
         + outroFramingRef.current * 0.16
-      skyLightRef.current.color.set('#d9eff4').lerp(new THREE.Color('#7894c1'), night)
-      skyLightRef.current.groundColor.set('#6f806a').lerp(new THREE.Color('#111b2a'), night)
+      skyLightRef.current.color
+        .set('#d9eff4')
+        .lerp(new THREE.Color('#e5a49a'), sunset * 0.72)
+        .lerp(new THREE.Color('#7894c1'), night)
+      skyLightRef.current.groundColor
+        .set('#6f806a')
+        .lerp(new THREE.Color('#75584e'), sunset * 0.62)
+        .lerp(new THREE.Color('#111b2a'), night)
     }
     if (ambientRef.current) {
       const dayIntensity = THREE.MathUtils.lerp(
         CAVE_LOOK.ambientIntensity,
-        0.27,
+        0.18,
         caveRelease,
       )
       ambientRef.current.intensity = THREE.MathUtils.lerp(dayIntensity, 0.18, night)
         + outroFramingRef.current * 0.07
       ambientRef.current.color
         .set('#a7b8b4')
+        .lerp(new THREE.Color('#b9877e'), sunset * 0.58)
         .lerp(new THREE.Color('#7185aa'), night)
     }
 
@@ -1481,7 +1501,7 @@ export default function JourneyScene({
       const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
       materials.forEach((material) => {
         if ('emissiveIntensity' in material) {
-          material.emissiveIntensity = THREE.MathUtils.lerp(0.12, 0.095, night)
+          material.emissiveIntensity = THREE.MathUtils.lerp(0.06, 0.045, night)
         }
         const uniforms = material.userData.journeyAlpineUniforms
         if (uniforms) {

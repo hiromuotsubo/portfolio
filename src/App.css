@@ -490,18 +490,18 @@
 
 .valley-mist {
   z-index: 4;
-  inset: 40% -9% -12%;
-  opacity: calc(var(--valley-mist) * 0.92);
+  inset: 34% -9% -12%;
+  opacity: calc(var(--valley-mist) * 0.2);
   background:
-    radial-gradient(ellipse at 50% 22%, rgba(230, 241, 235, 0.88), rgba(188, 213, 210, 0.52) 42%, transparent 74%),
-    radial-gradient(ellipse at 20% 58%, rgba(218, 235, 231, 0.64), transparent 60%),
-    radial-gradient(ellipse at 80% 63%, rgba(206, 228, 226, 0.58), transparent 62%);
-  filter: blur(16px) saturate(0.86);
+    radial-gradient(ellipse at 48% 28%, rgba(230, 241, 235, 0.7), rgba(188, 213, 210, 0.28) 34%, transparent 68%),
+    radial-gradient(ellipse at 12% 64%, rgba(218, 235, 231, 0.44), transparent 52%),
+    radial-gradient(ellipse at 86% 68%, rgba(206, 228, 226, 0.4), transparent 54%);
+  filter: blur(24px) saturate(0.82);
   mix-blend-mode: screen;
   transform: translate3d(calc(var(--valley-mist) * -1.2%), 0, 0) scale(1.04);
   transition: opacity 120ms linear, transform 160ms linear;
-  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 18%, #000 100%);
-  mask-image: linear-gradient(to bottom, transparent, #000 18%, #000 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, .34) 22%, #000 52%, rgba(0, 0, 0, .74) 100%);
+  mask-image: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, .34) 22%, #000 52%, rgba(0, 0, 0, .74) 100%);
   animation: valley-mist-drift 8s ease-in-out infinite alternate;
 }
 
@@ -512,9 +512,9 @@
   opacity: 0;
   background: radial-gradient(
     ellipse at 50% 38%,
-    rgba(241, 247, 241, 0.72) 0%,
-    rgba(189, 218, 213, 0.36) 36%,
-    transparent 70%
+    rgba(241, 247, 241, 0.48) 0%,
+    rgba(189, 218, 213, 0.22) 34%,
+    transparent 66%
   );
   filter: blur(18px);
   transform: scale3d(1.22, 1.08, 1);

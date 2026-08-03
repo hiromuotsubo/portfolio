@@ -678,7 +678,7 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
     <section className="portfolio-story portfolio-page" aria-labelledby="about-title">
       <aside className="portfolio-story__rail">
         <span className="portfolio-kicker">ABOUT</span>
-        <h2 id="about-title">Hiromu Otsubo.</h2>
+        <h2 id="about-title">Hiromu Otsubo</h2>
         <nav aria-label="About chapters">
           {ABOUT_ITEMS.map(([id, label], index) => (
             <button key={id} type="button" className={activePanel === id ? 'is-current' : ''} onClick={() => selectPanel(id)}>
@@ -744,7 +744,7 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
     <section className="portfolio-story portfolio-page is-project" aria-labelledby="project-title">
       <aside className="portfolio-story__rail">
         <span className="portfolio-kicker">PROJECT</span>
-        <h2 id="project-title">Journey.</h2>
+        <h2 id="project-title">Journey</h2>
         <nav aria-label="Project chapters">
           {PROJECT_ITEMS.map(([id, label], index) => (
             <button key={id} type="button" className={activePanel === id ? 'is-current' : ''} onClick={() => selectPanel(id)}>
@@ -846,7 +846,7 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
         {page === 'contact' ? (
           <section className="portfolio-contact portfolio-page" aria-labelledby="contact-title">
             <span className="portfolio-kicker">CONTACT</span>
-            <h2 id="contact-title">Let’s Talk.</h2>
+            <h2 id="contact-title">Let’s Talk</h2>
             <p>For collaborations, research or thoughtful ideas.</p>
             <div className="portfolio-contact__links">
               <a href="mailto:hiromu.otsubo.design@gmail.com"><small>EMAIL</small><span>hiromu.otsubo.design@gmail.com</span><i>↗</i></a>
