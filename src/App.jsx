@@ -508,8 +508,8 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
       ? `${event.clientY}px`
       : `${(targetBounds?.top ?? window.innerHeight / 2) + (targetBounds?.height ?? 0) / 2}px`
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    const switchDelay = reduceMotion ? 90 : 700
-    const finishDelay = reduceMotion ? 190 : 1400
+    const switchDelay = reduceMotion ? 90 : 1050
+    const finishDelay = reduceMotion ? 190 : 2100
 
     transitioningRef.current = true
     transitionTimersRef.current.forEach(window.clearTimeout)
@@ -751,7 +751,7 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
   return (
     <section
       ref={siteScrollRef}
-      className={`portfolio-site is-page-${page}`}
+      className={`portfolio-site is-page-${page} is-mist-${mistTransition.phase}`}
       data-portfolio-page={page}
     >
       <header className="portfolio-nav">

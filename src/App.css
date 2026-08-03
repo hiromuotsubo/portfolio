@@ -1432,6 +1432,58 @@
   }
 }
 
+@keyframes portfolio-scene-dissolve {
+  0% { opacity: 1; filter: blur(0) saturate(1) contrast(1); transform: scale(1); }
+  45% { opacity: .78; filter: blur(3px) saturate(.82) contrast(.9); transform: scale(.997); }
+  100% { opacity: .05; filter: blur(18px) saturate(.35) contrast(.7); transform: scale(.985); }
+}
+
+@keyframes portfolio-scene-emerge {
+  0% { opacity: .06; filter: blur(20px) saturate(.42) contrast(.72); transform: scale(1.012); }
+  38% { opacity: .45; filter: blur(9px) saturate(.72) contrast(.86); transform: scale(1.006); }
+  100% { opacity: 1; filter: blur(0) saturate(1) contrast(1); transform: scale(1); }
+}
+
+@keyframes portfolio-atmosphere-cover {
+  0% { visibility: visible; opacity: 0; background-color: rgba(240, 238, 230, 0); backdrop-filter: blur(0); -webkit-backdrop-filter: blur(0); }
+  52% { opacity: .82; background-color: rgba(240, 238, 230, .16); }
+  100% { visibility: visible; opacity: 1; background-color: rgba(240, 238, 230, 1); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); }
+}
+
+@keyframes portfolio-atmosphere-reveal {
+  0% { visibility: visible; opacity: 1; backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); }
+  42% { opacity: .78; }
+  100% { visibility: visible; opacity: 0; backdrop-filter: blur(0); -webkit-backdrop-filter: blur(0); }
+}
+
+@keyframes portfolio-mist-bloom-a {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(.05) rotate(-8deg); }
+  30% { opacity: .82; }
+  100% { opacity: 1; transform: translate(-50%, -50%) scale(3.9) rotate(7deg); }
+}
+
+@keyframes portfolio-mist-bloom-b {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(.04) rotate(12deg); }
+  38% { opacity: .7; }
+  100% { opacity: .92; transform: translate(-50%, -50%) scale(4.3) rotate(-6deg); }
+}
+
+@keyframes portfolio-mist-wander-in {
+  0% { opacity: 0; transform: translate3d(-8%, 5%, 0) scale(.45); }
+  45% { opacity: .28; }
+  100% { opacity: .08; transform: translate3d(7%, -5%, 0) scale(1.55); }
+}
+
+@keyframes portfolio-mist-release-a {
+  0% { opacity: .72; transform: translate(-50%, -50%) scale(3.9) rotate(7deg); }
+  100% { opacity: 0; transform: translate(-44%, -56%) scale(4.7) rotate(15deg); }
+}
+
+@keyframes portfolio-mist-release-b {
+  0% { opacity: .58; transform: translate(-50%, -50%) scale(4.3) rotate(-6deg); }
+  100% { opacity: 0; transform: translate(-57%, -43%) scale(5) rotate(-14deg); }
+}
+
 /* Portfolio system ------------------------------------------------------- */
 
 .journey-3d.is-portfolio {
@@ -2177,6 +2229,111 @@
   .portfolio-contact footer {
     right: 24px;
     left: 24px;
+  }
+}
+
+/* Higher-specificity transition layer: the current page loses its edges in
+   mist, then the next page gathers slowly from the same atmosphere. */
+.portfolio-site.is-mist-cover .portfolio-page-transition {
+  animation: portfolio-scene-dissolve 940ms cubic-bezier(.42, 0, .28, 1) both;
+  transform-origin: center center;
+}
+
+.portfolio-site.is-mist-reveal .portfolio-page-transition {
+  animation: portfolio-scene-emerge 1080ms cubic-bezier(.2, .72, .18, 1) both;
+  transform-origin: center center;
+}
+
+.portfolio-site .portfolio-mist-transition {
+  background: rgba(240, 238, 230, 0);
+  clip-path: none;
+  isolation: isolate;
+}
+
+.portfolio-site .portfolio-mist-transition::before,
+.portfolio-site .portfolio-mist-transition::after {
+  position: absolute;
+  z-index: 0;
+  width: 64vmax;
+  height: 64vmax;
+  border-radius: 44% 56% 62% 38% / 52% 42% 58% 48%;
+  content: '';
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(.05) rotate(-8deg);
+  transform-origin: center;
+  filter: blur(34px);
+  will-change: transform, opacity;
+}
+
+.portfolio-site .portfolio-mist-transition::before {
+  top: var(--mist-y);
+  left: var(--mist-x);
+  background:
+    radial-gradient(circle at 35% 42%, rgba(255, 255, 255, .98) 0 13%, transparent 42%),
+    radial-gradient(circle at 68% 34%, rgba(240, 238, 230, .96) 0 18%, transparent 52%),
+    radial-gradient(circle at 48% 72%, rgba(224, 232, 224, .9) 0 16%, transparent 54%);
+}
+
+.portfolio-site .portfolio-mist-transition::after {
+  top: calc(var(--mist-y) + 9vmax);
+  left: calc(var(--mist-x) - 11vmax);
+  background:
+    radial-gradient(circle at 62% 38%, rgba(255, 255, 255, .94) 0 15%, transparent 50%),
+    radial-gradient(circle at 32% 64%, rgba(219, 230, 221, .9) 0 17%, transparent 55%);
+}
+
+.portfolio-site .portfolio-mist-transition i {
+  z-index: 1;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+.portfolio-site .portfolio-mist-transition.is-cover {
+  clip-path: none;
+  animation: portfolio-atmosphere-cover 1050ms cubic-bezier(.48, .02, .24, 1) both;
+}
+
+.portfolio-site .portfolio-mist-transition.is-cover::before {
+  animation: portfolio-mist-bloom-a 1050ms cubic-bezier(.42, .04, .22, 1) both;
+}
+
+.portfolio-site .portfolio-mist-transition.is-cover::after {
+  animation: portfolio-mist-bloom-b 1050ms cubic-bezier(.38, .02, .2, 1) 70ms both;
+}
+
+.portfolio-site .portfolio-mist-transition.is-cover i {
+  animation: portfolio-mist-wander-in 900ms cubic-bezier(.4, .02, .22, 1) both;
+}
+
+.portfolio-site .portfolio-mist-transition.is-cover i:nth-child(2) { animation-delay: 80ms; }
+.portfolio-site .portfolio-mist-transition.is-cover i:nth-child(3) { animation-delay: 150ms; }
+
+.portfolio-site .portfolio-mist-transition.is-reveal {
+  background: rgba(240, 238, 230, 1);
+  clip-path: none;
+  animation: portfolio-atmosphere-reveal 1050ms cubic-bezier(.22, .7, .18, 1) both;
+}
+
+.portfolio-site .portfolio-mist-transition.is-reveal::before {
+  animation: portfolio-mist-release-a 1050ms cubic-bezier(.22, .7, .18, 1) both;
+}
+
+.portfolio-site .portfolio-mist-transition.is-reveal::after {
+  animation: portfolio-mist-release-b 1050ms cubic-bezier(.22, .7, .18, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .portfolio-site.is-mist-cover .portfolio-page-transition,
+  .portfolio-site.is-mist-reveal .portfolio-page-transition {
+    animation-duration: 90ms;
+    filter: none;
+    transform: none;
+  }
+
+  .portfolio-site .portfolio-mist-transition::before,
+  .portfolio-site .portfolio-mist-transition::after,
+  .portfolio-site .portfolio-mist-transition i {
+    display: none;
   }
 }
 
