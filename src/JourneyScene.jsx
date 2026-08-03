@@ -20,12 +20,12 @@ const VISUAL_TIMING = {
 }
 
 const CAVE_LOOK = {
-  exposure: 3.5,
-  sunIntensity: 0.82,
-  skyIntensity: 0.48,
-  ambientIntensity: 0.16,
-  guideLightIntensity: 0.92,
-  materialTint: '#3d4348',
+  exposure: 2.6,
+  sunIntensity: 0.74,
+  skyIntensity: 0.62,
+  ambientIntensity: 0.22,
+  guideLightIntensity: 1.16,
+  materialTint: '#46504b',
 }
 
 const clamp01 = (value) => Math.min(1, Math.max(0, value))
@@ -225,39 +225,50 @@ function createStarFieldMaterial(milkyWay = false) {
 
 function createCloudTexture(seed) {
   const canvas = document.createElement('canvas')
-  canvas.width = 640
-  canvas.height = 220
+  canvas.width = 768
+  canvas.height = 288
   const context = canvas.getContext('2d')
   context.clearRect(0, 0, canvas.width, canvas.height)
+  context.save()
+  context.filter = 'blur(18px)'
 
-  for (let index = 0; index < 13; index += 1) {
-    const centerX = 55 + seededRandom(seed + index * 17) * 530
-    const centerY = 78 + seededRandom(seed + index * 29) * 78
-    const radiusX = 52 + seededRandom(seed + index * 41) * 78
-    const radiusY = 24 + seededRandom(seed + index * 53) * 34
-    const radius = Math.max(radiusX, radiusY)
-    const gradient = context.createRadialGradient(
-      centerX,
-      centerY,
-      0,
-      centerX,
-      centerY,
-      radius,
-    )
-    gradient.addColorStop(0, 'rgba(255, 255, 252, 0.82)')
-    gradient.addColorStop(0.48, 'rgba(255, 255, 252, 0.55)')
-    gradient.addColorStop(1, 'rgba(255, 255, 252, 0)')
-    context.save()
-    context.translate(centerX, centerY)
-    context.scale(1, radiusY / radiusX)
-    context.translate(-centerX, -centerY)
-    context.fillStyle = gradient
-    context.fillRect(centerX - radius, centerY - radius, radius * 2, radius * 2)
-    context.restore()
+  for (let index = 0; index < 15; index += 1) {
+    const centerX = 105 + seededRandom(seed + index * 17) * 558
+    const centerY = 106 + seededRandom(seed + index * 29) * 68
+    const radiusX = 46 + seededRandom(seed + index * 41) * 72
+    const radiusY = 20 + seededRandom(seed + index * 53) * 26
+    const alpha = 0.12 + seededRandom(seed + index * 67) * 0.16
+    context.beginPath()
+    context.ellipse(centerX, centerY, radiusX, radiusY, 0, 0, Math.PI * 2)
+    context.fillStyle = `rgba(255, 255, 252, ${alpha})`
+    context.fill()
   }
+  context.restore()
+
+  context.globalCompositeOperation = 'destination-in'
+  const horizontalMask = context.createLinearGradient(0, 0, canvas.width, 0)
+  horizontalMask.addColorStop(0, 'rgba(255,255,255,0)')
+  horizontalMask.addColorStop(0.16, 'rgba(255,255,255,1)')
+  horizontalMask.addColorStop(0.84, 'rgba(255,255,255,1)')
+  horizontalMask.addColorStop(1, 'rgba(255,255,255,0)')
+  context.fillStyle = horizontalMask
+  context.fillRect(0, 0, canvas.width, canvas.height)
+
+  const verticalMask = context.createLinearGradient(0, 0, 0, canvas.height)
+  verticalMask.addColorStop(0, 'rgba(255,255,255,0)')
+  verticalMask.addColorStop(0.24, 'rgba(255,255,255,1)')
+  verticalMask.addColorStop(0.76, 'rgba(255,255,255,1)')
+  verticalMask.addColorStop(1, 'rgba(255,255,255,0)')
+  context.fillStyle = verticalMask
+  context.fillRect(0, 0, canvas.width, canvas.height)
+  context.globalCompositeOperation = 'source-over'
 
   const texture = new THREE.CanvasTexture(canvas)
   texture.colorSpace = THREE.SRGBColorSpace
+  texture.premultiplyAlpha = false
+  texture.generateMipmaps = false
+  texture.minFilter = THREE.LinearFilter
+  texture.magFilter = THREE.LinearFilter
   texture.needsUpdate = true
   return texture
 }
@@ -385,33 +396,39 @@ uniform sampler2D uJourneyTriplanarRoughness;`,
       .replace(
         '#include <color_fragment>',
         `#include <color_fragment>
-float journeyAltitude = smoothstep(17.0, 45.0, vJourneyWorldPosition.y);
-float journeySteepness = smoothstep(0.22, 0.84, 1.0 - abs(vJourneyWorldNormal.y));
-float journeyWash = 0.5 + 0.5 * sin(
-  vJourneyWorldPosition.x * 0.19 +
-  sin(vJourneyWorldPosition.z * 0.11) * 2.3 +
-  sin((vJourneyWorldPosition.x + vJourneyWorldPosition.z) * 0.055) * 1.8
+float journeyAltitude = smoothstep(18.0, 51.0, vJourneyWorldPosition.y);
+float journeySteepness = smoothstep(0.18, 0.88, 1.0 - abs(vJourneyWorldNormal.y));
+float journeyMacro = 0.5 + 0.5 * sin(
+  vJourneyWorldPosition.x * 0.071 +
+  sin(vJourneyWorldPosition.z * 0.052) * 1.9 +
+  sin((vJourneyWorldPosition.x + vJourneyWorldPosition.z) * 0.021) * 1.2
 );
-vec3 journeyForest = vec3(0.13, 0.29, 0.17);
-vec3 journeySummer = vec3(0.28, 0.49, 0.25);
-vec3 journeyRock = vec3(0.36, 0.39, 0.38);
-vec3 journeySnow = vec3(0.86, 0.88, 0.83);
-float journeyRockMask = smoothstep(0.38, 0.90, journeySteepness + journeyAltitude * 0.28 + journeyWash * 0.09);
-float journeySnowMask = smoothstep(0.82, 0.99, journeyAltitude) * smoothstep(0.34, 0.76, 1.0 - journeySteepness) * smoothstep(0.64, 0.91, journeyWash);
+float journeyFine = 0.5 + 0.5 * sin(
+  vJourneyWorldPosition.x * 0.43 -
+  vJourneyWorldPosition.z * 0.31 +
+  sin(vJourneyWorldPosition.y * 0.29) * 1.6
+);
+float journeyWash = mix(journeyMacro, journeyFine, 0.22);
+vec3 journeyForest = vec3(0.105, 0.255, 0.165);
+vec3 journeySummer = vec3(0.255, 0.445, 0.245);
+vec3 journeyRock = vec3(0.305, 0.345, 0.335);
+vec3 journeySnow = vec3(0.73, 0.76, 0.71);
+float journeyRockMask = smoothstep(0.48, 0.94, journeySteepness + journeyAltitude * 0.24 + journeyMacro * 0.045);
+float journeySnowMask = smoothstep(0.93, 1.0, journeyAltitude) * smoothstep(0.58, 0.91, 1.0 - journeySteepness) * smoothstep(0.76, 0.96, journeyFine);
 vec3 journeyPaint = mix(journeyForest, journeySummer, smoothstep(0.08, 0.58, journeyAltitude));
-journeyPaint = mix(journeyPaint, journeyRock, journeyRockMask * 0.78);
-journeyPaint = mix(journeyPaint, journeySnow, journeySnowMask * 0.88);
-${isFarRidge ? 'journeyPaint = mix(journeyPaint, vec3(0.48, 0.58, 0.60), 0.58);' : ''}
+journeyPaint = mix(journeyPaint, journeyRock, journeyRockMask * 0.67);
+journeyPaint = mix(journeyPaint, journeySnow, journeySnowMask * 0.42);
+${isFarRidge ? 'journeyPaint = mix(journeyPaint, vec3(0.39, 0.49, 0.50), 0.42);' : ''}
 vec3 journeyLightDirection = normalize(vec3(-0.46, 0.72, 0.38));
 float journeyFacing = dot(normalize(vJourneyWorldNormal), journeyLightDirection) * 0.5 + 0.5;
 float journeyRidgeLight = smoothstep(0.40, 0.86, journeyFacing);
 float journeyValleyShade = smoothstep(0.62, 0.12, journeyFacing) * (0.46 + journeySteepness * 0.54);
 float journeyContour = 0.5 + 0.5 * sin(
-  vJourneyWorldPosition.y * 0.62 +
-  vJourneyWorldPosition.x * 0.052 +
-  journeyWash * 2.1
+  vJourneyWorldPosition.y * 0.41 +
+  vJourneyWorldPosition.x * 0.038 +
+  journeyMacro * 1.4
 );
-journeyContour = smoothstep(0.68, 0.92, journeyContour) * (0.12 + journeySteepness * 0.18);
+journeyContour = smoothstep(0.79, 0.96, journeyContour) * journeySteepness;
 float journeyStrata = 0.5 + 0.5 * sin(
   vJourneyWorldPosition.y * 1.84 +
   vJourneyWorldPosition.x * 0.21 +
@@ -425,36 +442,37 @@ float journeyFracture = 0.5 + 0.5 * sin(
 float journeyRockDetail = smoothstep(0.74, 0.96, journeyStrata * 0.58 + journeyFracture * 0.42);
 journeyRockDetail *= journeyRockMask * (0.38 + journeySteepness * 0.62);
 vec3 journeyShadow = mix(vec3(0.055, 0.13, 0.14), vec3(0.10, 0.16, 0.25), uJourneyNight);
-journeyPaint = mix(journeyPaint, journeyShadow, journeyValleyShade * 0.42);
-journeyPaint += vec3(0.15, 0.18, 0.14) * journeyRidgeLight * (0.10 + uJourneySunset * 0.12);
-journeyPaint -= vec3(0.05, 0.07, 0.06) * journeyContour;
-journeyPaint -= vec3(0.028, 0.043, 0.048) * journeyRockDetail * (0.72 + uJourneyNight * 0.28);
+journeyPaint = mix(journeyPaint, journeyShadow, journeyValleyShade * 0.34);
+journeyPaint += vec3(0.12, 0.15, 0.11) * journeyRidgeLight * (0.075 + uJourneySunset * 0.09);
+journeyPaint -= vec3(0.032, 0.046, 0.041) * journeyContour * 0.46;
+journeyPaint -= vec3(0.034, 0.049, 0.052) * journeyRockDetail * (0.66 + uJourneyNight * 0.24);
 vec2 journeyWatercolorUv = vec2(
   vJourneyWorldPosition.x * 0.0038 + vJourneyWorldPosition.z * 0.0009,
   vJourneyWorldPosition.y * 0.0062 - vJourneyWorldPosition.z * 0.0011
 );
 vec3 journeyWatercolor = texture2D(uJourneyWatercolor, fract(journeyWatercolorUv)).rgb;
 float journeyPigment = dot(journeyWatercolor, vec3(0.28, 0.52, 0.20));
-journeyPaint *= mix(0.90, 1.11, journeyPigment);
-journeyPaint = mix(journeyPaint, journeyPaint * journeyWatercolor * 1.32, 0.22);
-diffuseColor.rgb = journeyPaint * mix(0.88, 1.10, journeyWash);
+journeyPaint *= mix(0.94, 1.07, journeyPigment);
+journeyPaint = mix(journeyPaint, journeyPaint * journeyWatercolor * 1.22, 0.14);
+diffuseColor.rgb = journeyPaint * mix(0.94, 1.055, journeyWash);
 float journeyMysticRidge = smoothstep(0.64, 0.97, journeyAltitude) * smoothstep(0.68, 0.96, journeyWash);
 vec3 journeyMysticColor = mix(vec3(0.24, 0.58, 0.46), vec3(0.96, 0.54, 0.28), uJourneySunset);
 journeyMysticColor = mix(journeyMysticColor, vec3(0.26, 0.45, 0.78), uJourneyNight);
-diffuseColor.rgb += journeyMysticColor * journeyMysticRidge * (0.055 + uJourneySunset * 0.16 + uJourneyNight * 0.07);`,
+diffuseColor.rgb += journeyMysticColor * journeyMysticRidge * (0.028 + uJourneySunset * 0.095 + uJourneyNight * 0.04);`,
       )
     if (hasAlpineMap) {
       shader.fragmentShader = shader.fragmentShader.replace(
         '#include <map_fragment>',
         `vec3 journeyBlend = pow(abs(normalize(vJourneyWorldNormal)), vec3(5.0));
 journeyBlend /= max(journeyBlend.x + journeyBlend.y + journeyBlend.z, 0.0001);
-float journeyTextureScale = 0.034;
+float journeyTextureScale = 0.041;
 vec3 journeyTexX = texture2D(map, vJourneyWorldPosition.zy * journeyTextureScale).rgb;
 vec3 journeyTexY = texture2D(map, vJourneyWorldPosition.xz * journeyTextureScale).rgb;
 vec3 journeyTexZ = texture2D(map, vJourneyWorldPosition.xy * journeyTextureScale).rgb;
 vec3 journeyTriplanar = journeyTexX * journeyBlend.x + journeyTexY * journeyBlend.y + journeyTexZ * journeyBlend.z;
-journeyTriplanar = pow(max(journeyTriplanar, vec3(0.025)), vec3(0.82));
-diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * journeyTriplanar * 1.72, 0.72);`,
+journeyTriplanar = pow(max(journeyTriplanar, vec3(0.04)), vec3(0.91));
+vec3 journeyTextureValue = mix(vec3(1.0), journeyTriplanar * 1.32, 0.44);
+diffuseColor.rgb *= journeyTextureValue;`,
       )
     }
     if (triplanarNormalMap) {
@@ -468,7 +486,7 @@ vec3 journeyWorldDetail =
   vec3(journeyNormalX.z, journeyNormalX.y, journeyNormalX.x) * journeyBlend.x +
   vec3(journeyNormalY.x, journeyNormalY.z, journeyNormalY.y) * journeyBlend.y +
   journeyNormalZ * journeyBlend.z;
-normal = normalize(normal + journeyWorldDetail * 0.24);`,
+normal = normalize(normal + journeyWorldDetail * 0.17);`,
       )
     }
     if (triplanarRoughnessMap) {
@@ -479,11 +497,11 @@ float journeyRoughX = texture2D(uJourneyTriplanarRoughness, vJourneyWorldPositio
 float journeyRoughY = texture2D(uJourneyTriplanarRoughness, vJourneyWorldPosition.xz * journeyTextureScale).g;
 float journeyRoughZ = texture2D(uJourneyTriplanarRoughness, vJourneyWorldPosition.xy * journeyTextureScale).g;
 float journeyProjectedRoughness = dot(vec3(journeyRoughX, journeyRoughY, journeyRoughZ), journeyBlend);
-roughnessFactor = mix(roughnessFactor, journeyProjectedRoughness, 0.62);`,
+roughnessFactor = mix(roughnessFactor, max(0.68, journeyProjectedRoughness), 0.48);`,
       )
     }
   }
-  material.customProgramCacheKey = () => `journey-alpine-${isFarRidge ? 'far' : 'near'}-v4`
+  material.customProgramCacheKey = () => `journey-alpine-${isFarRidge ? 'far' : 'near'}-v5`
 }
 
 function applyWaterReflection(material) {
@@ -532,7 +550,7 @@ float journeyWindRipple = 0.5 + 0.5 * sin(
 );
 journeyWaterRipple = mix(journeyWaterRipple, journeyWindRipple, uJourneyTravelWind * 0.32);
 float journeyWaterSparkSeed = fract(sin(dot(floor(vJourneyWaterPosition.xz * 1.45), vec2(12.9898, 78.233))) * 43758.5453);
-float journeyWaterSparkle = pow(journeyWaterSparkSeed, 8.0) * smoothstep(0.52, 0.92, journeyWaterRipple * journeyWaterCrossRipple);
+float journeyWaterSparkle = pow(journeyWaterSparkSeed, 11.0) * smoothstep(0.64, 0.96, journeyWaterRipple * journeyWaterCrossRipple);
 vec2 journeyReflectionScale = vec2(0.72, 0.38);
 vec2 journeyReflectionGrid = floor(vJourneyWaterPosition.xz * journeyReflectionScale);
 vec2 journeyReflectionCell = fract(vJourneyWaterPosition.xz * journeyReflectionScale) - 0.5;
@@ -546,12 +564,12 @@ float journeyReflectedStar = 1.0 - smoothstep(
   0.105,
   length(journeyReflectionCell - journeyReflectionOffset * 0.62)
 );
-journeyReflectedStar *= smoothstep(0.84, 0.988, journeyReflectionSeed);
+journeyReflectedStar *= smoothstep(0.91, 0.994, journeyReflectionSeed);
 journeyReflectedStar *= 0.78 + 0.22 * sin(uJourneyTime * 1.1 + journeyReflectionSeed * 31.0);
 float journeyMilkyAxis = vJourneyWaterPosition.x * 0.065 +
   sin(vJourneyWaterPosition.z * 0.045 - uJourneyTime * 0.035) * 0.52;
 float journeyMilkyReflection = 1.0 - smoothstep(0.32, 1.52, abs(journeyMilkyAxis));
-journeyMilkyReflection *= 0.34 + journeyWaterRipple * 0.36 + journeyWaterCrossRipple * 0.18;
+journeyMilkyReflection *= 0.18 + journeyWaterRipple * 0.22 + journeyWaterCrossRipple * 0.11;
 float journeyRiverPath = clamp((8.0 - vJourneyWaterPosition.z) / 227.0, 0.0, 1.0);
 float journeyReflectedRidge = 0.72 +
   sin(vJourneyWaterPosition.x * 0.074 + 0.5) * 0.065 +
@@ -563,7 +581,7 @@ float journeyMountainReflection = 1.0 - smoothstep(
 );
 journeyMountainReflection *= 0.64 + journeyWaterRipple * 0.24 + journeyWaterCrossRipple * 0.12;
 float journeyRiverHead = 1.0 - smoothstep(uJourneyRiverGlow - 0.045, uJourneyRiverGlow + 0.035, journeyRiverPath);
-float journeyGroundRiver = 1.0 - smoothstep(2.5, 7.0, vJourneyWaterPosition.y);
+float journeyGroundRiver = 1.0 - smoothstep(1.35, 3.8, vJourneyWaterPosition.y);
 float journeyRiverMask = journeyRiverHead * smoothstep(0.01, 0.075, uJourneyRiverGlow) * journeyGroundRiver;
 float journeyRiverCurrent = 0.72 + journeyWaterRipple * 0.28;
 float journeyConnectionPulse = sin(clamp(uJourneySkyConnect, 0.0, 1.0) * 3.14159265);
@@ -571,26 +589,26 @@ float journeyReflectionReveal = uJourneyNight * max(
   smoothstep(0.18, 0.92, uJourneyRiverGlow) * 0.82,
   smoothstep(0.03, 0.84, uJourneySkyConnect)
 );
-vec3 journeyNightMirror = mix(vec3(0.025, 0.10, 0.16), vec3(0.10, 0.28, 0.42), journeyWaterRipple * 0.62 + journeyWaterCrossRipple * 0.18);
-diffuseColor.rgb = mix(diffuseColor.rgb, journeyNightMirror, uJourneyNight * 0.78);
-diffuseColor.rgb += vec3(0.42, 0.74, 1.00) * journeyWaterSparkle * uJourneyNight * 1.55;
+vec3 journeyNightMirror = mix(vec3(0.025, 0.085, 0.12), vec3(0.075, 0.22, 0.31), journeyWaterRipple * 0.54 + journeyWaterCrossRipple * 0.15);
+diffuseColor.rgb = mix(diffuseColor.rgb, journeyNightMirror, uJourneyNight * 0.72);
+diffuseColor.rgb += vec3(0.42, 0.68, 0.88) * journeyWaterSparkle * uJourneyNight * 0.72;
 diffuseColor.rgb = mix(
   diffuseColor.rgb,
   vec3(0.012, 0.038, 0.074),
-  journeyMountainReflection * journeyReflectionReveal * 0.38
+  journeyMountainReflection * journeyReflectionReveal * 0.24
 );
-diffuseColor.rgb += vec3(0.20, 0.39, 0.62) * journeyMountainReflection * journeyWaterCrossRipple * journeyReflectionReveal * 0.34;
-diffuseColor.rgb += vec3(0.78, 0.90, 1.0) * journeyReflectedStar * journeyReflectionReveal * 2.7;
-diffuseColor.rgb += vec3(0.34, 0.54, 0.96) * journeyMilkyReflection * journeyReflectionReveal * smoothstep(0.12, 1.0, uJourneySkyConnect) * 0.64;
-diffuseColor.rgb += vec3(0.34, 0.88, 1.0) * journeyRiverMask * journeyRiverCurrent * 1.7;`,
+diffuseColor.rgb += vec3(0.18, 0.34, 0.50) * journeyMountainReflection * journeyWaterCrossRipple * journeyReflectionReveal * 0.22;
+diffuseColor.rgb += vec3(0.70, 0.84, 0.94) * journeyReflectedStar * journeyReflectionReveal * 1.15;
+diffuseColor.rgb += vec3(0.28, 0.46, 0.72) * journeyMilkyReflection * journeyReflectionReveal * smoothstep(0.12, 1.0, uJourneySkyConnect) * 0.38;
+diffuseColor.rgb += vec3(0.28, 0.68, 0.78) * journeyRiverMask * journeyRiverCurrent * 0.82;`,
       )
       .replace(
         '#include <emissivemap_fragment>',
         `#include <emissivemap_fragment>
-totalEmissiveRadiance += vec3(0.22, 0.76, 1.0) * journeyRiverMask * journeyRiverCurrent * (4.2 + journeyConnectionPulse * 0.9);`,
+totalEmissiveRadiance += vec3(0.18, 0.58, 0.72) * journeyRiverMask * journeyRiverCurrent * (1.7 + journeyConnectionPulse * 0.35);`,
       )
   }
-  material.customProgramCacheKey = () => 'journey-water-reflection-v6'
+  material.customProgramCacheKey = () => 'journey-water-reflection-v7'
 }
 
 function createRiverHaloMaterial() {
@@ -616,7 +634,7 @@ function createRiverHaloMaterial() {
       void main() {
         float path = clamp((8.0 - vJourneyHaloWorldPosition.z) / 227.0, 0.0, 1.0);
         float head = 1.0 - smoothstep(uJourneyRiverGlow - 0.055, uJourneyRiverGlow + 0.045, path);
-        float groundRiver = 1.0 - smoothstep(2.5, 7.0, vJourneyHaloWorldPosition.y);
+        float groundRiver = 1.0 - smoothstep(1.35, 3.8, vJourneyHaloWorldPosition.y);
         float reveal = head * smoothstep(0.01, 0.075, uJourneyRiverGlow) * groundRiver;
         float connectionPulse = sin(clamp(uJourneySkyConnect, 0.0, 1.0) * 3.14159265);
         float current = 0.68 + 0.32 * sin(
@@ -626,8 +644,8 @@ function createRiverHaloMaterial() {
         );
         vec3 color = mix(vec3(0.08, 0.42, 0.92), vec3(0.52, 0.94, 1.0), current);
         gl_FragColor = vec4(
-          color * (1.25 + current * 0.75 + connectionPulse * 0.42),
-          reveal * (0.2 + current * 0.22 + connectionPulse * 0.08)
+          color * (0.72 + current * 0.46 + connectionPulse * 0.2),
+          reveal * (0.08 + current * 0.12 + connectionPulse * 0.035)
         );
       }
     `,
@@ -908,9 +926,9 @@ function DriftingClouds({ groupRef, materialRefs }) {
   )
 
   const clouds = [
-    { position: [-108, 104, -360], scale: [176, 48, 1], opacity: 0.62, speed: 2.7 },
-    { position: [92, 124, -410], scale: [220, 56, 1], opacity: 0.5, speed: 2.1 },
-    { position: [8, 76, -330], scale: [130, 34, 1], opacity: 0.4, speed: 3.2 },
+    { position: [-108, 104, -360], scale: [176, 48, 1], opacity: 0.34, speed: 2.7 },
+    { position: [92, 124, -410], scale: [220, 56, 1], opacity: 0.28, speed: 2.1 },
+    { position: [8, 76, -330], scale: [130, 34, 1], opacity: 0.22, speed: 3.2 },
   ]
 
   return (
@@ -937,8 +955,9 @@ function DriftingClouds({ groupRef, materialRefs }) {
             color="#f4f5ef"
             transparent
             opacity={0}
+            alphaTest={0.018}
             depthWrite={false}
-            depthTest={false}
+            depthTest
             toneMapped={false}
           />
         </sprite>
@@ -1103,7 +1122,7 @@ export default function JourneyScene({
   }, [camera, scene, set, size.height, size.width])
 
   useEffect(() => {
-    scene.fog = new THREE.FogExp2('#85989b', 0.018)
+    scene.fog = new THREE.FogExp2('#85989b', 0.013)
     return () => {
       scene.fog = null
     }
@@ -1344,15 +1363,15 @@ export default function JourneyScene({
 
     const entranceFog =
       progress < 13
-        ? 0.014 + smoothstep(9, 13, progress) * 0.006
-        : 0.011 * (1 - smoothstep(15, 20, progress)) + 0.0022
+        ? 0.011 + smoothstep(9, 13, progress) * 0.0045
+        : 0.0085 * (1 - smoothstep(15, 20, progress)) + 0.00175
     if (state.scene.fog) {
       const openAirFog = skyColor.clone().multiplyScalar(night > 0.5 ? 0.7 : 0.88)
       state.scene.fog.color
         .set('#050909')
         .lerp(openAirFog, caveRelease)
       state.scene.fog.density = Math.max(
-        0.00205,
+        0.0017,
         entranceFog * (1 - travelWindRef.current * 0.11),
       )
     }

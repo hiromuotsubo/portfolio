@@ -175,15 +175,36 @@ function useAmbientAudio(progress, fogCompleted) {
     if (!AudioContext) return
     const context = new AudioContext()
     const master = context.createGain()
-    master.gain.value = 0.82
-    master.connect(context.destination)
-    audioRef.current = { context, master, tracks: {}, cancelled: false }
+    const compressor = context.createDynamicsCompressor()
+    master.gain.value = 0.88
+    compressor.threshold.value = -24
+    compressor.knee.value = 18
+    compressor.ratio.value = 2
+    compressor.attack.value = 0.08
+    compressor.release.value = 0.9
+    master.connect(compressor).connect(context.destination)
+    audioRef.current = { context, master, compressor, tracks: {}, cancelled: false }
     await context.resume()
 
     const definitions = {
-      cave: { url: '/journey/audio/cave-ambience.m4a', position: [0, 3, -8], refDistance: 9 },
-      wind: { url: '/journey/audio/wind-field.m4a', position: [-58, 32, -112], refDistance: 34 },
-      river: { url: '/journey/audio/river-field.m4a', position: [12, -1, -82], refDistance: 22 },
+      cave: {
+        url: '/journey/audio/cave-master.m4a',
+        position: [0, 3, -8],
+        refDistance: 10,
+        filter: { type: 'lowpass', frequency: 5200, q: 0.42 },
+      },
+      wind: {
+        url: '/journey/audio/wind-master.m4a',
+        position: [-58, 32, -112],
+        refDistance: 38,
+        filter: { type: 'highpass', frequency: 72, q: 0.48 },
+      },
+      river: {
+        url: '/journey/audio/river-master.m4a',
+        position: [12, -1, -82],
+        refDistance: 25,
+        filter: { type: 'lowpass', frequency: 8200, q: 0.36 },
+      },
     }
 
     try {
@@ -200,10 +221,14 @@ function useAmbientAudio(progress, fogCompleted) {
       decoded.forEach(([name, definition, buffer]) => {
         const source = context.createBufferSource()
         const gain = context.createGain()
+        const filter = context.createBiquadFilter()
         const panner = context.createPanner()
         source.buffer = buffer
         source.loop = true
         gain.gain.value = 0.0001
+        filter.type = definition.filter.type
+        filter.frequency.value = definition.filter.frequency
+        filter.Q.value = definition.filter.q
         panner.panningModel = 'HRTF'
         panner.distanceModel = 'inverse'
         panner.refDistance = definition.refDistance
@@ -212,9 +237,9 @@ function useAmbientAudio(progress, fogCompleted) {
         panner.positionX.value = definition.position[0]
         panner.positionY.value = definition.position[1]
         panner.positionZ.value = definition.position[2]
-        source.connect(gain).connect(panner).connect(master)
-        source.start()
-        audioRef.current.tracks[name] = { source, gain, panner }
+        source.connect(gain).connect(filter).connect(panner).connect(master)
+        source.start(0, Math.min(buffer.duration * 0.18, name === 'cave' ? 2.7 : name === 'wind' ? 4.1 : 1.9))
+        audioRef.current.tracks[name] = { source, gain, filter, panner }
       })
       setAudioReady(true)
     } catch {
@@ -227,20 +252,29 @@ function useAmbientAudio(progress, fogCompleted) {
     if (!audioReady || !audio?.tracks) return
     const now = audio.context.currentTime
     const outside = clamp((progress - 16) / 10, 0, 1)
-    const night = clamp((progress - 44) / 10, 0, 1)
+    const night = clamp((progress - 44) / 12, 0, 1)
+    const valley = clamp((progress - 18) / 18, 0, 1)
     const levels = {
-      cave: 0.22 * (1 - clamp((progress - 10) / 12, 0, 1)),
-      wind: (fogCompleted ? 0.16 : 0.025) * outside * (1 - night * 0.92),
-      river: (0.008 + outside * 0.17) * (1 - night * 0.28),
+      cave: 0.2 * (1 - clamp((progress - 9) / 15, 0, 1)),
+      wind: (fogCompleted ? 0.12 : 0.018) * outside * (1 - night * 0.84),
+      river: (0.004 + valley * 0.115) * (1 - night * 0.38),
     }
 
     Object.entries(levels).forEach(([name, level]) => {
       const gain = audio.tracks[name]?.gain.gain
       if (!gain) return
       gain.cancelScheduledValues(now)
-      gain.setValueAtTime(gain.value, now)
-      gain.linearRampToValueAtTime(Math.max(0.0001, level), now + 1.4)
+      gain.setTargetAtTime(Math.max(0.0001, level), now, name === 'cave' ? 1.35 : 2.2)
     })
+
+    const windFilter = audio.tracks.wind?.filter
+    const riverFilter = audio.tracks.river?.filter
+    if (windFilter) {
+      windFilter.frequency.setTargetAtTime(72 + outside * 34 + night * 28, now, 1.8)
+    }
+    if (riverFilter) {
+      riverFilter.frequency.setTargetAtTime(5200 + valley * 3000 - night * 1700, now, 2.4)
+    }
 
     const listener = audio.context.listener
     const listenerZ = 18 - progress * 2.25
@@ -445,10 +479,11 @@ const ABOUT_ITEMS = [
 ]
 
 const PROJECT_ITEMS = [
-  ['goal', 'Goal'],
-  ['contrast', 'Contrast'],
+  ['origin', 'From Photo to 3D'],
+  ['contrast', 'Spatial Contrast'],
+  ['terrain', 'Terrain & Light'],
   ['interaction', 'Interaction'],
-  ['inspiration', 'Inspiration'],
+  ['atmosphere', 'Sound & Time'],
   ['emotion', 'Emotional Arc'],
 ]
 
@@ -720,25 +755,29 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
         <p className="portfolio-story__hint"><span aria-hidden="true">↓</span> SCROLL TO EXPLORE</p>
       </aside>
       <div className="portfolio-story__panels">
-        <article id="goal" className={panelClassName('goal')} data-story-panel="goal">
-          <PortfolioImage src="/portfolio/project-goal-v2.png" alt="The finished Journey valley beside its Blender terrain wireframe" caption="REAL-TIME 3D / FINAL SCENE" />
-          <div className="portfolio-panel__copy"><span className="portfolio-kicker">GOAL</span><h3>A landscape to enter, not only view.</h3><p>Built in real-time 3D, the camera moves through actual depth while light, mist, water and the soundscape change with the viewer’s progress.</p></div>
+        <article id="origin" className={panelClassName('origin')} data-story-panel="origin">
+          <PortfolioImage src="/portfolio/project-inspiration-v2.png" alt="A Kamikochi field photograph used as a reference for Journey" caption="FIELD REFERENCE / KAMIKOCHI" />
+          <div className="portfolio-panel__copy"><span className="portfolio-kicker">FROM PHOTO TO 3D</span><h3>The photograph became a reference, not a blueprint.</h3><p>I spent six weeks working in Kamikochi and photographed its mountains, river and changing atmosphere. In Blender, those memories became a fictional valley: the composition and feeling remain, while the terrain, route and timing were rebuilt for an interactive experience.</p></div>
         </article>
         <article id="contrast" className={panelClassName('contrast')} data-story-panel="contrast">
           <PortfolioImage src="/portfolio/project-contrast-v2.png" alt="Journey beginning inside a dark cave and opening toward the valley" caption="CAVE TO VALLEY" className="is-dark" />
-          <div className="portfolio-panel__copy"><span className="portfolio-kicker">CONTRAST</span><h3>A confined cave makes the open valley feel larger.</h3><p>The experience begins in compression so that its first open view feels more expansive.</p></div>
+          <div className="portfolio-panel__copy"><span className="portfolio-kicker">SPATIAL CONTRAST</span><h3>A confined cave makes the open valley feel larger.</h3><p>The narrow, dark opening intentionally limits the field of view. Emerging into the wide valley creates a stronger contrast in scale—an approach informed by my research into viewpoint, awe and emotional experience.</p></div>
+        </article>
+        <article id="terrain" className={panelClassName('terrain')} data-story-panel="terrain">
+          <PortfolioImage src="/portfolio/project-goal-v2.png" alt="The finished Journey valley beside its Blender terrain wireframe" caption="BLENDER TERRAIN / WEBGL LIGHTING" />
+          <div className="portfolio-panel__copy"><span className="portfolio-kicker">TERRAIN &amp; LIGHT</span><h3>Actual depth lets every change belong to the same place.</h3><p>The valley was shaped as 3D terrain in Blender, then shaded with projected rock detail and watercolor-like pigment. In the browser, the same geometry receives moving light, mist, shadows and the transition from day to night, so the scene changes without becoming a different image.</p></div>
         </article>
         <article id="interaction" className={panelClassName('interaction')} data-story-panel="interaction">
           <PortfolioImage src="/portfolio/project-interaction-v2.png" alt="The HOLD interaction placed within the night-time Journey landscape" caption="HOLD / WORLD RESPONSE" className="is-dark" />
-          <div className="portfolio-panel__copy"><span className="portfolio-kicker">INTERACTION</span><h3>Holding gives the landscape time to be seen.</h3><p>Each hold is raycast into the 3D scene, allowing the landscape to respond at the point the viewer touches.</p></div>
+          <div className="portfolio-panel__copy"><span className="portfolio-kicker">INTERACTION</span><h3>Holding gives the landscape time to be seen.</h3><p>Scroll carries the journey forward; HOLD deliberately interrupts that rhythm. A raycast places the response at the touched point in the 3D world, where light gathers and remains as a quiet trace of the viewer’s action.</p></div>
         </article>
-        <article id="inspiration" className={panelClassName('inspiration')} data-story-panel="inspiration">
-          <PortfolioImage src="/portfolio/project-inspiration-v2.png" alt="Kamikochi mountains and the Azusa River photographed as a field reference" caption="KAMIKOCHI / FIELD REFERENCE" />
-          <div className="portfolio-panel__copy"><span className="portfolio-kicker">INSPIRATION</span><h3>Kamikochi was a reference, not a place to reproduce.</h3><p>After six weeks working there, I translated its scale and atmosphere through watercolor-like surfaces and real-time 3D.</p></div>
+        <article id="atmosphere" className={panelClassName('atmosphere')} data-story-panel="atmosphere">
+          <PortfolioImage src="/portfolio/project-emotion-v2.png" alt="The Journey valley changing from daylight to a star-filled night" caption="SPATIAL AUDIO / DAY TO NIGHT" className="is-dark" />
+          <div className="portfolio-panel__copy"><span className="portfolio-kicker">SOUND &amp; TIME</span><h3>Time changes through light before it is explained in words.</h3><p>Cave ambience, wind and water occupy different positions in the world and crossfade as the camera travels. The gradual shift into night slows the experience, while the environment—not an interface—signals when to continue or hold.</p></div>
         </article>
         <article id="emotion" className={panelClassName('emotion')} data-story-panel="emotion">
-          <PortfolioImage src="/portfolio/project-emotion-v2.png" alt="Journey valley beneath the Milky Way-like night sky" caption="DAYLIGHT TO NIGHT" className="is-dark" />
-          <div className="portfolio-panel__copy"><span className="portfolio-kicker">EMOTIONAL ARC</span><h3>From tension, to awe, to calm.</h3><p>The sequence moves from a confined cave to an open valley, then gradually from daylight into night and afterglow.</p><button type="button" onClick={onReplay}>EXPERIENCE AGAIN <span>↗</span></button></div>
+          <PortfolioImage src="/portfolio/project-night-clean.png" alt="Journey valley at the quiet end of its night sequence" caption="TENSION / AWE / AFTERGLOW" className="is-dark" />
+          <div className="portfolio-panel__copy"><span className="portfolio-kicker">EMOTIONAL ARC</span><h3>From tension, to awe, to calm.</h3><p>The order of space, interaction, sound and time was planned as one emotional curve: uncertainty in the cave, release in the open valley, wonder as the river and sky connect, then enough stillness for the feeling to remain.</p><button type="button" onClick={onReplay}>EXPERIENCE AGAIN <span>↗</span></button></div>
         </article>
         <footer className="portfolio-story__end">
           <span>END OF PROJECT</span>
