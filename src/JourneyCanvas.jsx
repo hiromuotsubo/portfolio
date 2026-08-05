@@ -74,9 +74,11 @@ export default function JourneyCanvas({
   skyConnectionProgress,
   activeGate,
   holdProgress,
+  fogCompleted,
   presentationMode,
   outroMode,
   onAssetsProgress,
+  onListenerPose,
 }) {
   const [qualityTier, setQualityTier] = useState(getInitialQuality)
   const quality = QUALITY_PRESETS[qualityTier]
@@ -104,8 +106,10 @@ export default function JourneyCanvas({
           skyConnectionProgress={presentationMode ? 0 : skyConnectionProgress}
           activeGate={activeGate}
           holdProgress={holdProgress}
+          fogCompleted={fogCompleted}
           presentationMode={presentationMode}
           outroMode={outroMode}
+          onListenerPose={onListenerPose}
           quality={quality}
         />
       </Suspense>

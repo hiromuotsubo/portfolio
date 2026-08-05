@@ -9,14 +9,21 @@ const MODEL_URL = '/journey/models/journey-v16-pbr-ktx2.glb?v=1-memory-pbr'
 
 // Creator controls: visual transition timing and cave brightness.
 const VISUAL_TIMING = {
-  sunsetStart: 35,
-  sunsetEnd: 45,
-  nightStart: 45,
-  nightEnd: 55,
-  endingLiftStart: 72,
-  endingLiftEnd: 88,
-  endingWideStart: 82,
-  endingWideEnd: 100,
+  sunsetStart: 42,
+  sunsetEnd: 51,
+  nightStart: 51,
+  nightEnd: 59,
+}
+
+const ENDING_CAMERA = {
+  liftStart: 72,
+  liftEnd: 88,
+  wideStart: 82,
+  wideEnd: 100,
+  pullBack: 5.4,
+  cameraLift: 0.16,
+  lift: 0.08,
+  fov: 16,
 }
 
 const CAVE_LOOK = {
@@ -36,11 +43,11 @@ const smoothstep = (edge0, edge1, value) => {
 }
 
 const storyProgressToClipProgress = (progress) => {
-  if (progress <= 15) {
-    return THREE.MathUtils.lerp(0, 0.395, smoothstep(0, 15, progress))
+  if (progress <= 13.5) {
+    return THREE.MathUtils.lerp(0, 0.395, smoothstep(0, 13.5, progress))
   }
   if (progress <= 20) {
-    return THREE.MathUtils.lerp(0.395, 0.447, smoothstep(15, 20, progress))
+    return THREE.MathUtils.lerp(0.395, 0.447, smoothstep(13.5, 20, progress))
   }
   if (progress <= 80) {
     return THREE.MathUtils.lerp(0.447, 0.8, (progress - 20) / 60)
@@ -412,12 +419,25 @@ float journeyWash = mix(journeyMacro, journeyFine, 0.22);
 vec3 journeyForest = vec3(0.072, 0.19, 0.125);
 vec3 journeySummer = vec3(0.19, 0.355, 0.205);
 vec3 journeyRock = vec3(0.245, 0.285, 0.275);
-vec3 journeySnow = vec3(0.62, 0.66, 0.63);
+vec3 journeySnow = vec3(0.84, 0.87, 0.84);
 float journeyRockMask = smoothstep(0.48, 0.94, journeySteepness + journeyAltitude * 0.24 + journeyMacro * 0.045);
-float journeySnowMask = smoothstep(0.955, 1.0, journeyAltitude) * smoothstep(0.66, 0.94, 1.0 - journeySteepness) * smoothstep(0.82, 0.98, journeyFine);
+float journeySnowShelf =
+  smoothstep(0.58, 0.92, journeyAltitude) *
+  smoothstep(0.24, 0.86, 1.0 - journeySteepness) *
+  smoothstep(0.38, 0.76, journeyMacro * 0.62 + journeyFine * 0.38);
+float journeySnowGullyPattern = 0.5 + 0.5 * sin(
+  vJourneyWorldPosition.x * 0.19 +
+  sin(vJourneyWorldPosition.z * 0.052) * 2.7 -
+  vJourneyWorldPosition.y * 0.035
+);
+float journeySnowGully =
+  smoothstep(0.84, 0.97, journeySnowGullyPattern) *
+  smoothstep(0.44, 0.88, journeyAltitude) *
+  smoothstep(0.32, 0.88, journeySteepness) * 0.52;
+float journeySnowMask = clamp(journeySnowShelf + journeySnowGully, 0.0, 1.0);
 vec3 journeyPaint = mix(journeyForest, journeySummer, smoothstep(0.08, 0.58, journeyAltitude));
 journeyPaint = mix(journeyPaint, journeyRock, journeyRockMask * 0.67);
-journeyPaint = mix(journeyPaint, journeySnow, journeySnowMask * 0.24);
+journeyPaint = mix(journeyPaint, journeySnow, journeySnowMask * (0.54 + uJourneyNight * 0.12));
 ${isFarRidge ? 'journeyPaint = mix(journeyPaint, vec3(0.32, 0.42, 0.43), 0.36);' : ''}
 float journeyLowerValley = 1.0 - smoothstep(7.0, 30.0, vJourneyWorldPosition.y);
 float journeyValleyPigment = mix(0.79, 1.07, journeyMacro * 0.72 + journeyFine * 0.28);
@@ -503,8 +523,74 @@ float journeyProjectedRoughness = dot(vec3(journeyRoughX, journeyRoughY, journey
 roughnessFactor = mix(roughnessFactor, max(0.68, journeyProjectedRoughness), 0.48);`,
       )
     }
+    shader.fragmentShader = shader.fragmentShader.replace(
+      '#include <emissivemap_fragment>',
+      `#include <emissivemap_fragment>
+totalEmissiveRadiance += journeyPaint * uJourneyNight * 0.055;
+totalEmissiveRadiance += vec3(0.018, 0.038, 0.072) * uJourneyNight;`,
+    )
   }
-  material.customProgramCacheKey = () => `journey-alpine-${isFarRidge ? 'far' : 'near'}-v5`
+  material.customProgramCacheKey = () => `journey-alpine-${isFarRidge ? 'far' : 'near'}-v7-moonlit-snowmelt`
+}
+
+function applyWetGravelDetail(material, variant = 'bed') {
+  if (!material.isMeshStandardMaterial && !material.isMeshPhysicalMaterial) return
+  const isSubmergedBed = variant === 'submerged-bed'
+  const isRiverBar = variant === 'bar-pale' || variant === 'bar-granite'
+  material.onBeforeCompile = (shader) => {
+    shader.vertexShader = shader.vertexShader
+      .replace(
+        '#include <common>',
+        `#include <common>
+varying vec3 vJourneyGravelPosition;`,
+      )
+      .replace(
+        '#include <worldpos_vertex>',
+        `#include <worldpos_vertex>
+vJourneyGravelPosition = (modelMatrix * vec4(transformed, 1.0)).xyz;`,
+      )
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        '#include <common>',
+        `#include <common>
+varying vec3 vJourneyGravelPosition;
+
+float journeyGravelHash(vec2 point) {
+  return fract(sin(dot(point, vec2(127.1, 311.7))) * 43758.5453123);
+}`,
+      )
+      .replace(
+        '#include <color_fragment>',
+        `#include <color_fragment>
+vec2 journeyGravelUv = vJourneyGravelPosition.xz * ${variant === 'bed' ? '0.72' : '0.58'};
+vec2 journeyGravelCell = floor(journeyGravelUv);
+vec2 journeyGravelLocal = fract(journeyGravelUv) - 0.5;
+float journeyGravelSeed = journeyGravelHash(journeyGravelCell);
+vec2 journeyGravelOffset = vec2(
+  journeyGravelHash(journeyGravelCell + 17.3),
+  journeyGravelHash(journeyGravelCell + 41.9)
+) - 0.5;
+float journeyGravelRadius = mix(0.18, 0.39, journeyGravelSeed);
+float journeyGravelStone = 1.0 - smoothstep(
+  journeyGravelRadius - 0.055,
+  journeyGravelRadius + 0.045,
+  length(journeyGravelLocal - journeyGravelOffset * 0.24)
+);
+float journeyGravelFine = journeyGravelHash(floor(vJourneyGravelPosition.xz * 2.35) + 73.0);
+vec3 journeyGravelDark = ${isSubmergedBed ? 'vec3(0.055, 0.18, 0.15)' : isRiverBar ? 'vec3(0.045, 0.17, 0.145)' : 'vec3(0.31, 0.34, 0.31)'};
+vec3 journeyGravelLight = ${isSubmergedBed ? 'vec3(0.20, 0.38, 0.31)' : isRiverBar ? 'vec3(0.19, 0.34, 0.27)' : 'vec3(0.62, 0.59, 0.50)'};
+vec3 journeyGravelColor = mix(journeyGravelDark, journeyGravelLight, journeyGravelSeed * 0.7 + journeyGravelFine * 0.3);
+journeyGravelColor *= mix(0.72, ${isRiverBar ? '0.98' : '1.12'}, journeyGravelStone);
+diffuseColor.rgb = mix(diffuseColor.rgb, journeyGravelColor, ${isSubmergedBed ? '0.54' : variant === 'bed' ? '0.78' : isRiverBar ? '0.86' : '0.92'});`,
+      )
+      .replace(
+        '#include <roughnessmap_fragment>',
+        `#include <roughnessmap_fragment>
+roughnessFactor = ${isSubmergedBed ? 'mix(0.66, 0.88, journeyGravelStone)' : 'mix(0.78, 0.97, journeyGravelStone)'};`,
+      )
+  }
+  material.customProgramCacheKey = () => `journey-wet-gravel-v4-${variant}`
+  material.needsUpdate = true
 }
 
 function applyWaterReflection(material) {
@@ -523,142 +609,297 @@ function applyWaterReflection(material) {
       .replace(
         '#include <common>',
         `#include <common>
-varying vec3 vJourneyWaterPosition;`,
+varying vec3 vJourneyWaterPosition;
+varying vec3 vJourneyWaterNormal;`,
       )
       .replace(
         '#include <worldpos_vertex>',
         `#include <worldpos_vertex>
-vJourneyWaterPosition = (modelMatrix * vec4(transformed, 1.0)).xyz;`,
+vJourneyWaterPosition = (modelMatrix * vec4(transformed, 1.0)).xyz;
+vJourneyWaterNormal = normalize(mat3(modelMatrix) * objectNormal);`,
       )
     shader.fragmentShader = shader.fragmentShader
       .replace(
         '#include <common>',
         `#include <common>
 varying vec3 vJourneyWaterPosition;
+varying vec3 vJourneyWaterNormal;
 uniform float uJourneyNight;
 uniform float uJourneyRiverGlow;
 uniform float uJourneySkyConnect;
 uniform float uJourneyTime;
-uniform float uJourneyTravelWind;`,
+uniform float uJourneyTravelWind;
+
+float journeyWaterHash(vec2 point) {
+  return fract(sin(dot(point, vec2(127.1, 311.7))) * 43758.5453123);
+}
+
+float journeyWaterNoise(vec2 point) {
+  vec2 cell = floor(point);
+  vec2 local = fract(point);
+  local = local * local * (3.0 - 2.0 * local);
+  return mix(
+    mix(journeyWaterHash(cell), journeyWaterHash(cell + vec2(1.0, 0.0)), local.x),
+    mix(journeyWaterHash(cell + vec2(0.0, 1.0)), journeyWaterHash(cell + vec2(1.0)), local.x),
+    local.y
+  );
+}
+
+float journeyWaterFlow(vec2 point, float time) {
+  vec2 primary = point * vec2(0.09, 0.34) + vec2(time * 0.018, -time * 0.13);
+  vec2 crossing = point * vec2(0.24, 0.12) + vec2(-time * 0.045, time * 0.025);
+  float broad = journeyWaterNoise(primary) * 0.56;
+  float medium = journeyWaterNoise(primary * 2.6 + 13.7) * 0.3;
+  float detail = journeyWaterNoise(crossing * 5.8 - 8.4) * 0.14;
+  return broad + medium + detail;
+}`,
+      )
+      .replace(
+        '#include <normal_fragment_maps>',
+        `#include <normal_fragment_maps>
+float journeyWaterTime = uJourneyTime * (0.72 + uJourneyTravelWind * 0.9);
+vec2 journeyWaterPlane = vJourneyWaterPosition.xz;
+float journeyWaterHeight = journeyWaterFlow(journeyWaterPlane, journeyWaterTime);
+float journeyWaterHeightX = journeyWaterFlow(journeyWaterPlane + vec2(0.22, 0.0), journeyWaterTime);
+float journeyWaterHeightZ = journeyWaterFlow(journeyWaterPlane + vec2(0.0, 0.22), journeyWaterTime);
+vec3 journeyWaterPerturbation = vec3(
+  journeyWaterHeight - journeyWaterHeightX,
+  0.0,
+  journeyWaterHeight - journeyWaterHeightZ
+);
+normal = normalize(normal + journeyWaterPerturbation * (0.3 + uJourneyTravelWind * 0.24));`,
+      )
+      .replace(
+        '#include <roughnessmap_fragment>',
+        `#include <roughnessmap_fragment>
+float journeyWaterSurface = journeyWaterFlow(vJourneyWaterPosition.xz, uJourneyTime * 0.72);
+float journeyDayRoughness = mix(0.085, 0.18, journeyWaterSurface);
+float journeyNightRoughness = mix(0.035, 0.095, journeyWaterSurface);
+roughnessFactor = mix(journeyDayRoughness, journeyNightRoughness, uJourneyNight);
+roughnessFactor += uJourneyTravelWind * 0.035;`,
       )
       .replace(
         '#include <color_fragment>',
         `#include <color_fragment>
-float journeyWaterRipple = 0.5 + 0.5 * sin(vJourneyWaterPosition.x * 0.72 + vJourneyWaterPosition.z * 0.31 - uJourneyTime * 1.25);
-float journeyWaterCrossRipple = 0.5 + 0.5 * sin(vJourneyWaterPosition.x * 0.19 - vJourneyWaterPosition.z * 0.84 + uJourneyTime * 0.72);
-float journeyWindRipple = 0.5 + 0.5 * sin(
-  vJourneyWaterPosition.x * 1.46 +
-  vJourneyWaterPosition.z * 0.57 -
-  uJourneyTime * (2.1 + uJourneyTravelWind * 3.4)
+float journeyWaterRipple = journeyWaterFlow(vJourneyWaterPosition.xz, uJourneyTime * 0.72);
+float journeyWaterCrossRipple = journeyWaterFlow(vJourneyWaterPosition.zx * 1.37 + 27.0, -uJourneyTime * 0.41);
+vec3 journeyWaterView = normalize(cameraPosition - vJourneyWaterPosition);
+vec3 journeyWaterNormal = normalize(cross(dFdx(vJourneyWaterPosition), dFdy(vJourneyWaterPosition)));
+float journeyWaterFresnel = pow(1.0 - clamp(abs(dot(journeyWaterNormal, journeyWaterView)), 0.0, 1.0), 4.8);
+float journeyDepthVariation = journeyWaterNoise(vJourneyWaterPosition.xz * vec2(0.025, 0.075) + 4.7);
+float journeyFineCurrent = 0.5 + 0.5 * sin(
+  vJourneyWaterPosition.z * 0.72 - uJourneyTime * 0.92 +
+  sin(vJourneyWaterPosition.x * 0.19 + uJourneyTime * 0.08) * 1.7
 );
-journeyWaterRipple = mix(journeyWaterRipple, journeyWindRipple, uJourneyTravelWind * 0.32);
+journeyFineCurrent = smoothstep(0.76, 0.96, journeyFineCurrent) *
+  smoothstep(0.32, 0.88, journeyWaterRipple);
 float journeyWaterSparkSeed = fract(sin(dot(floor(vJourneyWaterPosition.xz * 1.45), vec2(12.9898, 78.233))) * 43758.5453);
-float journeyWaterSparkle = pow(journeyWaterSparkSeed, 11.0) * smoothstep(0.64, 0.96, journeyWaterRipple * journeyWaterCrossRipple);
-vec2 journeyReflectionScale = vec2(0.72, 0.38);
-vec2 journeyReflectionGrid = floor(vJourneyWaterPosition.xz * journeyReflectionScale);
-vec2 journeyReflectionCell = fract(vJourneyWaterPosition.xz * journeyReflectionScale) - 0.5;
-float journeyReflectionSeed = fract(sin(dot(journeyReflectionGrid, vec2(39.3468, 11.1351))) * 19642.349);
-vec2 journeyReflectionOffset = vec2(
-  fract(journeyReflectionSeed * 17.13),
-  fract(journeyReflectionSeed * 41.73)
-) - 0.5;
-float journeyReflectedStar = 1.0 - smoothstep(
-  0.018,
-  0.105,
-  length(journeyReflectionCell - journeyReflectionOffset * 0.62)
-);
-journeyReflectedStar *= smoothstep(0.91, 0.994, journeyReflectionSeed);
-journeyReflectedStar *= 0.78 + 0.22 * sin(uJourneyTime * 1.1 + journeyReflectionSeed * 31.0);
-float journeyMilkyAxis = vJourneyWaterPosition.x * 0.065 +
-  sin(vJourneyWaterPosition.z * 0.045 - uJourneyTime * 0.035) * 0.52;
-float journeyMilkyReflection = 1.0 - smoothstep(0.32, 1.52, abs(journeyMilkyAxis));
-journeyMilkyReflection *= 0.18 + journeyWaterRipple * 0.22 + journeyWaterCrossRipple * 0.11;
+float journeyWaterSparkle = pow(journeyWaterSparkSeed, 18.0) * smoothstep(0.66, 0.94, journeyWaterRipple * journeyWaterCrossRipple);
+float journeyRiverbedCell = journeyWaterHash(floor(vJourneyWaterPosition.xz * vec2(0.54, 0.78)));
+float journeyRiverbedFine = journeyWaterHash(floor(vJourneyWaterPosition.xz * vec2(1.36, 1.72)) + 19.0);
+float journeyRiverbedVariation = clamp(journeyRiverbedCell * 0.68 + journeyRiverbedFine * 0.32, 0.0, 1.0);
 float journeyRiverPath = clamp((8.0 - vJourneyWaterPosition.z) / 227.0, 0.0, 1.0);
-float journeyReflectedRidge = 0.72 +
-  sin(vJourneyWaterPosition.x * 0.074 + 0.5) * 0.065 +
-  sin(vJourneyWaterPosition.x * 0.173 + 2.1) * 0.035;
-float journeyMountainReflection = 1.0 - smoothstep(
-  0.025,
-  0.145,
-  abs(journeyRiverPath - journeyReflectedRidge)
-);
-journeyMountainReflection *= 0.64 + journeyWaterRipple * 0.24 + journeyWaterCrossRipple * 0.12;
 float journeyRiverHead = 1.0 - smoothstep(uJourneyRiverGlow - 0.045, uJourneyRiverGlow + 0.035, journeyRiverPath);
 float journeyGroundRiver = 1.0 - smoothstep(1.35, 3.8, vJourneyWaterPosition.y);
 float journeyRiverMask = journeyRiverHead * smoothstep(0.01, 0.075, uJourneyRiverGlow) * journeyGroundRiver;
-float journeyRiverCurrent = 0.72 + journeyWaterRipple * 0.28;
-float journeyConnectionPulse = sin(clamp(uJourneySkyConnect, 0.0, 1.0) * 3.14159265);
-float journeyReflectionReveal = uJourneyNight * max(
-  smoothstep(0.18, 0.92, uJourneyRiverGlow) * 0.82,
-  smoothstep(0.03, 0.84, uJourneySkyConnect)
-);
-vec3 journeyNightMirror = mix(vec3(0.025, 0.085, 0.12), vec3(0.075, 0.22, 0.31), journeyWaterRipple * 0.54 + journeyWaterCrossRipple * 0.15);
-diffuseColor.rgb = mix(diffuseColor.rgb, journeyNightMirror, uJourneyNight * 0.72);
-diffuseColor.rgb += vec3(0.42, 0.68, 0.88) * journeyWaterSparkle * uJourneyNight * 0.72;
-diffuseColor.rgb = mix(
-  diffuseColor.rgb,
-  vec3(0.012, 0.038, 0.074),
-  journeyMountainReflection * journeyReflectionReveal * 0.24
-);
-diffuseColor.rgb += vec3(0.18, 0.34, 0.50) * journeyMountainReflection * journeyWaterCrossRipple * journeyReflectionReveal * 0.22;
-diffuseColor.rgb += vec3(0.70, 0.84, 0.94) * journeyReflectedStar * journeyReflectionReveal * 1.15;
-diffuseColor.rgb += vec3(0.28, 0.46, 0.72) * journeyMilkyReflection * journeyReflectionReveal * smoothstep(0.12, 1.0, uJourneySkyConnect) * 0.38;
-diffuseColor.rgb += vec3(0.16, 0.44, 0.58) * journeyRiverMask * journeyRiverCurrent * 0.54;`,
+float journeyRiverCurrent = 0.58 + journeyWaterRipple * 0.24 + journeyWaterCrossRipple * 0.18;
+vec3 journeyDayShallowWater = vec3(0.018, 0.58, 0.43);
+vec3 journeyDayDeepWater = vec3(0.004, 0.22, 0.19);
+vec3 journeyNightShallowWater = vec3(0.018, 0.22, 0.34);
+vec3 journeyNightDeepWater = vec3(0.004, 0.035, 0.11);
+vec3 journeyShallowWater = mix(journeyDayShallowWater, journeyNightShallowWater, uJourneyNight);
+vec3 journeyDeepWater = mix(journeyDayDeepWater, journeyNightDeepWater, uJourneyNight);
+vec3 journeyClearBody = mix(journeyShallowWater, journeyDeepWater, 0.1 + journeyDepthVariation * 0.46);
+vec3 journeyWetRiverbed = mix(vec3(0.08, 0.18, 0.15), vec3(0.30, 0.34, 0.27), journeyRiverbedVariation);
+float journeyBedVisibility = (1.0 - journeyDepthVariation) * (0.64 + journeyWaterRipple * 0.08);
+journeyClearBody = mix(journeyClearBody, journeyWetRiverbed, journeyBedVisibility * mix(0.12, 0.1, uJourneyNight));
+journeyClearBody *= 0.96 + journeyWaterRipple * 0.16;
+vec3 journeySkyReflection = mix(vec3(0.05, 0.48, 0.67), vec3(0.015, 0.055, 0.16), uJourneyNight);
+diffuseColor.rgb = mix(journeyClearBody, journeySkyReflection, 0.06 + journeyWaterFresnel * 0.26);
+diffuseColor.rgb += vec3(0.16, 0.4, 0.36) * journeyFineCurrent * (0.018 + journeyWaterFresnel * 0.035);
+vec3 journeyNightWater = mix(vec3(0.008, 0.075, 0.16), vec3(0.025, 0.28, 0.38), journeyWaterRipple * 0.72);
+diffuseColor.rgb = mix(diffuseColor.rgb, journeyNightWater, uJourneyNight * 0.42);
+diffuseColor.rgb += vec3(0.62, 0.82, 0.94) * journeyWaterSparkle * (0.055 + uJourneyNight * 0.34) * (0.18 + journeyWaterFresnel);
+float journeyConnectionHead = smoothstep(0.0, 1.0, uJourneySkyConnect);
+float journeyConnectionPulse = exp(-pow((journeyRiverPath - journeyConnectionHead) * 7.2, 2.0));
+float journeyConnectionWake = 1.0 - smoothstep(journeyConnectionHead - 0.17, journeyConnectionHead + 0.035, journeyRiverPath);
+float journeyMysticCurrent = journeyRiverMask * (0.44 + journeyRiverCurrent * 0.34 + journeyFineCurrent * 0.42);
+float journeyLuminousThread = journeyRiverMask *
+  (0.26 + journeyFineCurrent * 0.74) *
+  (0.48 + journeyWaterCrossRipple * 0.52);
+vec3 journeyRiverLight = mix(vec3(0.08, 0.58, 0.62), vec3(0.22, 0.52, 1.0), uJourneyNight);
+diffuseColor.rgb += journeyRiverLight * journeyMysticCurrent * (0.34 + uJourneyNight * 0.78);
+diffuseColor.rgb += vec3(0.08, 0.76, 0.98) * journeyLuminousThread * (0.34 + uJourneyNight * 1.16);
+diffuseColor.rgb += vec3(0.42, 0.94, 1.0) * journeyConnectionPulse * uJourneySkyConnect * journeyGroundRiver * 1.85;
+diffuseColor.rgb += vec3(0.12, 0.46, 0.72) * journeyConnectionWake * uJourneySkyConnect * journeyGroundRiver * 0.58;
+// The source terrain contains a pale guide ribbon below the water. Keep the
+// daytime surface optically deep enough to hide it, while preserving apparent
+// clarity through the procedural riverbed detail above.
+float journeyDayAlpha = mix(0.97, 1.0, journeyWaterFresnel);
+float journeyNightAlpha = mix(0.43, 0.72, journeyWaterFresnel);
+diffuseColor.a *= mix(journeyDayAlpha, journeyNightAlpha, uJourneyNight);`,
       )
       .replace(
         '#include <emissivemap_fragment>',
         `#include <emissivemap_fragment>
-totalEmissiveRadiance += vec3(0.10, 0.34, 0.48) * journeyRiverMask * journeyRiverCurrent * (0.92 + journeyConnectionPulse * 0.22);`,
+vec3 journeyEmissiveFlow = mix(vec3(0.04, 0.45, 0.5), vec3(0.18, 0.48, 0.98), uJourneyNight);
+totalEmissiveRadiance += journeyEmissiveFlow * journeyMysticCurrent * (0.62 + uJourneyNight * 1.72);
+totalEmissiveRadiance += vec3(0.1, 0.72, 1.0) * journeyLuminousThread * (1.1 + uJourneyNight * 3.6);
+totalEmissiveRadiance += vec3(0.32, 0.82, 1.0) * journeyConnectionPulse * uJourneySkyConnect * journeyGroundRiver * 3.15;`,
+      )
+      .replace(
+        '#include <opaque_fragment>',
+        `#include <opaque_fragment>
+// Keep the physical highlights, but prevent the low-angle daylight reflection
+// from washing the emerald body into a flat white strip.
+float journeyPigmentStrength = mix(0.78, 0.32, uJourneyNight);
+gl_FragColor.rgb = mix(gl_FragColor.rgb, diffuseColor.rgb, journeyPigmentStrength);
+gl_FragColor.rgb += vec3(0.16, 0.72, 0.68) * journeyFineCurrent * (1.0 - uJourneyNight) * 0.045;`,
       )
   }
-  material.customProgramCacheKey = () => 'journey-water-reflection-v7'
+  material.customProgramCacheKey = () => 'journey-water-reflection-v18-opaque-day-emerald'
 }
 
-function createRiverHaloMaterial() {
-  return new THREE.ShaderMaterial({
-    uniforms: {
-      uJourneyRiverGlow: { value: 0 },
-      uJourneySkyConnect: { value: 0 },
-      uJourneyTime: { value: 0 },
-    },
+function createClearRiverMaterial() {
+  const material = new THREE.MeshPhysicalMaterial({
+    name: 'MAT_JOURNEY_CLEAR_RIVER',
+    color: '#38b9a4',
+    emissive: '#082f32',
+    emissiveIntensity: 0.025,
+    transparent: true,
+    opacity: 0.98,
+    depthWrite: false,
+    depthTest: true,
+    side: THREE.FrontSide,
+    roughness: 0.085,
+    metalness: 0,
+    ior: 1.333,
+    transmission: 0,
+    thickness: 0.34,
+    clearcoat: 1,
+    clearcoatRoughness: 0.09,
+    attenuationColor: new THREE.Color('#42bda7'),
+    attenuationDistance: 12,
+  })
+  // The foreground water stays optically clear while distant terrain retains fog.
+  // Its own depth tint and Fresnel fade keep it integrated with the valley.
+  material.fog = false
+  applyWaterReflection(material)
+  return material
+}
+
+function createRiverGlowMaterial() {
+  const uniforms = {
+    uJourneyGlow: { value: 0 },
+    uJourneySkyConnect: { value: 0 },
+    uJourneyTime: { value: 0 },
+  }
+  const material = new THREE.ShaderMaterial({
+    name: 'MAT_JOURNEY_RIVER_AURORA',
+    uniforms,
+    transparent: true,
+    depthWrite: false,
+    depthTest: false,
+    blending: THREE.AdditiveBlending,
+    toneMapped: false,
+    side: THREE.DoubleSide,
     vertexShader: `
-      varying vec3 vJourneyHaloWorldPosition;
+      varying vec3 vJourneyWorldPosition;
+      varying vec2 vJourneyUv;
       void main() {
         vec4 worldPosition = modelMatrix * vec4(position, 1.0);
-        vJourneyHaloWorldPosition = worldPosition.xyz;
+        vJourneyWorldPosition = worldPosition.xyz;
+        vJourneyUv = uv;
         gl_Position = projectionMatrix * viewMatrix * worldPosition;
       }
     `,
     fragmentShader: `
-      uniform float uJourneyRiverGlow;
+      uniform float uJourneyGlow;
       uniform float uJourneySkyConnect;
       uniform float uJourneyTime;
-      varying vec3 vJourneyHaloWorldPosition;
+      varying vec3 vJourneyWorldPosition;
+      varying vec2 vJourneyUv;
+
+      float journeyGlowHash(vec2 point) {
+        return fract(sin(dot(point, vec2(127.1, 311.7))) * 43758.5453123);
+      }
+
       void main() {
-        float path = clamp((8.0 - vJourneyHaloWorldPosition.z) / 227.0, 0.0, 1.0);
-        float head = 1.0 - smoothstep(uJourneyRiverGlow - 0.055, uJourneyRiverGlow + 0.045, path);
-        float groundRiver = 1.0 - smoothstep(1.35, 3.8, vJourneyHaloWorldPosition.y);
-        float reveal = head * smoothstep(0.01, 0.075, uJourneyRiverGlow) * groundRiver;
-        float connectionPulse = sin(clamp(uJourneySkyConnect, 0.0, 1.0) * 3.14159265);
-        float current = 0.68 + 0.32 * sin(
-          vJourneyHaloWorldPosition.x * 0.44 +
-          vJourneyHaloWorldPosition.z * 0.2 -
-          uJourneyTime * 1.45
+        vec2 plane = vJourneyWorldPosition.xz;
+        float path = clamp((8.0 - plane.y) / 227.0, 0.0, 1.0);
+        float reveal = 1.0 - smoothstep(uJourneyGlow - 0.06, uJourneyGlow + 0.025, path);
+        float activation = smoothstep(0.015, 0.12, uJourneyGlow);
+
+        float current = 0.5 + 0.5 * sin(
+          plane.y * 0.42 - uJourneyTime * 1.36 + sin(plane.x * 0.17) * 1.55
         );
-        vec3 color = mix(vec3(0.06, 0.28, 0.62), vec3(0.34, 0.72, 0.84), current);
-        gl_FragColor = vec4(
-          color * (0.72 + current * 0.46 + connectionPulse * 0.2),
-          reveal * (0.045 + current * 0.072 + connectionPulse * 0.022)
+        float fineCurrent = 0.5 + 0.5 * sin(
+          plane.y * 0.88 - uJourneyTime * 2.12 + sin(plane.x * 0.26 + uJourneyTime * 0.12)
         );
+        float lengthwise = 0.5 + 0.5 * sin(
+          plane.x * 0.78 + sin(plane.y * 0.105 - uJourneyTime * 0.22) * 2.4
+        );
+        float strand = pow(lengthwise, 14.0) * 0.82;
+        strand += pow(current, 11.0) * 0.18 + pow(fineCurrent, 16.0) * 0.11;
+
+        float grain = journeyGlowHash(floor(plane * vec2(1.25, 1.7)));
+        float sparkle = pow(grain, 22.0) * (0.38 + fineCurrent * 0.62);
+        float connectionHead = smoothstep(0.0, 1.0, uJourneySkyConnect);
+        float connectionPulse = exp(-pow((path - connectionHead) * 8.4, 2.0));
+        float wake = 1.0 - smoothstep(connectionHead - 0.2, connectionHead + 0.03, path);
+
+        float edgeFade = pow(max(0.0, sin(vJourneyUv.x * 3.14159265)), 0.82);
+        float alpha = reveal * activation * edgeFade * (0.028 + strand * 0.56 + sparkle * 0.42);
+        alpha += connectionPulse * uJourneySkyConnect * edgeFade * 0.78;
+        alpha += wake * uJourneySkyConnect * strand * edgeFade * 0.24;
+        vec3 cyan = vec3(0.07, 0.72, 0.92);
+        vec3 celestial = vec3(0.34, 0.72, 1.0);
+        vec3 color = mix(cyan, celestial, uJourneySkyConnect * 0.72 + path * 0.12);
+        color *= 0.88 + strand * 2.15 + sparkle * 2.72;
+        color += connectionPulse * vec3(0.38, 0.92, 1.0) * 3.2;
+        gl_FragColor = vec4(color, clamp(alpha, 0.0, 1.0));
       }
     `,
-    transparent: true,
-    depthWrite: false,
-    depthTest: true,
-    side: THREE.DoubleSide,
-    blending: THREE.AdditiveBlending,
-    toneMapped: false,
   })
+  material.userData.journeyRiverGlowUniforms = uniforms
+  return material
+}
+
+function buildRiverAuroraGeometry() {
+  const course = [
+    { x: -2, z: 12, width: 10.5 },
+    { x: 10, z: -12, width: 9 },
+    { x: -9, z: -37, width: 7.2 },
+    { x: 8, z: -64, width: 5.8 },
+    { x: -5, z: -94, width: 4.4 },
+    { x: 5, z: -128, width: 3.2 },
+    { x: -2, z: -166, width: 2.2 },
+    { x: 1, z: -210, width: 1.25 },
+  ]
+  const positions = []
+  const normals = []
+  const uvs = []
+  const indices = []
+  course.forEach((point, index) => {
+    positions.push(
+      point.x - point.width, 0.24, point.z,
+      point.x + point.width, 0.24, point.z,
+    )
+    normals.push(0, 1, 0, 0, 1, 0)
+    const v = index / (course.length - 1)
+    uvs.push(0, v, 1, v)
+    if (index < course.length - 1) {
+      const start = index * 2
+      indices.push(start, start + 2, start + 1, start + 1, start + 2, start + 3)
+    }
+  })
+  const geometry = new THREE.BufferGeometry()
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
+  geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3))
+  geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2))
+  geometry.setIndex(indices)
+  geometry.computeBoundingSphere()
+  return geometry
 }
 
 function prepareWorld(source) {
@@ -669,7 +910,7 @@ function prepareWorld(source) {
     transition: [],
     characters: [],
     water: [],
-    waterHalos: [],
+    riverGlow: [],
     pebbles: [],
     foliage: [],
     broadleaf: [],
@@ -745,54 +986,80 @@ function prepareWorld(source) {
       groups.characters.push(object)
     }
 
-    const isPebble =
-      identity.includes('PEBBLE') ||
-      identity.includes('GRAVEL') ||
-      identity.includes('BAR_V13')
+    const isPebble = identity.includes('PEBBLE') || identity.includes('GRAVEL')
+    const isRiverbank = identity.includes('BAR_V13')
+    const isStylizedRipple = identity.includes('RIPPLES')
+    if (isStylizedRipple) {
+      object.visible = false
+      return
+    }
     const isWater =
       !isPebble &&
+      !isRiverbank &&
       (identity.includes('WATER') ||
-        identity.includes('EMERALD_S') ||
-        identity.includes('RIPPLES'))
+        identity.includes('EMERALD_S'))
+    const isMainRiver =
+      identity.includes('EMERALD_S') ||
+      identity.includes('CLEAR_EMERALD_RIVER')
 
     if (isPebble) {
+      groups.pebbles.push(object)
+      // The source GLB's riverbed meshes are pale guide geometry rather than a
+      // physically modelled bed. They read as a white painted ribbon through
+      // transparent water, so the shader now supplies the submerged depth and
+      // fine gravel variation instead.
+      object.visible = false
+      return
+    }
+
+    if (isRiverbank) {
       groups.pebbles.push(object)
       materials.forEach((material) => {
         material.transparent = false
         material.opacity = 1
         material.depthWrite = true
-        material.color?.lerp(new THREE.Color('#89958a'), 0.72)
-        if ('roughness' in material) material.roughness = 0.94
+        const isPaleBank = identity.includes('PALE')
+        material.color?.set(isPaleBank ? '#777568' : '#59665d')
+        if ('roughness' in material) material.roughness = 0.96
         if ('metalness' in material) material.metalness = 0
+        if ('emissive' in material) {
+          material.emissive.set('#414b47')
+          material.emissiveIntensity = 0.17
+        }
+        applyWetGravelDetail(material, isPaleBank ? 'bar-pale' : 'bar-granite')
       })
     }
 
     if (isWater) {
       groups.water.push(object)
       object.receiveShadow = false
-      materials.forEach((material) => {
+      if (isMainRiver) {
+        materials.forEach((material) => material.dispose())
+        object.material = createClearRiverMaterial()
+        object.renderOrder = 3
+      } else materials.forEach((material) => {
         if ('roughness' in material) material.roughness = 0.1
-        if ('metalness' in material) material.metalness = 0.02
+        if ('metalness' in material) material.metalness = 0
         material.transparent = true
-        material.opacity = 0.88
+        material.opacity = 0.42
         material.depthWrite = false
-        material.color?.set('#3ba8a2')
+        material.depthTest = true
+        material.map = null
+        material.alphaMap = null
+        material.color?.set('#78b9af')
         if ('emissive' in material) {
-          material.emissive.set('#174f50')
-          material.emissiveIntensity = 0.09
+          material.emissiveMap = null
+          material.emissive.set('#1b6e68')
+          material.emissiveIntensity = 0.2
         }
         if (material.isMeshPhysicalMaterial) {
           material.ior = 1.333
-          material.transmission = Math.max(material.transmission ?? 0, 0.12)
-          material.thickness = 0.18
-          material.clearcoat = 0.42
-          material.clearcoatRoughness = 0.18
-        }
-        if (material.map) {
-          material.map = material.map.clone()
-          material.map.wrapS = THREE.RepeatWrapping
-          material.map.wrapT = THREE.RepeatWrapping
-          material.map.needsUpdate = true
+          material.transmission = 0
+          material.thickness = 0.045
+          material.clearcoat = 0.82
+          material.clearcoatRoughness = 0.08
+          material.attenuationColor?.set('#7fc1b6')
+          material.attenuationDistance = 12
         }
         applyWaterReflection(material)
       })
@@ -824,8 +1091,6 @@ function prepareWorld(source) {
         material.opacity = 1
         material.depthWrite = true
         material.depthTest = true
-        material.normalMap = null
-        material.roughnessMap = null
         if (material.map) {
           material.map = material.map.clone()
           material.map.wrapS = THREE.RepeatWrapping
@@ -848,16 +1113,14 @@ function prepareWorld(source) {
     })
   })
 
-  groups.water.forEach((source, index) => {
-    const halo = new THREE.Mesh(source.geometry, createRiverHaloMaterial())
-    halo.name = `JOURNEY_RIVER_HALO_${index}`
-    halo.position.y = 0.035
-    halo.scale.set(1.018, 1.0, 1.018)
-    halo.renderOrder = 3
-    halo.frustumCulled = true
-    source.add(halo)
-    groups.waterHalos.push(halo)
-  })
+  const riverGlow = new THREE.Mesh(buildRiverAuroraGeometry(), createRiverGlowMaterial())
+  riverGlow.name = 'JOURNEY_RIVER_AURORA_OVERLAY'
+  riverGlow.renderOrder = 6
+  riverGlow.frustumCulled = false
+  riverGlow.castShadow = false
+  riverGlow.receiveShadow = false
+  root.add(riverGlow)
+  groups.riverGlow.push(riverGlow)
 
   return { root, groups }
 }
@@ -969,6 +1232,61 @@ function DriftingClouds({ groupRef, materialRefs }) {
   )
 }
 
+function ValleyFogBanks({ groupRef, materialRefs, layers = 7 }) {
+  const textures = useMemo(
+    () => [createCloudTexture(18400), createCloudTexture(22100), createCloudTexture(26700)],
+    [],
+  )
+  useEffect(() => () => textures.forEach((texture) => texture.dispose()), [textures])
+
+  const banks = useMemo(() => {
+    const presets = [
+      { position: [-22, 7, -35], scale: [78, 24, 1], opacity: 0.42, speed: 0.42 },
+      { position: [32, 12, -62], scale: [116, 30, 1], opacity: 0.36, speed: 0.31 },
+      { position: [-58, 17, -92], scale: [146, 35, 1], opacity: 0.31, speed: 0.25 },
+      { position: [64, 21, -122], scale: [172, 40, 1], opacity: 0.28, speed: 0.2 },
+      { position: [-36, 27, -158], scale: [188, 45, 1], opacity: 0.24, speed: 0.17 },
+      { position: [40, 34, -198], scale: [210, 51, 1], opacity: 0.2, speed: 0.14 },
+      { position: [-12, 42, -244], scale: [232, 58, 1], opacity: 0.17, speed: 0.11 },
+    ]
+    return presets.slice(0, Math.max(3, Math.min(layers, presets.length)))
+  }, [layers])
+
+  return (
+    <group ref={groupRef}>
+      {banks.map((bank, index) => (
+        <sprite
+          key={`${bank.position.join('-')}-${index}`}
+          position={bank.position}
+          scale={bank.scale}
+          renderOrder={index - 2}
+          frustumCulled={false}
+          userData={{
+            baseX: bank.position[0],
+            baseY: bank.position[1],
+            opacity: bank.opacity,
+            speed: bank.speed,
+          }}
+        >
+          <spriteMaterial
+            ref={(material) => {
+              materialRefs.current[index] = material
+            }}
+            map={textures[index % textures.length]}
+            color="#dce8df"
+            transparent
+            opacity={0}
+            alphaTest={0.006}
+            depthWrite={false}
+            depthTest
+            toneMapped={false}
+          />
+        </sprite>
+      ))}
+    </group>
+  )
+}
+
 function MysticMotes({ groupRef, materialRef, qualityScale = 1 }) {
   const geometry = useMemo(
     () => buildMysticMotes(Math.round(420 * qualityScale)),
@@ -1023,8 +1341,10 @@ export default function JourneyScene({
   skyConnectionProgress = 0,
   activeGate = null,
   holdProgress = 0,
+  fogCompleted = false,
   presentationMode = false,
   outroMode = false,
+  onListenerPose,
   quality = { name: 'high', particles: 1, shadows: true, fogLayers: 7 },
 }) {
   const renderer = useThree((state) => state.gl)
@@ -1083,12 +1403,15 @@ export default function JourneyScene({
   const ambientRef = useRef(null)
   const caveGuideLightRef = useRef(null)
   const mysticLightRef = useRef(null)
+  const riverMysticLightRef = useRef(null)
   const starMaterialRef = useRef(null)
   const milkyMaterialRef = useRef(null)
   const milkyPointsRef = useRef(null)
   const skyBridgeRef = useRef(null)
   const cloudGroupRef = useRef(null)
   const cloudMaterialRefs = useRef([])
+  const valleyFogGroupRef = useRef(null)
+  const valleyFogMaterialRefs = useRef([])
   const skyRigRef = useRef(null)
   const motesRef = useRef(null)
   const motesMaterialRef = useRef(null)
@@ -1218,7 +1541,7 @@ export default function JourneyScene({
         )
     const cameraProgress = THREE.MathUtils.lerp(
       progress,
-      74,
+      94,
       outroFramingRef.current,
     )
     const clipTime = clip
@@ -1234,23 +1557,25 @@ export default function JourneyScene({
       if (sampledPosition) camera.position.fromArray(sampledPosition)
       if (sampledQuaternion) camera.quaternion.fromArray(sampledQuaternion).normalize()
 
-      const walkStrength = 1 - smoothstep(12.5, 15, progress)
+      const walkStrength = 1 - smoothstep(11.3, 13.5, progress)
       const pointerStrength =
         smoothstep(19, 24, progress) *
         (1 - smoothstep(79, 86, cameraProgress)) *
         (presentationMode ? 0.42 : 1)
+      const openVista = smoothstep(18, 25, cameraProgress)
+      const viewportAspect = size.width / Math.max(size.height, 1)
+      const portraitFactor = 1 - smoothstep(0.62, 0.95, viewportAspect)
+      const portraitVista = smoothstep(12, 25, cameraProgress)
       const endingLift = smoothstep(
-        VISUAL_TIMING.endingLiftStart,
-        VISUAL_TIMING.endingLiftEnd,
+        ENDING_CAMERA.liftStart,
+        ENDING_CAMERA.liftEnd,
         cameraProgress,
       )
       const endingWide = smoothstep(
-        VISUAL_TIMING.endingWideStart,
-        VISUAL_TIMING.endingWideEnd,
+        ENDING_CAMERA.wideStart,
+        ENDING_CAMERA.wideEnd,
         cameraProgress,
       )
-      const openVista = smoothstep(18, 25, cameraProgress) *
-        (1 - smoothstep(82, 90, cameraProgress))
       pointerLookRef.current.x = THREE.MathUtils.damp(
         pointerLookRef.current.x,
         state.pointer.x * pointerStrength,
@@ -1274,37 +1599,46 @@ export default function JourneyScene({
         .set(1, 0, 0)
         .applyQuaternion(camera.quaternion)
         .normalize()
-      camera.position.addScaledVector(cameraScratch.forward, -endingWide * 3.8)
       camera.position.addScaledVector(
         cameraScratch.forward,
-        presentationMode ? -1.8 : 0,
+        (presentationMode ? -1.8 : 0) -
+          endingWide * ENDING_CAMERA.pullBack +
+          portraitFactor * THREE.MathUtils.lerp(0.38, 1.05, portraitVista),
       )
       camera.position.addScaledVector(cameraScratch.right, horizontalBob)
       camera.position.addScaledVector(
         cameraScratch.right,
         pointerLookRef.current.x * 0.038,
       )
-      camera.position.y += verticalBob + pointerLookRef.current.y * 0.022
+      camera.position.y +=
+        verticalBob +
+        endingLift * ENDING_CAMERA.cameraLift +
+        pointerLookRef.current.y * 0.022 +
+        portraitFactor * THREE.MathUtils.lerp(-0.08, 0.18, portraitVista)
       cameraScratch.target.copy(camera.position).add(cameraScratch.forward)
       cameraScratch.target.addScaledVector(
         cameraScratch.right,
         pointerLookRef.current.x * 0.16,
       )
       cameraScratch.target.y +=
-        endingLift * 0.14 +
         (presentationMode ? 0.12 : 0) +
-        pointerLookRef.current.y * 0.095
+        endingLift * ENDING_CAMERA.lift +
+        pointerLookRef.current.y * 0.095 -
+        portraitFactor * (1 - endingLift) * 0.08
       camera.up.set(0, 1, 0)
       camera.lookAt(cameraScratch.target)
       const desiredFov =
         camera.userData.journeyBaseFov +
         openVista * 4.5 +
-        endingWide * 14 +
-        (presentationMode ? 15 : 0)
+        endingWide * ENDING_CAMERA.fov +
+        (presentationMode ? 15 : 0) +
+        portraitFactor * THREE.MathUtils.lerp(7.5, 4.5, portraitVista)
       if (Math.abs(camera.fov - desiredFov) > 0.001) {
         camera.fov = desiredFov
         camera.updateProjectionMatrix()
       }
+      camera.updateMatrixWorld()
+      onListenerPose?.(camera)
     }
 
     if (camera?.isCamera && skyRigRef.current) {
@@ -1324,9 +1658,9 @@ export default function JourneyScene({
       progress,
     )
     const caveRelease = smoothstep(7, 20, progress)
-    const daySky = new THREE.Color('#78bdc8')
+    const daySky = new THREE.Color('#55b8cf')
     const sunsetSky = new THREE.Color('#d66e5f')
-    const nightSky = new THREE.Color('#10264c')
+    const nightSky = new THREE.Color('#17385f')
     const skyColor = daySky
       .clone()
       .lerp(sunsetSky, sunsetColorMix)
@@ -1334,7 +1668,7 @@ export default function JourneyScene({
     state.scene.background = skyColor
 
     if (cloudGroupRef.current) {
-      const openSky = smoothstep(17.5, 24, progress)
+      const openSky = smoothstep(15, 21, progress)
       const cloudNightFade = 1 - smoothstep(0.12, 0.92, night)
       const cloudColor = new THREE.Color('#f4f5ef').lerp(
         new THREE.Color('#ffd0ba'),
@@ -1360,36 +1694,69 @@ export default function JourneyScene({
       })
     }
 
+    const valleyFogArrival = smoothstep(9.3, 13.2, progress)
+    const holdFogRemaining = activeGate === 'fog' ? 1 - clamp01(holdProgress) : 1
+    const valleyMist = fogCompleted ? 0 : valleyFogArrival * holdFogRemaining
+    const valleyNight = smoothstep(51, 59, progress)
+    if (valleyFogGroupRef.current) {
+      const fogColor = new THREE.Color('#dbe5dc')
+        .lerp(new THREE.Color('#e7b3a2'), sunset * 0.52)
+        .lerp(new THREE.Color('#7189ad'), night * 0.72)
+      valleyFogGroupRef.current.children.forEach((bank, index) => {
+        const material = valleyFogMaterialRefs.current[index]
+        const breathing = 0.86 + Math.sin(state.clock.elapsedTime * 0.13 + index * 1.31) * 0.14
+        if (material) {
+          material.opacity =
+            valleyMist * 1.78 *
+            (bank.userData.opacity ?? 0.2) *
+            breathing *
+            (1 - valleyNight * 0.46)
+          material.color.copy(fogColor)
+        }
+        bank.position.x =
+          bank.userData.baseX +
+          Math.sin(state.clock.elapsedTime * bank.userData.speed * 0.14 + index * 0.8) *
+            (5.5 + index * 1.7)
+        bank.position.y =
+          bank.userData.baseY +
+          Math.sin(state.clock.elapsedTime * 0.075 + index * 1.4) * (0.7 + index * 0.17)
+      })
+    }
+
     const daylightExposure = THREE.MathUtils.lerp(
       CAVE_LOOK.exposure,
-      1.02,
+      1.08,
       caveRelease,
     )
     state.gl.toneMappingExposure = THREE.MathUtils.lerp(
       daylightExposure,
-      1.14,
+      0.98,
       night,
-    ) + outroFramingRef.current * 0.16
+    ) + outroFramingRef.current * 0.3
 
-    const entranceFog =
-      progress < 15
-        ? THREE.MathUtils.lerp(0.0105, 0.00105, smoothstep(10, 15, progress))
-        : 0.0007 * (1 - smoothstep(15, 20, progress)) + 0.00035
+    const openAirFogDensity = THREE.MathUtils.lerp(0.00062, 0.00072, night)
+    const preHoldFog = progress < 9.3
+      ? 0.018
+      : THREE.MathUtils.lerp(0.018, 0.012, smoothstep(9.3, 13.5, progress))
+    const holdClear = activeGate === 'fog' ? clamp01(holdProgress) : 0
+    const entranceFog = fogCompleted
+      ? openAirFogDensity
+      : THREE.MathUtils.lerp(preHoldFog, openAirFogDensity, holdClear)
     if (state.scene.fog) {
-      const openAirFog = skyColor.clone().multiplyScalar(night > 0.5 ? 0.7 : 0.88)
+      const openAirFog = skyColor.clone().multiplyScalar(night > 0.5 ? 0.82 : 0.91)
       state.scene.fog.color
         .set('#050909')
         .lerp(openAirFog, caveRelease)
       state.scene.fog.density = Math.max(
-        0.00035,
-        entranceFog * (1 - travelWindRef.current * 0.11),
+        openAirFogDensity,
+        entranceFog * (1 - travelWindRef.current * 0.08),
       )
     }
 
     if (sunRef.current) {
       const dayIntensity = THREE.MathUtils.lerp(
         CAVE_LOOK.sunIntensity,
-        2.65,
+        3,
         caveRelease,
       )
       sunRef.current.intensity = THREE.MathUtils.lerp(dayIntensity, 0.52, night)
@@ -1403,11 +1770,11 @@ export default function JourneyScene({
     if (skyLightRef.current) {
       const dayIntensity = THREE.MathUtils.lerp(
         CAVE_LOOK.skyIntensity,
-        1.2,
+        1.32,
         caveRelease,
       )
-      skyLightRef.current.intensity = THREE.MathUtils.lerp(dayIntensity, 0.78, night)
-        + outroFramingRef.current * 0.16
+      skyLightRef.current.intensity = THREE.MathUtils.lerp(dayIntensity, 1.08, night)
+        + outroFramingRef.current * 0.28
       skyLightRef.current.color
         .set('#d9eff4')
         .lerp(new THREE.Color('#e5a49a'), sunset * 0.72)
@@ -1420,11 +1787,11 @@ export default function JourneyScene({
     if (ambientRef.current) {
       const dayIntensity = THREE.MathUtils.lerp(
         CAVE_LOOK.ambientIntensity,
-        0.18,
+        0.15,
         caveRelease,
       )
-      ambientRef.current.intensity = THREE.MathUtils.lerp(dayIntensity, 0.18, night)
-        + outroFramingRef.current * 0.07
+      ambientRef.current.intensity = THREE.MathUtils.lerp(dayIntensity, 0.23, night)
+        + outroFramingRef.current * 0.14
       ambientRef.current.color
         .set('#a7b8b4')
         .lerp(new THREE.Color('#b9877e'), sunset * 0.58)
@@ -1467,7 +1834,7 @@ export default function JourneyScene({
       )
     }
 
-    const openValley = smoothstep(18, 24, progress)
+    const openValley = smoothstep(16.5, 22, progress)
     if (motesMaterialRef.current) {
       motesMaterialRef.current.opacity =
         openValley * (1 - night * 0.72) * (0.015 + travelWindRef.current * 0.09)
@@ -1497,6 +1864,10 @@ export default function JourneyScene({
       ? 0.018 + gateArrivalPulse * 0.027 + gateBreath * 0.006
       : 0
     const riverGlow = Math.max(smoothstep(55, 61, progress), riverPromptGlow)
+    if (riverMysticLightRef.current) {
+      riverMysticLightRef.current.intensity =
+        night * (riverGlow * 1.35 + skyConnectionProgress * 1.8)
+    }
     groups.mountains.forEach((mesh) => {
       const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
       materials.forEach((material) => {
@@ -1516,9 +1887,38 @@ export default function JourneyScene({
     groups.water.forEach((mesh, index) => {
       const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
       materials.forEach((material) => {
+        const isClearRiver = material.name === 'MAT_JOURNEY_CLEAR_RIVER'
+        if ('color' in material) {
+          material.color
+            .set(isClearRiver ? '#38b9a4' : '#45ae9c')
+            .lerp(new THREE.Color(isClearRiver ? '#163f65' : '#153f65'), night)
+        }
+        if ('opacity' in material) {
+          material.opacity = THREE.MathUtils.lerp(
+            isClearRiver ? 0.98 : 0.9,
+            isClearRiver ? 0.46 : 0.43,
+            night,
+          )
+        }
+        if ('roughness' in material) {
+          material.roughness = THREE.MathUtils.lerp(
+            isClearRiver ? 0.085 : 0.1,
+            isClearRiver ? 0.04 : 0.05,
+            night,
+          )
+        }
+        if (isClearRiver && 'transmission' in material) {
+          material.transmission = THREE.MathUtils.lerp(0, 0.54, night)
+          material.clearcoatRoughness = THREE.MathUtils.lerp(0.09, 0.04, night)
+          material.attenuationColor
+            .set('#42bda7')
+            .lerp(new THREE.Color('#1b5477'), night)
+        }
         if ('emissive' in material) {
-          material.emissive.set('#3aaec2')
-          material.emissiveIntensity = 0.025 + night * 0.06
+          material.emissive.set(isClearRiver ? '#0b3639' : '#155b59')
+          material.emissiveIntensity = isClearRiver
+            ? THREE.MathUtils.lerp(0.025, 0.055, night)
+            : THREE.MathUtils.lerp(0.13, 0.055, night)
         }
         const uniforms = material.userData.journeyWaterUniforms
         if (uniforms) {
@@ -1535,19 +1935,21 @@ export default function JourneyScene({
         }
       })
     })
-    groups.waterHalos.forEach((halo) => {
-      halo.material.uniforms.uJourneyRiverGlow.value = riverGlow
-      halo.material.uniforms.uJourneySkyConnect.value = skyConnectionProgress
-      halo.material.uniforms.uJourneyTime.value = state.clock.elapsedTime
+    groups.riverGlow.forEach((mesh) => {
+      const uniforms = mesh.material.userData.journeyRiverGlowUniforms
+      if (!uniforms) return
+      uniforms.uJourneyGlow.value = riverGlow
+      uniforms.uJourneySkyConnect.value = skyConnectionProgress
+      uniforms.uJourneyTime.value = state.clock.elapsedTime
+      mesh.visible = night > 0.06 && riverGlow > 0.01
     })
-
     groups.foliage.forEach((mesh, index) => {
       const baseRotation = mesh.userData.journeyBaseRotationZ ?? 0
       mesh.rotation.z =
         baseRotation + Math.sin(state.clock.elapsedTime * 0.45 + index * 1.7) * 0.0022
     })
 
-    const cavePresence = 1 - smoothstep(16.4, 22.6, progress)
+    const cavePresence = 1 - smoothstep(13.5, 20.2, progress)
     groups.cave.forEach((object) => {
       object.visible = cavePresence > 0.004
       const materials = Array.isArray(object.material) ? object.material : [object.material]
@@ -1614,10 +2016,23 @@ export default function JourneyScene({
         decay={2}
         color="#a9e5c0"
       />
+      <pointLight
+        ref={riverMysticLightRef}
+        position={[0, 4.2, -32]}
+        intensity={0}
+        distance={105}
+        decay={2}
+        color="#61dff0"
+      />
       <MysticMotes
         groupRef={motesRef}
         materialRef={motesMaterialRef}
         qualityScale={quality.particles}
+      />
+      <ValleyFogBanks
+        groupRef={valleyFogGroupRef}
+        materialRefs={valleyFogMaterialRefs}
+        layers={quality.fogLayers}
       />
       <group ref={skyRigRef}>
         <DriftingClouds

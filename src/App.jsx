@@ -9,12 +9,13 @@ const DEV_PREVIEW = import.meta.env.DEV
   : null
 const PREVIEW_PROGRESS = {
   cave: 5,
-  foghold: 15,
-  day: 28,
-  sunset: 40,
-  night: 51,
+  foghold: 13.5,
+  day: 30,
+  sunset: 46,
+  night: 56,
   riverhold: 55,
   river: 70,
+  final: 94,
   portfolio: 28,
   outro: 100,
 }[DEV_PREVIEW] ?? 0
@@ -78,17 +79,17 @@ const EXPERIENCE_TUNING = {
   gateCooldownMs: 520,
 }
 
-// Minimum forward time for each chapter. Together these total 30 seconds.
+// Minimum forward time for each chapter. The final night chapter deliberately slows the exit.
 const EXPERIENCE_PACE = [
-  { start: 0, end: 12, minSeconds: 4.5 }, // Walk through the cave.
-  { start: 12, end: 15, minSeconds: 1.5 }, // Approach the exit.
-  { start: 15, end: 20, minSeconds: 2.5 }, // Hold to clear the mist.
-  { start: 20, end: 35, minSeconds: 2 }, // Summer daylight.
-  { start: 35, end: 45, minSeconds: 6 }, // Day to sunset.
-  { start: 45, end: 55, minSeconds: 5 }, // Sunset to night.
+  { start: 0, end: 11.5, minSeconds: 4.5 }, // Walk through the cave.
+  { start: 11.5, end: 13.5, minSeconds: 1 }, // Reach the mist and respond immediately.
+  { start: 13.5, end: 20, minSeconds: 2.5 }, // Hold to clear the mist.
+  { start: 20, end: 42, minSeconds: 7 }, // Let the clear blue valley breathe.
+  { start: 42, end: 51, minSeconds: 5 }, // Day to sunset.
+  { start: 51, end: 55, minSeconds: 2.5 }, // Sunset to night.
   { start: 55, end: 65, minSeconds: 5.5 }, // Illuminate and connect the river.
-  { start: 65, end: 82, minSeconds: 1.5 }, // Luminous landscape.
-  { start: 82, end: 100, minSeconds: 1.5 }, // Final camera reveal.
+  { start: 65, end: 82, minSeconds: 3 }, // Luminous landscape.
+  { start: 82, end: 100, minSeconds: 5.5 }, // Let the night landscape settle before the ending.
 ]
 
 const getMaximumProgressRate = (progress) => {
@@ -100,7 +101,7 @@ const getMaximumProgressRate = (progress) => {
 
 const GATES = {
   fog: {
-    at: 15,
+    at: 13.5,
     end: 20,
     duration: 2500,
     label: 'HOLD',
@@ -122,7 +123,7 @@ const SKY_CONNECTION = {
 const STORY_MESSAGES = [
   {
     start: 21,
-    end: 31,
+    end: 34,
     number: '01',
     title: ['The world opens', 'when you stay.'],
     tone: 'dark',
@@ -138,9 +139,9 @@ const STORY_MESSAGES = [
   },
   {
     start: 84,
-    end: 96,
+    end: 98,
     number: '03',
-    title: ['What you notice,', 'remains.'],
+    title: ['Night settles', 'over the valley.'],
     tone: 'light',
     align: 'right',
   },
@@ -154,7 +155,7 @@ const PORTFOLIO_IMAGE_URLS = [
   '/portfolio/research-vr.jpg',
   '/portfolio/philosophy-lake.jpg',
   '/portfolio/nagano-summer.jpg',
-  '/portfolio/journey-day.jpg',
+  '/portfolio/journey-day-clear-river.jpg',
   '/portfolio/journey-cave.jpg',
   '/portfolio/journey-river.jpg',
   '/portfolio/journey-storyboard.jpg',
@@ -247,17 +248,47 @@ function useAmbientAudio(progress, fogCompleted) {
     }
   }, [])
 
+  const updateListenerPose = useCallback((camera) => {
+    const audio = audioRef.current
+    if (!audio || audio.context.state === 'closed' || !camera?.matrixWorld) return
+    const listener = audio.context.listener
+    const elements = camera.matrixWorld.elements
+    const now = audio.context.currentTime
+    const position = [elements[12], elements[13], elements[14]]
+    const forward = [-elements[8], -elements[9], -elements[10]]
+    const up = [elements[4], elements[5], elements[6]]
+    if (listener.positionX) {
+      listener.positionX.setTargetAtTime(position[0], now, 0.045)
+      listener.positionY.setTargetAtTime(position[1], now, 0.045)
+      listener.positionZ.setTargetAtTime(position[2], now, 0.045)
+      listener.forwardX.setTargetAtTime(forward[0], now, 0.045)
+      listener.forwardY.setTargetAtTime(forward[1], now, 0.045)
+      listener.forwardZ.setTargetAtTime(forward[2], now, 0.045)
+      listener.upX.setTargetAtTime(up[0], now, 0.045)
+      listener.upY.setTargetAtTime(up[1], now, 0.045)
+      listener.upZ.setTargetAtTime(up[2], now, 0.045)
+    } else {
+      listener.setPosition(...position)
+      listener.setOrientation(...forward, ...up)
+    }
+  }, [])
+
   useEffect(() => {
     const audio = audioRef.current
     if (!audioReady || !audio?.tracks) return
     const now = audio.context.currentTime
-    const outside = clamp((progress - 16) / 10, 0, 1)
-    const night = clamp((progress - 44) / 12, 0, 1)
-    const valley = clamp((progress - 18) / 18, 0, 1)
+    const outside = clamp((progress - 13.5) / 9, 0, 1)
+    const night = clamp((progress - 51) / 9, 0, 1)
+    const quietNight = clamp((progress - 58) / 15, 0, 1)
+    const valley = clamp((progress - 16) / 18, 0, 1)
     const levels = {
-      cave: 0.2 * (1 - clamp((progress - 9) / 15, 0, 1)),
-      wind: (fogCompleted ? 0.12 : 0.018) * outside * (1 - night * 0.84),
-      river: (0.004 + valley * 0.115) * (1 - night * 0.38),
+      cave: 0.2 * (1 - clamp((progress - 8) / 12, 0, 1)),
+      wind:
+        (fogCompleted ? 0.12 : 0.018) * outside * (1 - quietNight),
+      river:
+        (0.004 + valley * 0.115) *
+        (1 - night * 0.28) *
+        (1 - quietNight * 0.42),
     }
 
     Object.entries(levels).forEach(([name, level]) => {
@@ -270,28 +301,12 @@ function useAmbientAudio(progress, fogCompleted) {
     const windFilter = audio.tracks.wind?.filter
     const riverFilter = audio.tracks.river?.filter
     if (windFilter) {
-      windFilter.frequency.setTargetAtTime(72 + outside * 34 + night * 28, now, 1.8)
+      windFilter.frequency.setTargetAtTime(72 + outside * 34 - quietNight * 38, now, 1.8)
     }
     if (riverFilter) {
       riverFilter.frequency.setTargetAtTime(5200 + valley * 3000 - night * 1700, now, 2.4)
     }
 
-    const listener = audio.context.listener
-    const listenerZ = 18 - progress * 2.25
-    if (listener.positionX) {
-      listener.positionX.linearRampToValueAtTime(0, now + 0.2)
-      listener.positionY.linearRampToValueAtTime(2.2, now + 0.2)
-      listener.positionZ.linearRampToValueAtTime(listenerZ, now + 0.2)
-      listener.forwardX.value = 0
-      listener.forwardY.value = 0
-      listener.forwardZ.value = -1
-      listener.upX.value = 0
-      listener.upY.value = 1
-      listener.upZ.value = 0
-    } else {
-      listener.setPosition(0, 2.2, listenerZ)
-      listener.setOrientation(0, 0, -1, 0, 1, 0)
-    }
   }, [audioReady, fogCompleted, progress])
 
   useEffect(
@@ -304,7 +319,7 @@ function useAmbientAudio(progress, fogCompleted) {
     [],
   )
 
-  return ensureAudio
+  return { ensureAudio, updateListenerPose }
 }
 
 function HiromuMark({ stage = 4, compact = false }) {
@@ -765,7 +780,7 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
         </article>
         <article id="terrain" className={panelClassName('terrain')} data-story-panel="terrain">
           <PortfolioImage src="/portfolio/project-goal-v2.png" alt="The finished Journey valley beside its Blender terrain wireframe" caption="BLENDER TERRAIN / WEBGL LIGHTING" />
-          <div className="portfolio-panel__copy"><span className="portfolio-kicker">TERRAIN &amp; LIGHT</span><h3>Actual depth lets every change belong to the same place.</h3><p>The valley was shaped as 3D terrain in Blender, then shaded with projected rock detail and watercolor-like pigment. In the browser, the same geometry receives moving light, mist, shadows and the transition from day to night, so the scene changes without becoming a different image.</p></div>
+          <div className="portfolio-panel__copy"><span className="portfolio-kicker">TERRAIN &amp; LIGHT</span><h3>Actual depth lets every change belong to the same place.</h3><p>The valley was shaped as 3D terrain in Blender, then shaded with projected rock detail, broken snowfields and watercolor-like pigment. In the browser, the same geometry receives moving light, layered mist, water reflections and the transition from day to night, so the scene changes without becoming a different image.</p></div>
         </article>
         <article id="interaction" className={panelClassName('interaction')} data-story-panel="interaction">
           <PortfolioImage src="/portfolio/project-interaction-v2.png" alt="The HOLD interaction placed within the night-time Journey landscape" caption="HOLD / WORLD RESPONSE" className="is-dark" />
@@ -777,7 +792,7 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
         </article>
         <article id="emotion" className={panelClassName('emotion')} data-story-panel="emotion">
           <PortfolioImage src="/portfolio/project-night-clean.png" alt="Journey valley at the quiet end of its night sequence" caption="TENSION / AWE / AFTERGLOW" className="is-dark" />
-          <div className="portfolio-panel__copy"><span className="portfolio-kicker">EMOTIONAL ARC</span><h3>From tension, to awe, to calm.</h3><p>The order of space, interaction, sound and time was planned as one emotional curve: uncertainty in the cave, release in the open valley, wonder as the river and sky connect, then enough stillness for the feeling to remain.</p><button type="button" onClick={onReplay}>EXPERIENCE AGAIN <span>↗</span></button></div>
+          <div className="portfolio-panel__copy"><span className="portfolio-kicker">EMOTIONAL ARC</span><h3>From tension, to awe, to stillness.</h3><p>The order of space, interaction, sound and time was planned as one emotional curve: uncertainty in the cave, release in the open valley, wonder as the river and sky connect, then stillness beneath the night sky.</p><button type="button" onClick={onReplay}>EXPERIENCE AGAIN <span>↗</span></button></div>
         </article>
         <footer className="portfolio-story__end">
           <span>END OF PROJECT</span>
@@ -869,7 +884,7 @@ function App() {
   const [holdProgress, setHoldProgress] = useState(PREVIEW_HOLD_PROGRESS)
   const [holdOrigin, setHoldOrigin] = useState({ x: 50, y: 50 })
   const [skyConnectionProgress, setSkyConnectionProgress] = useState(
-    DEV_PREVIEW === 'outro' || DEV_PREVIEW === 'riverhold' ? 1 : 0,
+    ['riverhold', 'river', 'final', 'outro'].includes(DEV_PREVIEW) ? 1 : 0,
   )
   const [isSkyConnecting, setIsSkyConnecting] = useState(false)
   const [fogCompleted, setFogCompleted] = useState(PREVIEW_PROGRESS >= 20)
@@ -897,10 +912,12 @@ function App() {
   const holdRef = useRef({ frame: null, startedAt: 0, pointerId: null })
   const skyConnectionRef = useRef({ frame: null, startedAt: 0 })
   const touchRef = useRef({ active: false, y: 0 })
-  const shownMessagesRef = useRef(new Set())
+  const activeMessageNumberRef = useRef(null)
+  const previousStoryProgressRef = useRef(PREVIEW_PROGRESS)
+  const storyDirectionRef = useRef(1)
   const messageTimersRef = useRef({ reveal: null, hide: null, clear: null })
   const portfolioRef = useRef(DEV_PREVIEW === 'portfolio' || INITIAL_VIEW === 'portfolio')
-  const ensureAudio = useAmbientAudio(progress, fogCompleted)
+  const { ensureAudio, updateListenerPose } = useAmbientAudio(progress, fogCompleted)
 
   const handleJourneyAssets = useCallback(({ active, progress: nextProgress }) => {
     setJourneyAssets((current) =>
@@ -1090,8 +1107,13 @@ function App() {
         pendingGateRef.current = null
         setGate(pendingGate)
       }
-      progressRef.current = next
-      setProgress(next)
+      // Keep the render loop alive for Three.js, but do not enqueue a React
+      // update once the eased progress has settled. Updating on every frame
+      // caused a feedback loop in narrow/short viewports and could stop input.
+      if (Math.abs(next - current) > 0.0001) {
+        progressRef.current = next
+        setProgress(next)
+      }
       frame = requestAnimationFrame(tick)
     }
     frame = requestAnimationFrame(tick)
@@ -1275,21 +1297,37 @@ function App() {
   )
 
   const activeConfig = activeGate ? GATES[activeGate] : null
-  const isNight = progress >= 45
-  const caveDepth = 1 - clamp((progress - 7) / 13, 0, 1)
-  const openAir = clamp((progress - 12) / 8, 0, 1)
-  const valleyMist =
-    progress < 12
+  const isNight = progress >= 51
+  const caveDepth = 1 - clamp((progress - 6.5) / 12, 0, 1)
+  const openAir = clamp((progress - 11.5) / 8.5, 0, 1)
+  const valleyMist = fogCompleted
+    ? 0
+    : progress < 10
       ? 0
-      : progress < 15
-        ? clamp((progress - 12) / 3, 0, 1)
-        : 1 - clamp((progress - 15) / 5, 0, 1)
+      : activeGate === 'fog'
+        ? 1 - holdProgress
+        : progress < GATES.fog.at
+          ? clamp((progress - 10) / (GATES.fog.at - 10), 0, 1)
+          : 1
   const queuedMessage = STORY_MESSAGES.find(
     (message) => progress >= message.start && progress <= message.end,
   )
   useEffect(() => {
-    if (!queuedMessage || shownMessagesRef.current.has(queuedMessage.number)) return
-    shownMessagesRef.current.add(queuedMessage.number)
+    const previousProgress = previousStoryProgressRef.current
+    const nextDirection = progress < previousProgress ? -1 : progress > previousProgress ? 1 : storyDirectionRef.current
+    const directionChanged = nextDirection !== storyDirectionRef.current
+    previousStoryProgressRef.current = progress
+    storyDirectionRef.current = nextDirection
+
+    if (!queuedMessage) {
+      activeMessageNumberRef.current = null
+      return
+    }
+    if (
+      activeMessageNumberRef.current === queuedMessage.number &&
+      !directionChanged
+    ) return
+    activeMessageNumberRef.current = queuedMessage.number
     const timers = messageTimersRef.current
     cancelAnimationFrame(timers.reveal)
     window.clearTimeout(timers.hide)
@@ -1299,7 +1337,7 @@ function App() {
     timers.reveal = requestAnimationFrame(() => setMessageVisible(true))
     timers.hide = window.setTimeout(() => setMessageVisible(false), 3500)
     timers.clear = window.setTimeout(() => setDisplayedMessage(null), 4100)
-  }, [queuedMessage])
+  }, [progress, queuedMessage])
 
   useEffect(
     () => () => {
@@ -1327,13 +1365,15 @@ function App() {
     portfolioRef.current = false
     enteredRef.current = false
     progressRef.current = 0
+    previousStoryProgressRef.current = 0
+    storyDirectionRef.current = 1
     targetRef.current = 0
     gateRef.current = null
     pendingGateRef.current = null
     fogCompletedRef.current = false
     riverCompletedRef.current = false
     inputCooldownUntilRef.current = 0
-    shownMessagesRef.current.clear()
+    activeMessageNumberRef.current = null
     const messageTimers = messageTimersRef.current
     cancelAnimationFrame(messageTimers.reveal)
     window.clearTimeout(messageTimers.hide)
@@ -1405,9 +1445,11 @@ function App() {
               skyConnectionProgress={skyConnectionProgress}
               activeGate={activeGate}
               holdProgress={holdProgress}
+              fogCompleted={fogCompleted}
               presentationMode={showPortfolio}
               outroMode={showOutro && !showPortfolio}
               onAssetsProgress={handleJourneyAssets}
+              onListenerPose={updateListenerPose}
             />
           </Suspense>
         ) : null}
@@ -1429,17 +1471,9 @@ function App() {
 
       <section className="journey-outro" aria-label="Thank you so much.">
         <p className="journey-outro__copy" aria-hidden="true">
-          <span className="journey-outro__prefix">Thank you so</span>
-          <span className="journey-outro__slot">
-            <span className="journey-outro__ridge" aria-hidden="true">
-              <i />
-              <i />
-              <i />
-              <i />
-            </span>
-            <span className="journey-outro__m">m</span>
+          <span className="journey-outro__text">
+            Thank you so <span className="journey-outro__m">m</span>uch.
           </span>
-          <span className="journey-outro__suffix">uch.</span>
         </p>
       </section>
 
@@ -1465,14 +1499,14 @@ function App() {
             '--message-opacity': messageOpacity,
             '--message-shift': `${(1 - messageOpacity) * 16}px`,
             '--message-blur': `${(1 - messageOpacity) * 4}px`,
-            '--message-color': activeMessage.tone === 'dark' ? '#123f35' : '#f6f0e3',
+            '--message-color': '#f8f4e9',
           }}
           aria-live="polite"
         >
           <span className="journey-message__number">{activeMessage.number}</span>
           <div className="journey-message__copy">
             <p>
-              {activeMessage.title.map((line) => (
+              {activeMessage.title.slice(0, 3).map((line) => (
                 <span key={line}>{line}</span>
               ))}
             </p>

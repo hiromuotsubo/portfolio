@@ -169,7 +169,18 @@
   display: grid;
   place-items: center;
   opacity: 0;
-  color: var(--outro-green);
+  color: transparent;
+  background-image:
+    linear-gradient(rgba(16, 54, 47, 0.06), rgba(16, 54, 47, 0.06)),
+    url('/portfolio/project-night-clean.png');
+  background-position: 50% 20%;
+  background-size: auto 146%;
+  background-repeat: no-repeat;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: saturate(0.98) contrast(1.1) brightness(2.35);
+  text-shadow: 0 0 0.01px rgba(49, 95, 73, 0.12);
   line-height: 1;
 }
 
@@ -183,12 +194,12 @@
 
 .journey-3d.is-outro:not(.is-portfolio) .journey-scene-frame {
   -webkit-mask-image:
-    linear-gradient(to right, transparent 0%, rgba(0, 0, 0, 0.34) 7%, #000 19%, #000 84%, rgba(0, 0, 0, 0.3) 95%, transparent 100%),
-    linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.28) 10%, #000 25%, #000 76%, rgba(0, 0, 0, 0.32) 91%, transparent 100%);
+    linear-gradient(to right, transparent 0%, rgba(0, 0, 0, 0.72) 4%, #000 11%, #000 89%, rgba(0, 0, 0, 0.72) 96%, transparent 100%),
+    linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.72) 5%, #000 13%, #000 87%, rgba(0, 0, 0, 0.72) 95%, transparent 100%);
   -webkit-mask-composite: source-in;
   mask-image:
-    linear-gradient(to right, transparent 0%, rgba(0, 0, 0, 0.34) 7%, #000 19%, #000 84%, rgba(0, 0, 0, 0.3) 95%, transparent 100%),
-    linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.28) 10%, #000 25%, #000 76%, rgba(0, 0, 0, 0.32) 91%, transparent 100%);
+    linear-gradient(to right, transparent 0%, rgba(0, 0, 0, 0.72) 4%, #000 11%, #000 89%, rgba(0, 0, 0, 0.72) 96%, transparent 100%),
+    linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.72) 5%, #000 13%, #000 87%, rgba(0, 0, 0, 0.72) 95%, transparent 100%);
   mask-composite: intersect;
 }
 
@@ -198,9 +209,10 @@
   content: '';
   inset: -1.5%;
   pointer-events: none;
-  background-image: url('/portfolio/journey-night-watercolor.jpg');
+  background-image: url('/portfolio/project-night-clean.png');
   background-position: 50% 50%;
   background-size: cover;
+  filter: brightness(1.45) saturate(0.9) contrast(1.04);
   opacity: 0;
   transform: scale(1.045);
   animation: outro-watercolor-matte 6.4s cubic-bezier(.55, 0, .25, 1) both;
@@ -1121,14 +1133,14 @@
     width: var(--outro-screen-width);
     height: var(--outro-screen-height);
     opacity: 1;
-    filter: saturate(0.7) contrast(0.86) brightness(1.08) blur(0.18px);
+    filter: saturate(0.88) contrast(0.98) brightness(1.18) blur(0);
     transform: translate(-50%, -50%) scale(1);
   }
   74%, 100% {
     width: var(--outro-screen-width);
     height: var(--outro-screen-height);
     opacity: 0;
-    filter: saturate(0.48) contrast(0.78) brightness(1.12) blur(0.7px);
+    filter: saturate(0.62) contrast(0.9) brightness(1.2) blur(0);
     transform: translate(-50%, -50%) scale(0.965);
   }
 }
@@ -1139,7 +1151,7 @@
     transform: scale(1.035) rotate(-0.15deg);
   }
   32%, 60% {
-    opacity: 0.72;
+    opacity: 0.16;
     transform: scale(1) rotate(0);
   }
   74%, 100% {
@@ -1155,7 +1167,7 @@
     transform: scale(1.045);
   }
   36%, 62% {
-    opacity: 0.92;
+    opacity: 1;
     background-position: 50% 51%;
     transform: scale(1.005);
   }
@@ -1181,7 +1193,7 @@
     height: var(--outro-screen-height);
   }
   84%, 100% {
-    width: 0.72em;
+    width: 0.62em;
     height: 1em;
   }
 }
@@ -1210,9 +1222,15 @@
 @keyframes outro-m-in {
   0%, 67% {
     opacity: 0;
+    background-size: auto 176%;
   }
-  82%, 100% {
+  82% {
     opacity: 1;
+    background-size: auto 158%;
+  }
+  100% {
+    opacity: 1;
+    background-size: auto 146%;
   }
 }
 
@@ -2675,19 +2693,20 @@
 }
 
 .journey-ui__operation.is-hold {
-  grid-template-columns: 31px auto;
-  column-gap: 11px;
+  grid-template-columns: 54px auto;
+  column-gap: 13px;
   row-gap: 0;
   min-width: 0;
-  color: var(--paper);
+  color: #f6f0e3;
+  filter: drop-shadow(0 1px 8px rgba(8, 23, 21, 0.34));
   animation: hold-cue-arrive 820ms cubic-bezier(0.22, 1, 0.36, 1) 320ms both;
 }
 
 .journey-ui__operation.is-hold > span {
   display: inline-block;
   transform-origin: left center;
-  font-size: 13px;
-  letter-spacing: 0.28em;
+  font-size: 15px;
+  letter-spacing: 0.2em;
   animation: hold-word-breathe 2.4s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 }
 
@@ -2697,7 +2716,7 @@
 }
 
 .journey-3d.is-gate-fog .journey-ui__operation.is-hold {
-  color: #123f35;
+  color: #f6f0e3;
 }
 
 .journey-ui__operation.is-holding {
@@ -2713,8 +2732,8 @@
 
 .journey-ui__operation.is-holding .hold-mark {
   grid-row: auto;
-  width: 42px;
-  height: 42px;
+  width: 54px;
+  height: 54px;
   border-color: currentColor;
   box-shadow: 0 0 0 8px rgba(105, 167, 133, 0.08);
 }
@@ -2731,8 +2750,8 @@
 }
 
 .hold-mark {
-  width: 34px;
-  height: 34px;
+  width: 54px;
+  height: 54px;
   border: 1px solid currentColor;
   background: transparent;
 }
@@ -3203,7 +3222,7 @@
 .portfolio-story.is-project .portfolio-story__panels {
   background:
     linear-gradient(rgba(232, 238, 232, 0.88), rgba(240, 238, 230, 0.95)),
-    url('/portfolio/journey-day.jpg') center / cover;
+    url('/portfolio/journey-day-clear-river.jpg') center / cover;
 }
 
 .portfolio-story__panels::-webkit-scrollbar {
@@ -4722,7 +4741,152 @@
 }
 
 .journey-3d {
-  height: 100%;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 100svh;
+}
+
+/* The closing line remains one normally-spaced sentence. Only the glyph that
+   belongs to the m position reveals the final Journey frame. */
+.journey-outro__copy {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  grid-template-columns: none;
+}
+
+.journey-outro__text {
+  display: inline;
+  color: var(--outro-green);
+  white-space: nowrap;
+  opacity: 0;
+}
+
+.journey-outro__m {
+  position: static;
+  inset: auto;
+  display: inline;
+  width: auto;
+  height: auto;
+  min-width: 0;
+  aspect-ratio: auto;
+  overflow: visible;
+  opacity: 1;
+  color: var(--outro-green);
+  background-image:
+    linear-gradient(rgba(49, 95, 73, 0.74), rgba(49, 95, 73, 0.74)),
+    url('/portfolio/project-night-clean.png');
+  background-blend-mode: multiply;
+  background-position: 50% 25%;
+  background-size: auto 150%;
+  background-repeat: no-repeat;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: saturate(0.7) contrast(1.02) brightness(1.28);
+  text-shadow: none;
+  font: inherit;
+  letter-spacing: inherit;
+  line-height: inherit;
+  vertical-align: baseline;
+}
+
+.journey-3d.is-outro .journey-outro__text {
+  animation: outro-copy-unified-in 6.4s ease both;
+}
+
+.journey-3d.is-outro .journey-outro__m {
+  animation: none;
+}
+
+/* The former outro shrank the live WebGL scene into a rectangular card.
+   The final view now lives only inside the inline "m", so the old card
+   must not cover the sentence at any viewport size. */
+.journey-3d.is-outro:not(.is-portfolio) .journey-scene-frame {
+  visibility: hidden;
+  opacity: 0;
+  animation: none;
+  pointer-events: none;
+}
+
+.journey-3d.is-outro:not(.is-portfolio) .journey-scene-frame::before,
+.journey-3d.is-outro:not(.is-portfolio) .journey-scene-frame::after {
+  content: none;
+  animation: none;
+}
+
+@keyframes outro-copy-unified-in {
+  0%,
+  10% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  24%,
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Safe areas and portrait composition keep the controls clear of browser UI
+   without shrinking the WebGL world. */
+@media (max-width: 720px), (max-aspect-ratio: 4 / 5) {
+  .journey-ui__header {
+    top: max(20px, calc(env(safe-area-inset-top) + 12px));
+    left: max(19px, calc(env(safe-area-inset-left) + 14px));
+  }
+
+  .journey-ui__rail {
+    right: max(13px, calc(env(safe-area-inset-right) + 10px));
+    height: min(36dvh, 280px);
+  }
+
+  .journey-ui__operation {
+    bottom: max(58px, calc(env(safe-area-inset-bottom) + 54px));
+  }
+
+  .journey-ui__sound {
+    left: max(19px, calc(env(safe-area-inset-left) + 14px));
+    bottom: max(20px, calc(env(safe-area-inset-bottom) + 14px));
+  }
+
+  .journey-ui__operation.is-hold {
+    grid-template-columns: 56px auto;
+    column-gap: 14px;
+    color: #f6f0e3;
+  }
+
+  .journey-3d.is-gate-fog .journey-ui__operation.is-hold {
+    color: #f6f0e3;
+  }
+
+  .journey-ui__operation.is-hold > span {
+    font-size: 15px;
+    letter-spacing: 0.18em;
+  }
+
+  .journey-ui__operation.is-hold .hold-mark,
+  .journey-ui__operation.is-holding .hold-mark {
+    width: 56px;
+    height: 56px;
+  }
+
+  .journey-message {
+    width: min(82vw, 380px);
+  }
+
+  .journey-outro__copy {
+    padding-inline: 16px;
+    font-size: clamp(34px, 10.4vw, 54px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .journey-3d.is-outro .journey-outro__text {
+    animation: none;
+    opacity: 1;
+  }
 }
 
 /* Page changes emerge from the same mist that shapes Journey. */
