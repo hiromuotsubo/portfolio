@@ -506,6 +506,14 @@ const PROJECT_ITEMS = [
   ['emotion', 'Emotion'],
 ]
 
+function ShortArrow() {
+  return (
+    <svg className="short-arrow" viewBox="0 0 16 16" aria-hidden="true">
+      <path d="M3.25 12.75 12.5 3.5M6.25 3.5h6.25v6.25" />
+    </svg>
+  )
+}
+
 function PortfolioImage({ src, alt, caption, className = '' }) {
   return (
     <figure className={`portfolio-figure ${className}`}>
@@ -778,23 +786,23 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
       <div className="portfolio-story__panels">
         <article id="origin" className={panelClassName('origin')} data-story-panel="origin">
           <PortfolioImage src="/portfolio/project-inspiration-v2.png" alt="A Kamikochi field photograph used as a reference for Journey" caption="FIELD REFERENCE / KAMIKOCHI" />
-          <div className="portfolio-panel__copy"><span className="portfolio-kicker">INSPIRATION</span><h3>A photograph captured the view, not the feeling.</h3><p>Six weeks in Kamikochi taught me that photographs preserve scenery, but not experience. Journey recreates that experience through space, interaction and time rather than visual accuracy.</p></div>
+          <div className="portfolio-panel__copy"><span className="portfolio-kicker">INSPIRATION</span><h3>A photograph captured the view,<br />not the feeling.</h3><p>Six weeks in Kamikochi taught me that photographs preserve scenery, but not experience. Journey recreates that experience through space, interaction and time rather than visual accuracy.</p></div>
         </article>
         <article id="contrast" className={panelClassName('contrast')} data-story-panel="contrast">
           <PortfolioImage src="/portfolio/project-contrast-v2.png" alt="Journey beginning inside a dark cave and opening toward the valley" caption="CAVE TO VALLEY" className="is-dark" />
-          <div className="portfolio-panel__copy"><span className="portfolio-kicker">SPACE</span><h3>Emotion begins with space.</h3><p>The journey begins inside a confined cave before opening toward a vast valley. The contrast in scale amplifies awe, reflecting my research on viewpoint and emotion.</p></div>
+          <div className="portfolio-panel__copy"><span className="portfolio-kicker">SPACE</span><h3>Emotion begins with space.</h3><p>The cave narrows the view.<br />The valley feels larger because of it.</p></div>
         </article>
         <article id="terrain" className={panelClassName('terrain')} data-story-panel="terrain">
           <PortfolioImage src="/portfolio/project-goal-v2.png" alt="The finished Journey valley beside its Blender terrain wireframe" caption="BLENDER TERRAIN / WEBGL LIGHTING" />
-          <div className="portfolio-panel__copy"><span className="portfolio-kicker">ATMOSPHERE</span><h3>Light lets the landscape breathe.</h3><p>Light, mist, sound and time transform one landscape into many moments without changing the place itself.</p></div>
+          <div className="portfolio-panel__copy"><span className="portfolio-kicker">ATMOSPHERE</span><h3>Light lets the landscape breathe.</h3><p>Light shifts.<br />Mist drifts.<br />The same landscape feels different without ever becoming another place.</p></div>
         </article>
         <article id="interaction" className={panelClassName('interaction')} data-story-panel="interaction">
           <PortfolioImage src="/portfolio/project-interaction-v2.png" alt="The HOLD interaction placed within the night-time Journey landscape" caption="HOLD / WORLD RESPONSE" className="is-dark" />
-          <div className="portfolio-panel__copy"><span className="portfolio-kicker">INTERACTION</span><h3>The landscape responds when you slow down.</h3><p>Scroll moves forward. HOLD creates stillness. Looking around reveals quiet details hidden in the landscape.</p></div>
+          <div className="portfolio-panel__copy"><span className="portfolio-kicker">INTERACTION</span><h3>The landscape responds when you<br />slow down.</h3><p>Scroll moves forward.<br />HOLD creates stillness.<br />Looking around reveals quiet details hidden in the landscape.</p></div>
         </article>
         <article id="emotion" className={panelClassName('emotion', 'is-emotion-panel')} data-story-panel="emotion">
           <PortfolioImage src="/portfolio/project-emotion-v2.png" alt="A small figure beneath the Journey night sky" caption="EMOTION / AFTERGLOW" className="is-dark" />
-          <div className="portfolio-panel__copy"><span className="portfolio-kicker">EMOTION</span><h3>Wonder grows in quiet moments.</h3><p>The journey ends with only a small figure beneath an immense night sky. Rather than offering a conclusion, it leaves space for reflection.</p><button type="button" onClick={onReplay}>EXPERIENCE AGAIN <span className="short-arrow" aria-hidden="true" /></button></div>
+          <div className="portfolio-panel__copy"><span className="portfolio-kicker">EMOTION</span><h3>Wonder grows in quiet moments.</h3><p>The journey ends beneath an immense night sky.<br />Nothing changes around.<br />Only the way you feel.</p><button type="button" onClick={onReplay}>EXPERIENCE AGAIN <ShortArrow /></button></div>
         </article>
         <footer className="portfolio-story__end">
           <span>END OF PROJECT</span>
@@ -870,7 +878,7 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
                 <div><dt>BUILT WITH</dt><dd>BLENDER / REACT / THREE.JS</dd></div>
                 <div><dt>YEAR</dt><dd>2026</dd></div>
               </dl>
-              <button type="button" onClick={onReplay}><span>EXPERIENCE AGAIN</span><i className="short-arrow" aria-hidden="true" /></button>
+              <button type="button" onClick={onReplay}><span>EXPERIENCE AGAIN</span><ShortArrow /></button>
             </div>
           </section>
         ) : null}

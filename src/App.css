@@ -19,6 +19,8 @@
   --outro-screen-height: calc(var(--outro-screen-width) * 0.5625);
   --outro-letter-height: clamp(37px, 5.9vw, 88px);
   --outro-letter-width: calc(var(--outro-letter-height) * 0.64);
+  --outro-glyph-width: calc(var(--outro-letter-height) * 1.02);
+  --outro-glyph-height: calc(var(--outro-letter-height) * 0.66);
   --portfolio-card-width: min(54vw, 960px);
   --portfolio-card-height: calc(var(--portfolio-card-width) * 0.5625);
   --portfolio-start-scale: 0.32;
@@ -449,15 +451,9 @@
   cursor: pointer;
 }
 
-.portfolio-home__copy button i {
-  font-family: Arial, sans-serif;
-  font-size: 18px;
-  font-style: normal;
-  transition: transform 300ms ease;
-}
-
-.portfolio-home__copy button:hover i {
-  transform: translate(4px, -4px);
+.portfolio-home__copy button:hover .short-arrow,
+.portfolio-panel__copy button:hover .short-arrow {
+  transform: translate(2px, -2px);
 }
 
 .portfolio-home__caption {
@@ -1132,8 +1128,8 @@
     transform: translate(-50%, -50%) scale(1);
   }
   46%, 54% {
-    width: var(--outro-screen-width);
-    height: var(--outro-screen-height);
+    width: var(--outro-glyph-width);
+    height: var(--outro-glyph-height);
     opacity: 1;
     filter: saturate(0.88) contrast(0.98) brightness(1.18) blur(0);
     transform: translate(-50%, -50%) scale(1);
@@ -1181,18 +1177,22 @@
 }
 
 @keyframes outro-copy-in {
-  0%, 34% {
+  0%, 40% {
     opacity: 0;
   }
-  46%, 100% {
+  50%, 100% {
     opacity: 1;
   }
 }
 
 @keyframes outro-slot-close {
-  0%, 54% {
+  0%, 38% {
     width: var(--outro-screen-width);
     height: var(--outro-screen-height);
+  }
+  46%, 54% {
+    width: var(--outro-glyph-width);
+    height: var(--outro-glyph-height);
   }
   72%, 100% {
     width: var(--outro-letter-width);
@@ -2319,36 +2319,17 @@ textarea,
 }
 
 .short-arrow {
-  position: relative;
-  display: inline-block;
-  width: 15px;
-  height: 15px;
-  flex: 0 0 15px;
-}
-
-.short-arrow::before,
-.short-arrow::after {
-  position: absolute;
-  content: '';
-}
-
-.short-arrow::before {
-  top: 7px;
-  right: 1px;
-  width: 13px;
-  height: 1px;
-  background: currentColor;
-  transform: rotate(-45deg);
-  transform-origin: right center;
-}
-
-.short-arrow::after {
-  top: 1px;
-  right: 1px;
-  width: 6px;
-  height: 6px;
-  border-top: 1px solid currentColor;
-  border-right: 1px solid currentColor;
+  display: block;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  overflow: visible;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.15;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 280ms ease;
 }
 
 .portfolio-home__copy > button,

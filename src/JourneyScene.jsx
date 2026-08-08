@@ -20,10 +20,10 @@ const ENDING_CAMERA = {
   liftEnd: 90,
   wideStart: 86,
   wideEnd: 100,
-  pullBack: 11.5,
+  pullBack: 13.5,
   cameraLift: 0.16,
   lift: 0.08,
-  fov: 25,
+  fov: 26,
 }
 
 // V1 framing is preserved on backup/journey-lookdev-v1-e5ec4a3.
@@ -472,14 +472,14 @@ function createCloudTexture(seed) {
   const context = canvas.getContext('2d')
   context.clearRect(0, 0, canvas.width, canvas.height)
   context.save()
-  context.filter = 'blur(18px)'
+  context.filter = 'blur(24px)'
 
-  for (let index = 0; index < 15; index += 1) {
+  for (let index = 0; index < 12; index += 1) {
     const centerX = 105 + seededRandom(seed + index * 17) * 558
-    const centerY = 106 + seededRandom(seed + index * 29) * 68
-    const radiusX = 46 + seededRandom(seed + index * 41) * 72
-    const radiusY = 20 + seededRandom(seed + index * 53) * 26
-    const alpha = 0.12 + seededRandom(seed + index * 67) * 0.16
+    const centerY = 116 + seededRandom(seed + index * 29) * 52
+    const radiusX = 62 + seededRandom(seed + index * 41) * 86
+    const radiusY = 12 + seededRandom(seed + index * 53) * 18
+    const alpha = 0.1 + seededRandom(seed + index * 67) * 0.12
     context.beginPath()
     context.ellipse(centerX, centerY, radiusX, radiusY, 0, 0, Math.PI * 2)
     context.fillStyle = `rgba(255, 255, 252, ${alpha})`
@@ -930,7 +930,7 @@ vec3 journeyConiferDark = vec3(0.022, 0.095, 0.052);
 vec3 journeyConiferLight = vec3(0.12, 0.285, 0.105);
 vec3 journeyCrownColor = mix(journeyConiferDark, journeyConiferLight, journeyCanopyTexture);
 journeyCrownColor *= mix(0.72, 1.16, journeyTreeBands);
-journeyPaint = mix(journeyPaint, journeyCrownColor, journeyCrownPresence * 0.54);
+journeyPaint = mix(journeyPaint, journeyCrownColor, journeyCrownPresence * 0.67);
 vec2 journeyTreeUv = vec2(
   vJourneyWorldPosition.x + vJourneyWorldPosition.z * 0.22,
   vJourneyWorldPosition.y - vJourneyWorldPosition.z * 0.035
@@ -943,7 +943,12 @@ float journeyTreeDistanceFade = 1.0 - smoothstep(255.0, 430.0, length(vViewPosit
 float journeyTreePresence = journeyTreeSilhouettes * journeyForestSurface *
   mix(0.32, 1.0, journeyVegetationDensity) * journeyTreeDistanceFade;
 vec3 journeyTreeColor = mix(vec3(0.012, 0.052, 0.026), vec3(0.065, 0.17, 0.06), journeyCanopyMass);
-journeyPaint = mix(journeyPaint, journeyTreeColor, journeyTreePresence * 0.72);
+journeyPaint = mix(journeyPaint, journeyTreeColor, journeyTreePresence * 0.34);
+float journeyForestPatch = smoothstep(
+  0.3,
+  0.74,
+  journeyFbm(journeyTerrainUv * vec2(1.72, 2.45) + vec2(28.0, -37.0))
+);
 float journeyForestStand = smoothstep(
   0.24,
   0.82,
@@ -957,8 +962,16 @@ vec3 journeyForestStandColor = mix(
 journeyPaint = mix(
   journeyPaint,
   journeyForestStandColor,
-  journeyForestSurface * (0.5 + journeyVegetationDensity * 0.28)
+  journeyForestSurface * (0.24 + journeyVegetationDensity * 0.34) *
+    mix(0.52, 1.0, journeyForestPatch)
 );
+float journeyScrubTransition =
+  smoothstep(0.3, 0.5, journeyAltitude) *
+  (1.0 - smoothstep(0.67, 0.84, journeyAltitude)) *
+  (1.0 - journeyRockMask) *
+  smoothstep(0.28, 0.76, journeyMacro * 0.58 + journeyFine * 0.42);
+vec3 journeyScrubColor = mix(vec3(0.105, 0.205, 0.09), vec3(0.24, 0.34, 0.13), journeyFine);
+journeyPaint = mix(journeyPaint, journeyScrubColor, journeyScrubTransition * 0.28);
 float journeyLowerForestBelt =
   (1.0 - smoothstep(16.0, 48.0, vJourneyWorldPosition.y)) *
   (0.34 + smoothstep(0.08, 0.42, journeySteepness) * 0.66);
@@ -970,7 +983,8 @@ vec3 journeyLowerForestColor = mix(
 journeyPaint = mix(
   journeyPaint,
   journeyLowerForestColor,
-  journeyLowerForestBelt * (0.46 + journeyVegetationDensity * 0.18)
+  journeyLowerForestBelt * (0.3 + journeyVegetationDensity * 0.24) *
+    mix(0.48, 1.0, journeyForestPatch)
 );
 float journeyForestShadow = journeyForestSurface * smoothstep(
   0.54,
@@ -982,6 +996,12 @@ float journeyClearing = journeyForestSurface * (1.0 - journeyVegetationDensity) 
   smoothstep(0.58, 0.94, vJourneyWorldNormal.y);
 vec3 journeyGrassland = mix(vec3(0.19, 0.31, 0.12), vec3(0.34, 0.43, 0.17), journeyFine);
 journeyPaint = mix(journeyPaint, journeyGrassland, journeyClearing * 0.34);
+float journeyRiverGrass =
+  (1.0 - smoothstep(5.0, 17.0, vJourneyWorldPosition.y)) *
+  smoothstep(0.55, 0.92, vJourneyWorldNormal.y) *
+  (1.0 - smoothstep(0.46, 0.78, journeyVegetationDensity)) *
+  smoothstep(0.34, 0.76, journeyFine);
+journeyPaint = mix(journeyPaint, journeyGrassland * 0.94, journeyRiverGrass * 0.3);
 float journeySoilBreak = journeyForestSurface * smoothstep(
   0.79,
   0.96,
@@ -1128,7 +1148,7 @@ totalEmissiveRadiance += journeyPaint * uJourneyNight * 0.055;
 totalEmissiveRadiance += vec3(0.018, 0.038, 0.072) * uJourneyNight;`,
     )
   }
-  material.customProgramCacheKey = () => `journey-alpine-${isFarRidge ? 'far' : 'near'}-v21-canopy-normal`
+  material.customProgramCacheKey = () => `journey-alpine-${isFarRidge ? 'far' : 'near'}-v23-forest-transition`
 }
 
 function applyWetGravelDetail(material, variant = 'bed') {
@@ -2023,13 +2043,15 @@ function DriftingClouds({ groupRef, materialRefs }) {
   )
 
   const clouds = [
-    { position: [-108, 76, -210], scale: [138, 38, 1], opacity: 0.34, speed: 2.7, tone: 0.08 },
-    { position: [92, 124, -410], scale: [220, 56, 1], opacity: 0.3, speed: 2.1, tone: 0.02 },
-    { position: [8, 62, -170], scale: [104, 30, 1], opacity: 0.3, speed: 3.2, tone: 0.16 },
-    { position: [-34, 148, -448], scale: [244, 62, 1], opacity: 0.22, speed: 1.6, tone: 0.04 },
-    { position: [110, 70, -195], scale: [116, 34, 1], opacity: 0.32, speed: 2.9, tone: 0.2 },
-    { position: [-174, 52, -292], scale: [152, 42, 1], opacity: 0.25, speed: 3.4, tone: 0.24 },
-    { position: [28, 188, -486], scale: [284, 70, 1], opacity: 0.17, speed: 1.3, tone: 0.1 },
+    { position: [-96, 108, -214], scale: [154, 28, 1], opacity: 0.28, speed: 2.1, tone: 0.05, depthTest: true },
+    { position: [84, 132, -332], scale: [218, 38, 1], opacity: 0.23, speed: 1.6, tone: 0.02, depthTest: true },
+    { position: [12, 94, -176], scale: [116, 22, 1], opacity: 0.27, speed: 2.4, tone: 0.12, depthTest: true },
+    { position: [-38, 154, -420], scale: [250, 44, 1], opacity: 0.18, speed: 1.2, tone: 0.04, depthTest: true },
+    { position: [112, 91, -204], scale: [132, 24, 1], opacity: 0.25, speed: 2.2, tone: 0.15, depthTest: true },
+    { position: [-126, 88, -176], scale: [146, 22, 1], opacity: 0.62, speed: 2.5, tone: 0.18, depthTest: false },
+    { position: [24, 94, -168], scale: [112, 18, 1], opacity: 0.55, speed: 1.9, tone: 0.08, depthTest: false },
+    { position: [108, 86, -188], scale: [138, 21, 1], opacity: 0.52, speed: 2.3, tone: 0.2, depthTest: false },
+    { position: [66, 108, -248], scale: [184, 25, 1], opacity: 0.44, speed: 1.35, tone: 0.03, depthTest: false },
   ]
 
   return (
@@ -2059,7 +2081,7 @@ function DriftingClouds({ groupRef, materialRefs }) {
             opacity={0}
             alphaTest={0.018}
             depthWrite={false}
-            depthTest={false}
+            depthTest={cloud.depthTest}
             toneMapped={false}
           />
         </sprite>
