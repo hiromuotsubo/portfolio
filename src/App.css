@@ -2693,7 +2693,7 @@
 }
 
 .journey-ui__operation.is-hold {
-  grid-template-columns: 54px auto;
+  grid-template-columns: auto 54px;
   column-gap: 13px;
   row-gap: 0;
   min-width: 0;
@@ -2722,7 +2722,7 @@
 .journey-ui__operation.is-holding {
   display: grid;
   min-width: 0;
-  gap: 0;
+  column-gap: 13px;
 }
 
 .journey-ui__operation.is-holding > span,
@@ -4774,7 +4774,7 @@
   opacity: 1;
   color: var(--outro-green);
   background-image:
-    linear-gradient(rgba(49, 95, 73, 0.74), rgba(49, 95, 73, 0.74)),
+    linear-gradient(rgba(49, 95, 73, 0.18), rgba(49, 95, 73, 0.18)),
     url('/portfolio/project-night-clean.png');
   background-blend-mode: multiply;
   background-position: 50% 25%;
@@ -4783,7 +4783,7 @@
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  filter: saturate(0.7) contrast(1.02) brightness(1.28);
+  filter: saturate(0.82) contrast(0.92) brightness(1.9);
   text-shadow: none;
   font: inherit;
   letter-spacing: inherit;
@@ -4796,7 +4796,7 @@
 }
 
 .journey-3d.is-outro .journey-outro__m {
-  animation: none;
+  animation: outro-m-dissolve 6.4s ease both;
 }
 
 /* The former outro shrank the live WebGL scene into a rectangular card.
@@ -4829,6 +4829,20 @@
   }
 }
 
+@keyframes outro-m-dissolve {
+  0%,
+  48% {
+    -webkit-text-fill-color: transparent;
+    filter: saturate(0.82) contrast(0.92) brightness(1.9);
+  }
+
+  72%,
+  100% {
+    -webkit-text-fill-color: var(--outro-green);
+    filter: none;
+  }
+}
+
 /* Safe areas and portrait composition keep the controls clear of browser UI
    without shrinking the WebGL world. */
 @media (max-width: 720px), (max-aspect-ratio: 4 / 5) {
@@ -4852,7 +4866,7 @@
   }
 
   .journey-ui__operation.is-hold {
-    grid-template-columns: 56px auto;
+    grid-template-columns: auto 56px;
     column-gap: 14px;
     color: #f6f0e3;
   }
@@ -4886,6 +4900,12 @@
   .journey-3d.is-outro .journey-outro__text {
     animation: none;
     opacity: 1;
+  }
+
+  .journey-3d.is-outro .journey-outro__m {
+    animation: none;
+    -webkit-text-fill-color: var(--outro-green);
+    filter: none;
   }
 }
 
