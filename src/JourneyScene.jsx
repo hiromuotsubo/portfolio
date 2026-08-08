@@ -1703,6 +1703,10 @@ export default function JourneyScene({
     [],
   )
   const pointerLookRef = useRef(new THREE.Vector2())
+  const coarsePointer = useMemo(
+    () => window.matchMedia('(pointer: coarse)').matches,
+    [],
+  )
   const previousProgressRef = useRef(progress)
   const travelWindRef = useRef(0)
   const outroFramingRef = useRef(0)
@@ -1879,6 +1883,7 @@ export default function JourneyScene({
         (presentationMode ? 0.42 : 1)
       const openVista = smoothstep(18, 25, cameraProgress)
       const viewportAspect = size.width / Math.max(size.height, 1)
+      const mobilePointer = coarsePointer || size.width <= 720
       const portraitFactor = 1 - smoothstep(0.62, 0.95, viewportAspect)
       const portraitVista = smoothstep(12, 25, cameraProgress)
       const endingLift = smoothstep(
@@ -1893,13 +1898,13 @@ export default function JourneyScene({
       )
       pointerLookRef.current.x = THREE.MathUtils.damp(
         pointerLookRef.current.x,
-        (state.pointer.x + mobileLook.x) * pointerStrength,
+        (mobilePointer ? mobileLook.x : state.pointer.x) * pointerStrength,
         5.2,
         delta,
       )
       pointerLookRef.current.y = THREE.MathUtils.damp(
         pointerLookRef.current.y,
-        (state.pointer.y + mobileLook.y) * pointerStrength,
+        (mobilePointer ? mobileLook.y : state.pointer.y) * pointerStrength,
         5.2,
         delta,
       )

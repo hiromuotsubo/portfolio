@@ -1163,10 +1163,14 @@ function App() {
       const touch = event.touches[0]
       const totalX = touch.clientX - touchRef.current.startX
       const totalY = touch.clientY - touchRef.current.startY
-      if (!touchRef.current.mode && Math.hypot(totalX, totalY) > 7) {
-        touchRef.current.mode = Math.abs(totalX) > Math.abs(totalY) * 1.12
-          ? 'look'
-          : 'scroll'
+      if (!touchRef.current.mode && Math.hypot(totalX, totalY) > 14) {
+        const horizontal = Math.abs(totalX)
+        const vertical = Math.abs(totalY)
+        if (horizontal >= vertical * 1.22) {
+          touchRef.current.mode = 'look'
+        } else if (vertical >= horizontal * 1.08) {
+          touchRef.current.mode = 'scroll'
+        }
       }
       if (!touchRef.current.mode) return
       event.preventDefault()
@@ -1174,8 +1178,8 @@ function App() {
       const deltaY = touch.clientY - touchRef.current.y
       if (touchRef.current.mode === 'look') {
         setMobileLook((current) => ({
-          x: clamp(current.x + deltaX / Math.max(window.innerWidth * 0.34, 1), -1, 1),
-          y: clamp(current.y - deltaY / Math.max(window.innerHeight * 0.38, 1), -0.8, 0.8),
+          x: clamp(current.x + deltaX / Math.max(window.innerWidth * 0.5, 1), -0.72, 0.72),
+          y: 0,
         }))
       } else {
         advance(-deltaY * 1.8)
@@ -1184,17 +1188,23 @@ function App() {
       touchRef.current.y = touch.clientY
     }
     const onTouchEnd = () => {
+      if (touchRef.current.mode === 'look') {
+        setMobileLook({ x: 0, y: 0 })
+      }
       touchRef.current.active = false
+      touchRef.current.mode = null
     }
     window.addEventListener('wheel', onWheel, { passive: false })
     window.addEventListener('touchstart', onTouchStart, { passive: true })
     window.addEventListener('touchmove', onTouchMove, { passive: false })
     window.addEventListener('touchend', onTouchEnd, { passive: true })
+    window.addEventListener('touchcancel', onTouchEnd, { passive: true })
     return () => {
       window.removeEventListener('wheel', onWheel)
       window.removeEventListener('touchstart', onTouchStart)
       window.removeEventListener('touchmove', onTouchMove)
       window.removeEventListener('touchend', onTouchEnd)
+      window.removeEventListener('touchcancel', onTouchEnd)
     }
   }, [advance])
 
