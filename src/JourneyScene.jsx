@@ -399,6 +399,67 @@ function createCloudTexture(seed) {
   return texture
 }
 
+function createSkyAtmosphereMaterial() {
+  return new THREE.ShaderMaterial({
+    uniforms: {
+      uJourneyTopColor: { value: new THREE.Color('#3e9ec5') },
+      uJourneyHorizonColor: { value: new THREE.Color('#d8e7df') },
+      uJourneySunColor: { value: new THREE.Color('#fff4cf') },
+      uJourneySunDirection: {
+        value: new THREE.Vector3(-0.48, 0.46, -0.74).normalize(),
+      },
+      uJourneyNight: { value: 0 },
+    },
+    vertexShader: `
+      varying vec3 vJourneySkyDirection;
+      void main() {
+        vJourneySkyDirection = normalize(position);
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      varying vec3 vJourneySkyDirection;
+      uniform vec3 uJourneyTopColor;
+      uniform vec3 uJourneyHorizonColor;
+      uniform vec3 uJourneySunColor;
+      uniform vec3 uJourneySunDirection;
+      uniform float uJourneyNight;
+      void main() {
+        vec3 direction = normalize(vJourneySkyDirection);
+        float heightMix = smoothstep(-0.12, 0.78, direction.y);
+        heightMix = pow(heightMix, 0.72);
+        vec3 color = mix(uJourneyHorizonColor, uJourneyTopColor, heightMix);
+        float horizonMist = 1.0 - smoothstep(0.0, 0.24, abs(direction.y));
+        color = mix(color, uJourneyHorizonColor * 1.08, horizonMist * (1.0 - uJourneyNight) * 0.22);
+        float sunAmount = pow(max(dot(direction, normalize(uJourneySunDirection)), 0.0), 42.0);
+        float sunHalo = pow(max(dot(direction, normalize(uJourneySunDirection)), 0.0), 7.5);
+        color += uJourneySunColor * (sunAmount * 0.48 + sunHalo * 0.075) * (1.0 - uJourneyNight * 0.8);
+        gl_FragColor = vec4(color, 1.0);
+      }
+    `,
+    side: THREE.BackSide,
+    depthWrite: false,
+    depthTest: false,
+    fog: false,
+    toneMapped: false,
+  })
+}
+
+function SkyAtmosphere({ meshRef, materialRef }) {
+  const material = useMemo(() => createSkyAtmosphereMaterial(), [])
+  useEffect(() => {
+    materialRef.current = material
+    return () => material.dispose()
+  }, [material, materialRef])
+
+  return (
+    <mesh ref={meshRef} scale={720} renderOrder={-10} frustumCulled={false}>
+      <sphereGeometry args={[1, 32, 20]} />
+      <primitive object={material} attach="material" />
+    </mesh>
+  )
+}
+
 function createWatercolorWashTexture(seed = 4200, softEdges = false) {
   const canvas = document.createElement('canvas')
   canvas.width = 768
@@ -517,29 +578,78 @@ uniform float uJourneyRiverLight;
 uniform float uJourneyTime;
 uniform sampler2D uJourneyWatercolor;
 uniform sampler2D uJourneyTriplanarNormal;
-uniform sampler2D uJourneyTriplanarRoughness;`,
+uniform sampler2D uJourneyTriplanarRoughness;
+
+float journeyHash(vec2 point) {
+  return fract(sin(dot(point, vec2(127.1, 311.7))) * 43758.5453123);
+}
+
+float journeyNoise(vec2 point) {
+  vec2 cell = floor(point);
+  vec2 local = fract(point);
+  local = local * local * (3.0 - 2.0 * local);
+  float a = journeyHash(cell);
+  float b = journeyHash(cell + vec2(1.0, 0.0));
+  float c = journeyHash(cell + vec2(0.0, 1.0));
+  float d = journeyHash(cell + vec2(1.0, 1.0));
+  return mix(mix(a, b, local.x), mix(c, d, local.x), local.y);
+}
+
+float journeyFbm(vec2 point) {
+  float value = 0.0;
+  float amplitude = 0.58;
+  mat2 rotation = mat2(0.82, -0.57, 0.57, 0.82);
+  for (int octave = 0; octave < 3; octave++) {
+    value += journeyNoise(point) * amplitude;
+    point = rotation * point * 2.03 + vec2(13.7, 9.2);
+    amplitude *= 0.48;
+  }
+  return value;
+}`,
       )
       .replace(
         '#include <color_fragment>',
         `#include <color_fragment>
 float journeyAltitude = smoothstep(18.0, 51.0, vJourneyWorldPosition.y);
 float journeySteepness = smoothstep(0.18, 0.88, 1.0 - abs(vJourneyWorldNormal.y));
-float journeyMacro = 0.5 + 0.5 * sin(
-  vJourneyWorldPosition.x * 0.071 +
-  sin(vJourneyWorldPosition.z * 0.052) * 1.9 +
-  sin((vJourneyWorldPosition.x + vJourneyWorldPosition.z) * 0.021) * 1.2
+vec2 journeyTerrainUv = vec2(
+  vJourneyWorldPosition.x * 0.043 + vJourneyWorldPosition.y * 0.009,
+  vJourneyWorldPosition.z * 0.039 - vJourneyWorldPosition.y * 0.006
 );
-float journeyFine = 0.5 + 0.5 * sin(
-  vJourneyWorldPosition.x * 0.43 -
-  vJourneyWorldPosition.z * 0.31 +
-  sin(vJourneyWorldPosition.y * 0.29) * 1.6
+float journeyMacro = journeyFbm(journeyTerrainUv);
+float journeyFine = journeyFbm(journeyTerrainUv * 3.45 + vec2(21.4, -8.7));
+float journeyWash = mix(journeyMacro, journeyFine, 0.28);
+float journeyForestClusters = smoothstep(
+  0.34,
+  0.73,
+  journeyMacro * 0.62 + journeyFine * 0.38 - journeySteepness * 0.16
 );
-float journeyWash = mix(journeyMacro, journeyFine, 0.22);
-vec3 journeyForest = vec3(0.072, 0.19, 0.125);
-vec3 journeySummer = vec3(0.19, 0.355, 0.205);
-vec3 journeyRock = vec3(0.245, 0.285, 0.275);
+float journeyErosion = 1.0 - abs(journeyFine * 2.0 - 1.0);
+float journeyWetGully =
+  smoothstep(0.72, 0.94, journeyErosion) *
+  smoothstep(0.2, 0.78, journeySteepness) *
+  (1.0 - smoothstep(0.74, 1.0, journeyAltitude));
+vec3 journeyForest = mix(
+  vec3(0.045, 0.135, 0.088),
+  vec3(0.105, 0.255, 0.135),
+  journeyForestClusters
+);
+vec3 journeySummer = mix(
+  vec3(0.135, 0.285, 0.16),
+  vec3(0.285, 0.44, 0.22),
+  journeyMacro
+);
+vec3 journeyRock = mix(
+  vec3(0.19, 0.225, 0.215),
+  vec3(0.35, 0.37, 0.34),
+  journeyFine
+);
 vec3 journeySnow = vec3(0.84, 0.87, 0.84);
-float journeyRockMask = smoothstep(0.48, 0.94, journeySteepness + journeyAltitude * 0.24 + journeyMacro * 0.045);
+float journeyRockMask = smoothstep(
+  0.5,
+  0.91,
+  journeySteepness + journeyAltitude * 0.2 + journeyErosion * 0.12 - journeyForestClusters * 0.1
+);
 float journeySnowShelf =
   smoothstep(0.58, 0.92, journeyAltitude) *
   smoothstep(0.24, 0.86, 1.0 - journeySteepness) *
@@ -556,8 +666,25 @@ float journeySnowGully =
 float journeySnowMask = clamp(journeySnowShelf + journeySnowGully, 0.0, 1.0);
 vec3 journeyPaint = mix(journeyForest, journeySummer, smoothstep(0.08, 0.58, journeyAltitude));
 journeyPaint = mix(journeyPaint, journeyRock, journeyRockMask * 0.67);
+float journeyForestSurface =
+  (1.0 - smoothstep(0.62, 0.9, journeyAltitude)) *
+  (1.0 - smoothstep(0.38, 0.82, journeyRockMask));
+float journeyCanopyGrain = journeyNoise(
+  journeyTerrainUv * 22.0 + vec2(journeyFine * 3.1, vJourneyWorldPosition.y * 0.24)
+);
+float journeyCanopyOpenings = smoothstep(0.76, 0.94, journeyCanopyGrain);
+journeyPaint *= mix(
+  vec3(1.0),
+  mix(vec3(0.88, 0.91, 0.86), vec3(1.045, 1.07, 1.015), journeyCanopyGrain),
+  journeyForestSurface * 0.34
+);
+journeyPaint = mix(
+  journeyPaint,
+  journeySummer * 1.08,
+  journeyForestSurface * journeyCanopyOpenings * 0.08
+);
 journeyPaint = mix(journeyPaint, journeySnow, journeySnowMask * (0.54 + uJourneyNight * 0.12));
-${isFarRidge ? 'journeyPaint = mix(journeyPaint, vec3(0.32, 0.42, 0.43), 0.36);' : ''}
+journeyPaint = mix(journeyPaint, vec3(0.038, 0.095, 0.082), journeyWetGully * 0.48);
 float journeyLowerValley = 1.0 - smoothstep(7.0, 30.0, vJourneyWorldPosition.y);
 float journeyValleyPigment = mix(0.79, 1.07, journeyMacro * 0.72 + journeyFine * 0.28);
 journeyPaint *= mix(1.0, journeyValleyPigment, journeyLowerValley * 0.58);
@@ -565,29 +692,37 @@ vec3 journeyLightDirection = normalize(vec3(-0.46, 0.72, 0.38));
 float journeyFacing = dot(normalize(vJourneyWorldNormal), journeyLightDirection) * 0.5 + 0.5;
 float journeyRidgeLight = smoothstep(0.40, 0.86, journeyFacing);
 float journeyValleyShade = smoothstep(0.62, 0.12, journeyFacing) * (0.46 + journeySteepness * 0.54);
-float journeyContour = 0.5 + 0.5 * sin(
-  vJourneyWorldPosition.y * 0.41 +
-  vJourneyWorldPosition.x * 0.038 +
-  journeyMacro * 1.4
-);
+float journeyContour = journeyNoise(vec2(
+  vJourneyWorldPosition.y * 0.16 + vJourneyWorldPosition.x * 0.027,
+  vJourneyWorldPosition.z * 0.105 + journeyMacro * 2.2
+));
 journeyContour = smoothstep(0.79, 0.96, journeyContour) * journeySteepness;
-float journeyStrata = 0.5 + 0.5 * sin(
-  vJourneyWorldPosition.y * 1.84 +
-  vJourneyWorldPosition.x * 0.21 +
-  sin(vJourneyWorldPosition.z * 0.17) * 2.6
-);
-float journeyFracture = 0.5 + 0.5 * sin(
-  vJourneyWorldPosition.x * 0.63 -
-  vJourneyWorldPosition.z * 0.37 +
-  sin(vJourneyWorldPosition.y * 0.44) * 1.7
-);
+float journeyStrata = journeyNoise(vec2(
+  vJourneyWorldPosition.y * 0.72 + vJourneyWorldPosition.x * 0.12,
+  vJourneyWorldPosition.z * 0.31
+));
+float journeyFracture = journeyNoise(vec2(
+  vJourneyWorldPosition.x * 0.46 - vJourneyWorldPosition.z * 0.22,
+  vJourneyWorldPosition.y * 0.38 + vJourneyWorldPosition.z * 0.09
+));
 float journeyRockDetail = smoothstep(0.74, 0.96, journeyStrata * 0.58 + journeyFracture * 0.42);
 journeyRockDetail *= journeyRockMask * (0.38 + journeySteepness * 0.62);
 vec3 journeyShadow = mix(vec3(0.055, 0.13, 0.14), vec3(0.10, 0.16, 0.25), uJourneyNight);
 journeyPaint = mix(journeyPaint, journeyShadow, journeyValleyShade * 0.46);
 journeyPaint += vec3(0.10, 0.125, 0.095) * journeyRidgeLight * (0.052 + uJourneySunset * 0.065);
-journeyPaint -= vec3(0.032, 0.046, 0.041) * journeyContour * 0.46;
+journeyPaint -= vec3(0.032, 0.046, 0.041) * journeyContour * 0.22;
 journeyPaint -= vec3(0.034, 0.049, 0.052) * journeyRockDetail * (0.66 + uJourneyNight * 0.24);
+vec3 journeyDayHaze = vec3(0.48, 0.65, 0.66);
+vec3 journeySunsetHaze = vec3(0.72, 0.50, 0.43);
+vec3 journeyNightHaze = vec3(0.18, 0.27, 0.41);
+vec3 journeyAtmosphere = mix(journeyDayHaze, journeySunsetHaze, uJourneySunset * 0.72);
+journeyAtmosphere = mix(journeyAtmosphere, journeyNightHaze, uJourneyNight);
+float journeyDistanceHaze = smoothstep(88.0, 390.0, length(vViewPosition));
+journeyPaint = mix(
+  journeyPaint,
+  journeyAtmosphere,
+  journeyDistanceHaze * ${isFarRidge ? '0.48' : '0.23'}
+);
 vec2 journeyWatercolorUv = vec2(
   vJourneyWorldPosition.x * 0.0038 + vJourneyWorldPosition.z * 0.0009,
   vJourneyWorldPosition.y * 0.0062 - vJourneyWorldPosition.z * 0.0011
@@ -649,7 +784,7 @@ totalEmissiveRadiance += journeyPaint * uJourneyNight * 0.055;
 totalEmissiveRadiance += vec3(0.018, 0.038, 0.072) * uJourneyNight;`,
     )
   }
-  material.customProgramCacheKey = () => `journey-alpine-${isFarRidge ? 'far' : 'near'}-v7-moonlit-snowmelt`
+  material.customProgramCacheKey = () => `journey-alpine-${isFarRidge ? 'far' : 'near'}-v8-natural-density`
 }
 
 function applyWetGravelDetail(material, variant = 'bed') {
@@ -1531,6 +1666,8 @@ export default function JourneyScene({
   const seatedFigureMaterialRef = useRef(null)
   const cloudGroupRef = useRef(null)
   const cloudMaterialRefs = useRef([])
+  const skyAtmosphereRef = useRef(null)
+  const skyAtmosphereMaterialRef = useRef(null)
   const valleyFogGroupRef = useRef(null)
   const valleyFogMaterialRefs = useRef([])
   const skyRigRef = useRef(null)
@@ -1766,6 +1903,9 @@ export default function JourneyScene({
       camera.getWorldPosition(skyRigRef.current.position)
       camera.getWorldQuaternion(skyRigRef.current.quaternion)
     }
+    if (camera?.isCamera && skyAtmosphereRef.current) {
+      camera.getWorldPosition(skyAtmosphereRef.current.position)
+    }
 
     const sunset = smoothstep(
       VISUAL_TIMING.sunsetStart,
@@ -1787,6 +1927,30 @@ export default function JourneyScene({
       .lerp(sunsetSky, sunsetColorMix)
       .lerp(nightSky, night)
     state.scene.background = skyColor
+
+    if (skyAtmosphereMaterialRef.current) {
+      const uniforms = skyAtmosphereMaterialRef.current.uniforms
+      uniforms.uJourneyTopColor.value
+        .set('#3e9ec5')
+        .lerp(new THREE.Color('#6f7796'), sunsetColorMix)
+        .lerp(new THREE.Color('#08172f'), night)
+      uniforms.uJourneyHorizonColor.value
+        .set('#d8e7df')
+        .lerp(new THREE.Color('#e6a07f'), sunsetColorMix)
+        .lerp(new THREE.Color('#263b5d'), night)
+      uniforms.uJourneySunColor.value
+        .set('#fff3c9')
+        .lerp(new THREE.Color('#ffb077'), sunset)
+        .lerp(new THREE.Color('#7896c8'), night)
+      uniforms.uJourneySunDirection.value
+        .set(
+          THREE.MathUtils.lerp(-0.48, 0.42, sunset),
+          THREE.MathUtils.lerp(0.46, 0.08, sunset),
+          -0.74,
+        )
+        .normalize()
+      uniforms.uJourneyNight.value = night
+    }
 
     if (cloudGroupRef.current) {
       const openSky = smoothstep(15, 21, progress)
@@ -2129,6 +2293,10 @@ export default function JourneyScene({
   return (
     <>
       <primitive object={root} />
+      <SkyAtmosphere
+        meshRef={skyAtmosphereRef}
+        materialRef={skyAtmosphereMaterialRef}
+      />
       <RiverRipple
         groupRef={riverRippleRef}
         materialRefs={riverRippleMaterialRefs}
