@@ -2476,13 +2476,17 @@ textarea,
     z-index: 1;
     top: 70px;
     right: 0;
+    bottom: 0;
     left: 0;
     display: grid;
+    align-content: start;
     gap: 0;
-    padding: 12px 20px 22px;
+    height: calc(100dvh - 70px);
+    padding: clamp(28px, 7vh, 58px) 20px max(28px, env(safe-area-inset-bottom));
+    overflow-y: auto;
     visibility: hidden;
     opacity: 0;
-    background: rgba(240, 238, 230, 0.98);
+    background: rgb(240, 238, 230);
     border-bottom: 1px solid rgba(105, 167, 133, 0.42);
     transform: translateY(-12px);
     transition: visibility 0s linear 280ms, opacity 240ms ease, transform 280ms ease;
@@ -2503,6 +2507,25 @@ textarea,
     font-size: 12px;
     letter-spacing: 0.08em;
     text-transform: uppercase;
+  }
+
+  .portfolio-site.is-menu-open {
+    z-index: 100 !important;
+    overflow: hidden !important;
+    background: rgb(240, 238, 230) !important;
+    touch-action: none !important;
+  }
+
+  .portfolio-site.is-menu-open .portfolio-nav {
+    background: rgb(240, 238, 230);
+    border-bottom: 1px solid rgba(105, 167, 133, 0.42);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .portfolio-site.is-menu-open .portfolio-page-transition {
+    visibility: hidden;
+    pointer-events: none;
   }
 
   .portfolio-site.is-page-about,

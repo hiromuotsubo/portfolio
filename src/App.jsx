@@ -803,7 +803,7 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
   return (
     <section
       ref={siteScrollRef}
-      className={`portfolio-site is-page-${page} is-mist-${mistTransition.phase}`}
+      className={`portfolio-site is-page-${page} is-mist-${mistTransition.phase} ${mobileMenuOpen ? 'is-menu-open' : ''}`}
       data-portfolio-page={page}
     >
       <header className="portfolio-nav">
@@ -848,7 +848,11 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
         <i />
       </div>
 
-      <div key={page} className="portfolio-page-transition">
+      <div
+        key={page}
+        className="portfolio-page-transition"
+        aria-hidden={mobileMenuOpen || undefined}
+      >
         {page === 'home' ? (
           <section className="portfolio-home portfolio-page" aria-labelledby="portfolio-home-title">
             <div className="portfolio-home__visual" aria-hidden="true" />
