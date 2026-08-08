@@ -495,12 +495,11 @@ const ABOUT_ITEMS = [
 ]
 
 const PROJECT_ITEMS = [
-  ['origin', 'From Photo to 3D'],
-  ['contrast', 'Spatial Contrast'],
-  ['terrain', 'Terrain & Light'],
+  ['origin', 'Inspiration'],
+  ['contrast', 'Space'],
+  ['terrain', 'Atmosphere'],
   ['interaction', 'Interaction'],
-  ['atmosphere', 'Sound & Time'],
-  ['emotion', 'Emotional Arc'],
+  ['emotion', 'Emotion'],
 ]
 
 function PortfolioImage({ src, alt, caption, className = '' }) {
@@ -519,6 +518,7 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
   const transitionTimersRef = useRef([])
   const transitioningRef = useRef(false)
   const [activePanel, setActivePanel] = useState('profile')
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [panelMotion, setPanelMotion] = useState({})
   const [mistTransition, setMistTransition] = useState({
     phase: 'idle',
@@ -550,6 +550,7 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
 
   const navigate = useCallback((nextPage, event) => {
     if (nextPage === page || transitioningRef.current) return
+    setMobileMenuOpen(false)
 
     const targetBounds = event?.currentTarget?.getBoundingClientRect()
     const x = Number.isFinite(event?.clientX) && event.clientX > 0
@@ -568,7 +569,7 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
 
     transitionTimersRef.current = [
       window.setTimeout(() => {
-        setActivePanel(nextPage === 'project' ? 'goal' : 'profile')
+        setActivePanel(nextPage === 'project' ? 'origin' : 'profile')
         onNavigate(nextPage)
         setMistTransition({ phase: 'reveal', x, y })
       }, switchDelay),
@@ -584,7 +585,7 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
   }, [])
 
   useEffect(() => {
-    setActivePanel(page === 'project' ? 'goal' : 'profile')
+    setActivePanel(page === 'project' ? 'origin' : 'profile')
     onScrolledChange(page !== 'home')
     if (page === 'about' || page === 'project') {
       requestAnimationFrame(() => {
@@ -709,8 +710,8 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
           <PortfolioImage src="/portfolio/about-portrait.webp" alt="Hiromu checking his camera" caption="Photographing" className="is-about-photo" />
           <div className="portfolio-panel__copy">
             <span className="portfolio-kicker">PROFILE</span>
-            <h3>I’m interested in how experiences make people feel.</h3>
-            <p>I explore those feelings through perspective, atmosphere and interaction.</p>
+            <h3>Experiences shape emotion.</h3>
+            <p>I explore how perspective, atmosphere and interaction influence the way people feel.</p>
             <dl className="portfolio-profile-facts">
               <div><dt>BASED IN</dt><dd>NAGANO, JAPAN</dd></div>
               <div><dt>WORK</dt><dd>DESIGN / DEVELOPMENT</dd></div>
@@ -724,8 +725,8 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
           <PortfolioImage src="/portfolio/about-perspective.webp" alt="Two people walking beneath a vast mountain and summer sky" caption="Human scale in landscape." className="is-about-photo" />
           <div className="portfolio-panel__copy">
             <span className="portfolio-kicker">RESEARCH</span>
-            <h3>A person can make a vast landscape feel even greater.</h3>
-            <p>That observation led to my primary study comparing awe in first- and third-person immersive VR.</p>
+            <h3>Human scale amplifies vastness.</h3>
+            <p>This idea became the foundation of my research on awe in immersive VR, comparing first- and third-person perspectives.</p>
             <p>I also contributed as a co-author to related studies on awe, emotion and human experience.</p>
             <a href="https://scholar.google.co.jp/citations?user=xiwv18wAAAAJ&hl=ja" target="_blank" rel="noreferrer">VIEW RESEARCH <span>↗</span></a>
           </div>
@@ -735,7 +736,7 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
           <PortfolioImage src="/portfolio/about-stillness.webp" alt="Mist floating above a still lake and quiet boats" caption="MIST OVER STILL WATER" className="is-about-photo" />
           <div className="portfolio-panel__copy">
             <span className="portfolio-kicker">APPROACH</span>
-            <h3>Give people time to notice what they feel.</h3>
+            <h3>People need time to feel.</h3>
             <p>I use stillness, space and slower moments to make room for that attention.</p>
           </div>
         </article>
@@ -744,8 +745,8 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
           <PortfolioImage src="/portfolio/about-origin.webp" alt="Kamikochi mountains and the Azusa River seen from Kappa Bridge" caption="KAMIKOCHI" className="is-about-photo" />
           <div className="portfolio-panel__copy">
             <span className="portfolio-kicker">MOTIVATION</span>
-            <h3>A photograph preserved the view, but not the feeling of being there.</h3>
-            <p>I spent six weeks working in Kamikochi. Journey uses depth, sound and interaction to translate that experience—from a confined cave to an open valley.</p>
+            <h3>Photographs preserve views, not feelings.</h3>
+            <p>Six weeks in Kamikochi taught me that photographs can preserve scenery, but not the feeling of being there. Journey translates that experience through depth, sound and interaction.</p>
           </div>
         </article>
         <footer className="portfolio-story__end">
@@ -773,27 +774,23 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
       <div className="portfolio-story__panels">
         <article id="origin" className={panelClassName('origin')} data-story-panel="origin">
           <PortfolioImage src="/portfolio/project-inspiration-v2.png" alt="A Kamikochi field photograph used as a reference for Journey" caption="FIELD REFERENCE / KAMIKOCHI" />
-          <div className="portfolio-panel__copy"><span className="portfolio-kicker">FROM PHOTO TO 3D</span><h3>The photograph became a reference, not a blueprint.</h3><p>I spent six weeks working in Kamikochi and photographed its mountains, river and changing atmosphere. In Blender, those memories became a fictional valley: the composition and feeling remain, while the terrain, route and timing were rebuilt for an interactive experience.</p></div>
+          <div className="portfolio-panel__copy"><span className="portfolio-kicker">INSPIRATION</span><h3>A photograph captured the view, not the feeling.</h3><p>Six weeks in Kamikochi taught me that photographs preserve scenery, but not experience. Journey recreates that experience through space, interaction and time rather than visual accuracy.</p></div>
         </article>
         <article id="contrast" className={panelClassName('contrast')} data-story-panel="contrast">
           <PortfolioImage src="/portfolio/project-contrast-v2.png" alt="Journey beginning inside a dark cave and opening toward the valley" caption="CAVE TO VALLEY" className="is-dark" />
-          <div className="portfolio-panel__copy"><span className="portfolio-kicker">SPATIAL CONTRAST</span><h3>A confined cave makes the open valley feel larger.</h3><p>The narrow, dark opening intentionally limits the field of view. Emerging into the wide valley creates a stronger contrast in scale—an approach informed by my research into viewpoint, awe and emotional experience.</p></div>
+          <div className="portfolio-panel__copy"><span className="portfolio-kicker">SPACE</span><h3>Emotion begins with space.</h3><p>The journey begins inside a confined cave before opening toward a vast valley. The contrast in scale amplifies awe, reflecting my research on viewpoint and emotion.</p></div>
         </article>
         <article id="terrain" className={panelClassName('terrain')} data-story-panel="terrain">
           <PortfolioImage src="/portfolio/project-goal-v2.png" alt="The finished Journey valley beside its Blender terrain wireframe" caption="BLENDER TERRAIN / WEBGL LIGHTING" />
-          <div className="portfolio-panel__copy"><span className="portfolio-kicker">TERRAIN &amp; LIGHT</span><h3>Actual depth lets every change belong to the same place.</h3><p>The valley was shaped as 3D terrain in Blender, then shaded with projected rock detail, broken snowfields and watercolor-like pigment. In the browser, the same geometry receives moving light, layered mist, water reflections and the transition from day to night, so the scene changes without becoming a different image.</p></div>
+          <div className="portfolio-panel__copy"><span className="portfolio-kicker">ATMOSPHERE</span><h3>Light lets the landscape breathe.</h3><p>Light, mist, sound and time transform one landscape into many moments without changing the place itself.</p></div>
         </article>
         <article id="interaction" className={panelClassName('interaction')} data-story-panel="interaction">
           <PortfolioImage src="/portfolio/project-interaction-v2.png" alt="The HOLD interaction placed within the night-time Journey landscape" caption="HOLD / WORLD RESPONSE" className="is-dark" />
-          <div className="portfolio-panel__copy"><span className="portfolio-kicker">INTERACTION</span><h3>Holding gives the landscape time to be seen.</h3><p>Scroll carries the journey forward; HOLD deliberately interrupts that rhythm. A raycast places the response at the touched point in the 3D world, where light gathers and remains as a quiet trace of the viewer’s action.</p></div>
+          <div className="portfolio-panel__copy"><span className="portfolio-kicker">INTERACTION</span><h3>The landscape responds when you slow down.</h3><p>Scroll moves forward. HOLD creates stillness. Looking around reveals quiet details hidden in the landscape.</p></div>
         </article>
-        <article id="atmosphere" className={panelClassName('atmosphere')} data-story-panel="atmosphere">
-          <PortfolioImage src="/portfolio/project-emotion-v2.png" alt="The Journey valley changing from daylight to a star-filled night" caption="SPATIAL AUDIO / DAY TO NIGHT" className="is-dark" />
-          <div className="portfolio-panel__copy"><span className="portfolio-kicker">SOUND &amp; TIME</span><h3>Time changes through light before it is explained in words.</h3><p>Cave ambience, wind and water occupy different positions in the world and crossfade as the camera travels. The gradual shift into night slows the experience, while the environment—not an interface—signals when to continue or hold.</p></div>
-        </article>
-        <article id="emotion" className={panelClassName('emotion')} data-story-panel="emotion">
-          <PortfolioImage src="/portfolio/project-night-clean.png" alt="Journey valley at the quiet end of its night sequence" caption="TENSION / AWE / AFTERGLOW" className="is-dark" />
-          <div className="portfolio-panel__copy"><span className="portfolio-kicker">EMOTIONAL ARC</span><h3>From tension, to awe, to stillness.</h3><p>The order of space, interaction, sound and time was planned as one emotional curve: uncertainty in the cave, release in the open valley, wonder as the river and sky connect, then stillness beneath the night sky.</p><button type="button" onClick={onReplay}>EXPERIENCE AGAIN <span>↗</span></button></div>
+        <article id="emotion" className={panelClassName('emotion', 'is-emotion-panel')} data-story-panel="emotion">
+          <PortfolioImage src="/portfolio/project-emotion-v2.png" alt="A small figure beneath the Journey night sky" caption="EMOTION / AFTERGLOW" className="is-dark" />
+          <div className="portfolio-panel__copy"><span className="portfolio-kicker">EMOTION</span><h3>Wonder grows in quiet moments.</h3><p>The journey ends with only a small figure beneath an immense night sky. Rather than offering a conclusion, it leaves space for reflection.</p><button type="button" onClick={onReplay}>EXPERIENCE AGAIN <span className="short-arrow" aria-hidden="true" /></button></div>
         </article>
         <footer className="portfolio-story__end">
           <span>END OF PROJECT</span>
@@ -814,14 +811,26 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
           <HiromuMark compact />
           <span>Hiromu / Portfolio</span>
         </button>
-        <nav aria-label="Portfolio navigation">
+        <button
+          className="portfolio-nav__toggle"
+          type="button"
+          aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+          aria-expanded={mobileMenuOpen}
+          onClick={() => setMobileMenuOpen((open) => !open)}
+        >
+          <i /><i /><i />
+        </button>
+        <nav className={mobileMenuOpen ? 'is-open' : ''} aria-label="Portfolio navigation">
           {PORTFOLIO_PAGES.map((item) => (
             <button
               key={item}
               type="button"
               className={page === item ? 'is-current' : ''}
               aria-current={page === item ? 'page' : undefined}
-              onClick={(event) => navigate(item, event)}
+              onClick={(event) => {
+                setMobileMenuOpen(false)
+                navigate(item, event)
+              }}
             >
               {item}
             </button>
@@ -853,7 +862,7 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
                 <div><dt>BUILT WITH</dt><dd>BLENDER / REACT / THREE.JS</dd></div>
                 <div><dt>YEAR</dt><dd>2026</dd></div>
               </dl>
-              <button type="button" onClick={onReplay}><span>EXPERIENCE AGAIN</span><i aria-hidden="true">↗</i></button>
+              <button type="button" onClick={onReplay}><span>EXPERIENCE AGAIN</span><i className="short-arrow" aria-hidden="true" /></button>
             </div>
           </section>
         ) : null}
@@ -902,6 +911,7 @@ function App() {
   const [displayedMessage, setDisplayedMessage] = useState(null)
   const [messageVisible, setMessageVisible] = useState(false)
   const [journeyAssets, setJourneyAssets] = useState({ active: true, progress: 0 })
+  const [mobileLook, setMobileLook] = useState({ x: 0, y: 0 })
   const progressRef = useRef(PREVIEW_PROGRESS)
   const enteredRef = useRef(PREVIEW_ENTERED || INITIAL_VIEW === 'portfolio')
   const targetRef = useRef(PREVIEW_PROGRESS)
@@ -912,7 +922,7 @@ function App() {
   const riverCompletedRef = useRef(false)
   const holdRef = useRef({ frame: null, startedAt: 0, pointerId: null })
   const skyConnectionRef = useRef({ frame: null, startedAt: 0 })
-  const touchRef = useRef({ active: false, y: 0 })
+  const touchRef = useRef({ active: false, x: 0, y: 0, startX: 0, startY: 0, mode: null })
   const activeMessageNumberRef = useRef(null)
   const previousStoryProgressRef = useRef(PREVIEW_PROGRESS)
   const storyDirectionRef = useRef(1)
@@ -1131,15 +1141,41 @@ function App() {
     const onTouchStart = (event) => {
       if (portfolioRef.current) return
       if (gateRef.current || event.touches.length !== 1) return
-      touchRef.current = { active: true, y: event.touches[0].clientY }
+      const touch = event.touches[0]
+      touchRef.current = {
+        active: true,
+        x: touch.clientX,
+        y: touch.clientY,
+        startX: touch.clientX,
+        startY: touch.clientY,
+        mode: null,
+      }
     }
     const onTouchMove = (event) => {
       if (portfolioRef.current) return
       if (!touchRef.current.active || event.touches.length !== 1) return
+      const touch = event.touches[0]
+      const totalX = touch.clientX - touchRef.current.startX
+      const totalY = touch.clientY - touchRef.current.startY
+      if (!touchRef.current.mode && Math.hypot(totalX, totalY) > 7) {
+        touchRef.current.mode = Math.abs(totalX) > Math.abs(totalY) * 1.12
+          ? 'look'
+          : 'scroll'
+      }
+      if (!touchRef.current.mode) return
       event.preventDefault()
-      const y = event.touches[0].clientY
-      advance((touchRef.current.y - y) * 1.8)
-      touchRef.current.y = y
+      const deltaX = touch.clientX - touchRef.current.x
+      const deltaY = touch.clientY - touchRef.current.y
+      if (touchRef.current.mode === 'look') {
+        setMobileLook((current) => ({
+          x: clamp(current.x + deltaX / Math.max(window.innerWidth * 0.34, 1), -1, 1),
+          y: clamp(current.y - deltaY / Math.max(window.innerHeight * 0.38, 1), -0.8, 0.8),
+        }))
+      } else {
+        advance(-deltaY * 1.8)
+      }
+      touchRef.current.x = touch.clientX
+      touchRef.current.y = touch.clientY
     }
     const onTouchEnd = () => {
       touchRef.current.active = false
@@ -1391,6 +1427,7 @@ function App() {
     setFogCompleted(false)
     setDisplayedMessage(null)
     setMessageVisible(false)
+    setMobileLook({ x: 0, y: 0 })
     setPortfolioPage('home')
   }, [])
 
@@ -1449,6 +1486,7 @@ function App() {
               fogCompleted={fogCompleted}
               presentationMode={showPortfolio}
               outroMode={showOutro && !showPortfolio}
+              mobileLook={mobileLook}
               onAssetsProgress={handleJourneyAssets}
               onListenerPose={updateListenerPose}
             />
@@ -1472,9 +1510,14 @@ function App() {
 
       <section className="journey-outro" aria-label="Thank you so much.">
         <p className="journey-outro__copy" aria-hidden="true">
-          <span className="journey-outro__text">
-            Thank you so <span className="journey-outro__m">m</span>uch.
+          <span className="journey-outro__prefix">Thank you so</span>
+          <span className="journey-outro__slot">
+            <span className="journey-outro__ridge" aria-hidden="true">
+              <i /><i /><i /><i />
+            </span>
+            <span className="journey-outro__m">m</span>
           </span>
+          <span className="journey-outro__suffix">uch.</span>
         </p>
       </section>
 
