@@ -20,10 +20,24 @@ const ENDING_CAMERA = {
   liftEnd: 90,
   wideStart: 86,
   wideEnd: 100,
-  pullBack: 6.8,
+  pullBack: 11.5,
   cameraLift: 0.16,
   lift: 0.08,
-  fov: 18,
+  fov: 25,
+}
+
+// V1 framing is preserved on backup/journey-lookdev-v1-e5ec4a3.
+// These offsets leave the authored animation path intact and only widen the
+// open-valley composition so sky, water and distant ridges can share the frame.
+const LOOKDEV_V2_COMPOSITION = {
+  vistaStart: 19,
+  vistaFull: 28,
+  vistaFadeStart: 56,
+  vistaFadeEnd: 68,
+  pullBack: 3.6,
+  cameraLift: 0.34,
+  targetLift: 0,
+  fov: 7.4,
 }
 
 const CAVE_LOOK = {
@@ -336,23 +350,93 @@ function createSeatedFigureMaterial() {
   })
 }
 
-function SeatedStarFigure({ groupRef, materialRef, qualityScale = 1 }) {
+function createSeatedSilhouetteTexture() {
+  const canvas = document.createElement('canvas')
+  canvas.width = 512
+  canvas.height = 512
+  const context = canvas.getContext('2d')
+  context.clearRect(0, 0, canvas.width, canvas.height)
+  context.lineCap = 'round'
+  context.lineJoin = 'round'
+  context.strokeStyle = 'rgba(4, 11, 19, 0.96)'
+  context.fillStyle = 'rgba(4, 11, 19, 0.96)'
+
+  // Head and a forward-curving back.
+  context.beginPath()
+  context.arc(177, 78, 39, 0, Math.PI * 2)
+  context.fill()
+  context.lineWidth = 79
+  context.beginPath()
+  context.moveTo(178, 135)
+  context.bezierCurveTo(146, 188, 137, 265, 170, 330)
+  context.stroke()
+
+  // Folded legs establish the unmistakable triangular seated pose.
+  context.lineWidth = 72
+  context.beginPath()
+  context.moveTo(174, 326)
+  context.lineTo(332, 252)
+  context.lineTo(421, 396)
+  context.stroke()
+  context.lineWidth = 58
+  context.beginPath()
+  context.moveTo(166, 348)
+  context.lineTo(322, 410)
+  context.lineTo(432, 410)
+  context.stroke()
+
+  // Arms wrap around the knees instead of reading as loose particle strands.
+  context.lineWidth = 30
+  context.beginPath()
+  context.moveTo(190, 164)
+  context.bezierCurveTo(230, 204, 276, 244, 326, 270)
+  context.stroke()
+  context.beginPath()
+  context.moveTo(173, 184)
+  context.bezierCurveTo(208, 247, 255, 283, 315, 286)
+  context.stroke()
+
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.colorSpace = THREE.SRGBColorSpace
+  texture.generateMipmaps = true
+  texture.minFilter = THREE.LinearMipmapLinearFilter
+  texture.magFilter = THREE.LinearFilter
+  texture.needsUpdate = true
+  return texture
+}
+
+function SeatedStarFigure({ groupRef, materialRef, silhouetteMaterialRef, qualityScale = 1 }) {
   const geometry = useMemo(
     () => buildSeatedFigureGeometry(Math.round(1180 * qualityScale)),
     [qualityScale],
   )
   const material = useMemo(() => createSeatedFigureMaterial(), [])
+  const silhouetteTexture = useMemo(() => createSeatedSilhouetteTexture(), [])
 
   useEffect(() => {
     materialRef.current = material
     return () => {
       geometry.dispose()
       material.dispose()
+      silhouetteTexture.dispose()
     }
-  }, [geometry, material, materialRef])
+  }, [geometry, material, materialRef, silhouetteTexture])
 
   return (
     <group ref={groupRef} position={[11.2, 0.24, -58]}>
+      <sprite position={[0.72, 2.52, 0.16]} scale={[6.5, 6.8, 1]} renderOrder={3}>
+        <spriteMaterial
+          ref={silhouetteMaterialRef}
+          map={silhouetteTexture}
+          color="#07111b"
+          transparent
+          opacity={0}
+          alphaTest={0.018}
+          depthWrite={false}
+          depthTest
+          toneMapped={false}
+        />
+      </sprite>
       <points geometry={geometry} material={material} frustumCulled={false} renderOrder={4} />
       <mesh
         name="JOURNEY_FIGURE_GROUND_SHADOW"
@@ -707,6 +791,20 @@ float journeyFbm(vec2 point) {
     amplitude *= 0.48;
   }
   return value;
+}
+
+float journeyTreeCanopy(vec2 point, float densitySeed) {
+  float warp = journeyFbm(point * 0.075 + vec2(19.0, -11.0));
+  point.x += (warp - 0.5) * 2.7;
+  vec2 cell = floor(point);
+  vec2 local = fract(point);
+  float seed = journeyHash(cell + densitySeed);
+  local.x += (journeyHash(cell + densitySeed + 17.0) - 0.5) * 0.42;
+  float halfWidth = mix(0.045, mix(0.28, 0.43, seed), smoothstep(0.05, 0.84, local.y));
+  float crown = 1.0 - smoothstep(halfWidth, halfWidth + 0.055, abs(local.x - 0.5));
+  crown *= smoothstep(0.03, 0.12, local.y) * (1.0 - smoothstep(0.82, 0.98, local.y));
+  crown *= smoothstep(0.2, 0.58, seed);
+  return crown;
 }`,
       )
       .replace(
@@ -770,7 +868,7 @@ vec3 journeyPaint = mix(journeyForest, journeySummer, smoothstep(0.08, 0.58, jou
 journeyPaint = mix(journeyPaint, journeyRock, journeyRockMask * 0.67);
 float journeyForestSurface =
   (1.0 - smoothstep(0.62, 0.9, journeyAltitude)) *
-  (1.0 - smoothstep(0.38, 0.82, journeyRockMask));
+  (1.0 - smoothstep(0.68, 0.96, journeyRockMask));
 float journeyCanopyGrain = journeyNoise(
   journeyTerrainUv * 22.0 + vec2(journeyFine * 3.1, vJourneyWorldPosition.y * 0.24)
 );
@@ -782,8 +880,8 @@ float journeyCanopyShadow = smoothstep(
 );
 journeyPaint *= mix(
   vec3(1.0),
-  mix(vec3(0.88, 0.91, 0.86), vec3(1.045, 1.07, 1.015), journeyCanopyGrain),
-  journeyForestSurface * 0.48
+  mix(vec3(0.72, 0.78, 0.7), vec3(1.12, 1.16, 1.075), journeyCanopyGrain),
+  journeyForestSurface * 0.58
 );
 journeyPaint = mix(
   journeyPaint,
@@ -826,6 +924,19 @@ vec3 journeyConiferLight = vec3(0.12, 0.285, 0.105);
 vec3 journeyCrownColor = mix(journeyConiferDark, journeyConiferLight, journeyCanopyTexture);
 journeyCrownColor *= mix(0.72, 1.16, journeyTreeBands);
 journeyPaint = mix(journeyPaint, journeyCrownColor, journeyCrownPresence * 0.54);
+vec2 journeyTreeUv = vec2(
+  vJourneyWorldPosition.x + vJourneyWorldPosition.z * 0.22,
+  vJourneyWorldPosition.y - vJourneyWorldPosition.z * 0.035
+);
+float journeyTreeSilhouettes = max(
+  journeyTreeCanopy(journeyTreeUv * 0.26, 31.0),
+  journeyTreeCanopy(journeyTreeUv * 0.52 + vec2(8.0, 13.0), 79.0) * 0.72
+);
+float journeyTreeDistanceFade = 1.0 - smoothstep(255.0, 430.0, length(vViewPosition));
+float journeyTreePresence = journeyTreeSilhouettes * journeyForestSurface *
+  mix(0.32, 1.0, journeyVegetationDensity) * journeyTreeDistanceFade;
+vec3 journeyTreeColor = mix(vec3(0.012, 0.052, 0.026), vec3(0.065, 0.17, 0.06), journeyCanopyMass);
+journeyPaint = mix(journeyPaint, journeyTreeColor, journeyTreePresence * 0.72);
 float journeyForestStand = smoothstep(
   0.24,
   0.82,
@@ -839,7 +950,20 @@ vec3 journeyForestStandColor = mix(
 journeyPaint = mix(
   journeyPaint,
   journeyForestStandColor,
-  journeyForestSurface * (0.36 + journeyVegetationDensity * 0.28)
+  journeyForestSurface * (0.5 + journeyVegetationDensity * 0.28)
+);
+float journeyLowerForestBelt =
+  (1.0 - smoothstep(16.0, 48.0, vJourneyWorldPosition.y)) *
+  (0.34 + smoothstep(0.08, 0.42, journeySteepness) * 0.66);
+vec3 journeyLowerForestColor = mix(
+  vec3(0.018, 0.078, 0.042),
+  vec3(0.095, 0.235, 0.085),
+  journeyCanopyGrain * 0.56 + journeyVegetationDensity * 0.44
+);
+journeyPaint = mix(
+  journeyPaint,
+  journeyLowerForestColor,
+  journeyLowerForestBelt * (0.46 + journeyVegetationDensity * 0.18)
 );
 float journeyForestShadow = journeyForestSurface * smoothstep(
   0.54,
@@ -902,11 +1026,20 @@ vec3 journeySunsetHaze = vec3(0.72, 0.50, 0.43);
 vec3 journeyNightHaze = vec3(0.18, 0.27, 0.41);
 vec3 journeyAtmosphere = mix(journeyDayHaze, journeySunsetHaze, uJourneySunset * 0.72);
 journeyAtmosphere = mix(journeyAtmosphere, journeyNightHaze, uJourneyNight);
-float journeyDistanceHaze = smoothstep(88.0, 390.0, length(vViewPosition));
+float journeyViewDistance = length(vViewPosition);
+float journeyDistanceHaze = smoothstep(62.0, 330.0, journeyViewDistance);
 journeyPaint = mix(
   journeyPaint,
   journeyAtmosphere,
-  journeyDistanceHaze * ${isFarRidge ? '0.48' : '0.23'}
+  journeyDistanceHaze * ${isFarRidge ? '0.62' : '0.22'}
+);
+float journeyFootMist = smoothstep(76.0, 265.0, journeyViewDistance) *
+  (1.0 - smoothstep(9.0, 31.0, vJourneyWorldPosition.y)) *
+  (0.58 + journeyMacro * 0.42);
+journeyPaint = mix(
+  journeyPaint,
+  journeyAtmosphere * 1.035,
+  journeyFootMist * ${isFarRidge ? '0.34' : '0.12'}
 );
 vec2 journeyWatercolorUv = vec2(
   vJourneyWorldPosition.x * 0.0038 + vJourneyWorldPosition.z * 0.0009,
@@ -975,7 +1108,7 @@ totalEmissiveRadiance += journeyPaint * uJourneyNight * 0.055;
 totalEmissiveRadiance += vec3(0.018, 0.038, 0.072) * uJourneyNight;`,
     )
   }
-  material.customProgramCacheKey = () => `journey-alpine-${isFarRidge ? 'far' : 'near'}-v10-canopy-scale`
+  material.customProgramCacheKey = () => `journey-alpine-${isFarRidge ? 'far' : 'near'}-v20-forest-depth`
 }
 
 function applyWetGravelDetail(material, variant = 'bed') {
@@ -1002,6 +1135,17 @@ varying vec3 vJourneyGravelPosition;
 
 float journeyGravelHash(vec2 point) {
   return fract(sin(dot(point, vec2(127.1, 311.7))) * 43758.5453123);
+}
+
+float journeyGravelNoise(vec2 point) {
+  vec2 cell = floor(point);
+  vec2 local = fract(point);
+  local = local * local * (3.0 - 2.0 * local);
+  return mix(
+    mix(journeyGravelHash(cell), journeyGravelHash(cell + vec2(1.0, 0.0)), local.x),
+    mix(journeyGravelHash(cell + vec2(0.0, 1.0)), journeyGravelHash(cell + vec2(1.0)), local.x),
+    local.y
+  );
 }`,
       )
       .replace(
@@ -1022,16 +1166,24 @@ float journeyGravelStone = 1.0 - smoothstep(
   length(journeyGravelLocal - journeyGravelOffset * 0.24)
 );
 float journeyGravelFine = journeyGravelHash(floor(vJourneyGravelPosition.xz * 2.35) + 73.0);
+float journeyGravelMacro = journeyGravelNoise(vJourneyGravelPosition.xz * 0.11 + 9.0);
+float journeyGravelMeso = journeyGravelNoise(vJourneyGravelPosition.xz * 0.54 - 17.0);
 vec3 journeyGravelDark = ${isSubmergedBed ? 'vec3(0.055, 0.18, 0.15)' : isRiverBar ? 'vec3(0.045, 0.17, 0.145)' : 'vec3(0.31, 0.34, 0.31)'};
 vec3 journeyGravelLight = ${isSubmergedBed ? 'vec3(0.20, 0.38, 0.31)' : isRiverBar ? 'vec3(0.19, 0.34, 0.27)' : 'vec3(0.62, 0.59, 0.50)'};
-vec3 journeyGravelColor = mix(journeyGravelDark, journeyGravelLight, journeyGravelSeed * 0.7 + journeyGravelFine * 0.3);
+vec3 journeyGravelColor = mix(
+  journeyGravelDark,
+  journeyGravelLight,
+  journeyGravelMacro * 0.48 + journeyGravelMeso * 0.34 + journeyGravelFine * 0.18
+);
 journeyGravelColor *= mix(0.72, ${isRiverBar ? '0.98' : '1.12'}, journeyGravelStone);
 float journeyBankGrass = smoothstep(
-  0.82,
-  0.97,
-  journeyGravelHash(floor(vJourneyGravelPosition.xz * 0.22) + 113.0)
+  0.68,
+  0.9,
+  journeyGravelNoise(vJourneyGravelPosition.xz * 0.075 + 113.0) + journeyGravelMeso * 0.22
 ) * ${isRiverBar ? '1.0' : '0.28'};
-journeyGravelColor = mix(journeyGravelColor, vec3(0.105, 0.235, 0.13), journeyBankGrass * 0.48);
+float journeyWetEdge = smoothstep(0.38, 0.82, journeyGravelNoise(vJourneyGravelPosition.xz * 0.16 - 33.0));
+journeyGravelColor = mix(journeyGravelColor, vec3(0.075, 0.19, 0.12), journeyBankGrass * 0.42);
+journeyGravelColor = mix(journeyGravelColor, journeyGravelColor * vec3(0.62, 0.72, 0.72), journeyWetEdge * ${isRiverBar ? '0.2' : '0.08'});
 diffuseColor.rgb = mix(diffuseColor.rgb, journeyGravelColor, ${isSubmergedBed ? '0.54' : variant === 'bed' ? '0.78' : isRiverBar ? '0.86' : '0.92'});`,
       )
       .replace(
@@ -1040,13 +1192,14 @@ diffuseColor.rgb = mix(diffuseColor.rgb, journeyGravelColor, ${isSubmergedBed ? 
 roughnessFactor = ${isSubmergedBed ? 'mix(0.66, 0.88, journeyGravelStone)' : 'mix(0.78, 0.97, journeyGravelStone)'};`,
       )
   }
-  material.customProgramCacheKey = () => `journey-wet-gravel-v4-${variant}`
+  material.customProgramCacheKey = () => `journey-wet-gravel-v5-organic-${variant}`
   material.needsUpdate = true
 }
 
 function applyWaterReflection(material) {
   if (!material.isMeshStandardMaterial && !material.isMeshPhysicalMaterial) return
   const journeyUniforms = {
+    uJourneySunset: { value: 0 },
     uJourneyNight: { value: 0 },
     uJourneyRiverGlow: { value: 0 },
     uJourneySkyConnect: { value: 0 },
@@ -1076,6 +1229,7 @@ vJourneyWaterNormal = normalize(mat3(modelMatrix) * objectNormal);`,
 varying vec3 vJourneyWaterPosition;
 varying vec3 vJourneyWaterNormal;
 uniform float uJourneyNight;
+uniform float uJourneySunset;
 uniform float uJourneyRiverGlow;
 uniform float uJourneySkyConnect;
 uniform float uJourneyTime;
@@ -1158,8 +1312,14 @@ float journeyShoalNoise = journeyWaterNoise(
 );
 float journeyShoal = smoothstep(0.67, 0.91, journeyShoalNoise) *
   smoothstep(0.2, 0.92, journeyChannelDistance);
+float journeyMidChannelShoal = smoothstep(
+  0.74,
+  0.92,
+  journeyWaterNoise(vJourneyWaterPosition.xz * vec2(0.055, 0.12) + vec2(-31.0, 14.0))
+) * (1.0 - smoothstep(0.62, 0.9, journeyChannelDistance));
 float journeyOpticalDepth = clamp(
-  0.18 + journeyCenterDepth * 0.66 + journeyDepthVariation * 0.18 - journeyShoal * 0.32,
+  0.18 + journeyCenterDepth * 0.66 + journeyDepthVariation * 0.18 -
+    journeyShoal * 0.32 - journeyMidChannelShoal * 0.27,
   0.0,
   1.0
 );
@@ -1179,8 +1339,16 @@ float journeyRiverHead = 1.0 - smoothstep(uJourneyRiverGlow - 0.045, uJourneyRiv
 float journeyGroundRiver = 1.0 - smoothstep(1.35, 3.8, vJourneyWaterPosition.y);
 float journeyRiverMask = journeyRiverHead * smoothstep(0.01, 0.075, uJourneyRiverGlow) * journeyGroundRiver;
 float journeyRiverCurrent = 0.58 + journeyWaterRipple * 0.24 + journeyWaterCrossRipple * 0.18;
-vec3 journeyDayShallowWater = vec3(0.028, 0.50, 0.34);
-vec3 journeyDayDeepWater = vec3(0.003, 0.12, 0.14);
+vec3 journeyDayShallowWater = mix(
+  vec3(0.055, 0.43, 0.35),
+  vec3(0.13, 0.29, 0.25),
+  uJourneySunset * 0.62
+);
+vec3 journeyDayDeepWater = mix(
+  vec3(0.012, 0.16, 0.22),
+  vec3(0.055, 0.12, 0.17),
+  uJourneySunset * 0.58
+);
 vec3 journeyNightShallowWater = vec3(0.018, 0.22, 0.34);
 vec3 journeyNightDeepWater = vec3(0.004, 0.035, 0.11);
 vec3 journeyShallowWater = mix(journeyDayShallowWater, journeyNightShallowWater, uJourneyNight);
@@ -1191,25 +1359,58 @@ float journeyBedVisibility = (1.0 - journeyOpticalDepth) *
   (0.66 + journeyWaterRipple * 0.1) * (0.74 + journeyBankShallow * 0.26);
 journeyClearBody = mix(journeyClearBody, journeyWetRiverbed, journeyBedVisibility * mix(0.46, 0.2, uJourneyNight));
 journeyClearBody *= 0.96 + journeyWaterRipple * 0.16;
-vec3 journeySkyReflection = mix(vec3(0.18, 0.57, 0.72), vec3(0.015, 0.055, 0.16), uJourneyNight);
+vec3 journeyDaySkyReflection = mix(
+  vec3(0.19, 0.48, 0.62),
+  vec3(0.44, 0.27, 0.27),
+  uJourneySunset * 0.52
+);
+vec3 journeySkyReflection = mix(journeyDaySkyReflection, vec3(0.015, 0.055, 0.16), uJourneyNight);
+vec3 journeyMountainReflection = mix(vec3(0.055, 0.20, 0.13), vec3(0.022, 0.07, 0.12), uJourneyNight);
 float journeyReflectionBand = smoothstep(0.58, 0.92, journeyWaterCrossRipple) *
   smoothstep(0.18, 0.82, journeyWaterFresnel);
+float journeyReflectionBreakup = smoothstep(
+  0.34,
+  0.78,
+  journeyWaterNoise(vJourneyWaterPosition.xz * vec2(0.075, 0.19) + vec2(-13.0, 28.0))
+);
+vec3 journeyLandscapeReflection = mix(
+  journeySkyReflection,
+  journeyMountainReflection,
+  journeyReflectionBreakup * (0.36 + journeyWaterFresnel * 0.42)
+);
 diffuseColor.rgb = mix(
   journeyClearBody,
-  journeySkyReflection,
-  0.045 + journeyWaterFresnel * 0.22 + journeyReflectionBand * 0.07
+  journeyLandscapeReflection,
+  0.065 + journeyWaterFresnel * 0.3 + journeyReflectionBand * 0.09
 );
-float journeyExposedBank = smoothstep(0.79, 0.98, journeyChannelDistance);
+float journeyBankContourNoise = journeyWaterNoise(
+  vJourneyWaterPosition.xz * vec2(0.09, 0.055) + vec2(43.0, -21.0)
+);
+float journeyExposedBank = smoothstep(
+  0.87 + (journeyBankContourNoise - 0.5) * 0.11,
+  1.02 + (journeyBankContourNoise - 0.5) * 0.08,
+  journeyChannelDistance
+);
 vec3 journeyBankGravel = mix(
-  vec3(0.24, 0.25, 0.21),
-  vec3(0.49, 0.46, 0.37),
-  journeyRiverbedVariation
+  vec3(0.20, 0.235, 0.21),
+  vec3(0.43, 0.42, 0.35),
+  journeyWaterNoise(vJourneyWaterPosition.xz * 0.63 + 61.0)
 );
 diffuseColor.rgb = mix(
   diffuseColor.rgb,
   journeyBankGravel,
-  journeyExposedBank * mix(0.74, 0.52, uJourneyNight)
+  journeyExposedBank * mix(0.58, 0.46, uJourneyNight)
 );
+float journeyCurrentVein = smoothstep(
+  0.72,
+  0.95,
+  0.5 + 0.5 * sin(
+    vJourneyWaterPosition.z * 0.51 - uJourneyTime * 0.86 +
+    sin(vJourneyWaterPosition.x * 0.23) * 1.8
+  )
+) * (0.48 + journeyWaterRipple * 0.52) * (1.0 - journeyExposedBank);
+diffuseColor.rgb += mix(vec3(0.13, 0.37, 0.31), vec3(0.18, 0.36, 0.54), uJourneyNight) *
+  journeyCurrentVein * (0.035 + journeyWaterFresnel * 0.035);
 diffuseColor.rgb += vec3(0.16, 0.4, 0.36) * journeyFineCurrent * (0.018 + journeyWaterFresnel * 0.035);
 float journeyShallowThread = smoothstep(0.72, 0.94, journeyFineCurrent) *
   smoothstep(0.46, 0.94, journeyBankShallow + journeyShoal * 0.65);
@@ -1255,7 +1456,7 @@ gl_FragColor.rgb = mix(gl_FragColor.rgb, diffuseColor.rgb, journeyPigmentStrengt
 gl_FragColor.rgb += vec3(0.16, 0.72, 0.68) * journeyFineCurrent * (1.0 - uJourneyNight) * 0.045;`,
       )
   }
-  material.customProgramCacheKey = () => 'journey-water-reflection-v19-channel-depth'
+  material.customProgramCacheKey = () => 'journey-water-reflection-v22-shoals-flow'
 }
 
 function createClearRiverMaterial() {
@@ -1453,7 +1654,7 @@ function addForestCanopyPoints(mountain, groups, texture) {
       positions.getZ(index) + normals.getZ(index) * 0.56 - jitter * 0.58,
     )
     const light = 0.64 + seed * 0.38
-    canopyColors.push(0.19 * light, 0.42 * light, 0.22 * light)
+    canopyColors.push(0.24 * light, 0.56 * light, 0.27 * light)
   }
   if (!canopyPositions.length) return
 
@@ -1464,12 +1665,12 @@ function addForestCanopyPoints(mountain, groups, texture) {
     alphaMap: texture,
     alphaTest: 0.1,
     color: '#ffffff',
-    depthTest: false,
+    depthTest: true,
     depthWrite: false,
     fog: true,
     opacity: 0.72,
-    size: 2.05,
-    sizeAttenuation: true,
+    size: 4.2,
+    sizeAttenuation: false,
     transparent: true,
     vertexColors: true,
   })
@@ -1927,6 +2128,48 @@ function ValleyFogBanks({ groupRef, materialRefs, layers = 7 }) {
   )
 }
 
+function OpenValleyAtmosphere({ groupRef, materialRefs }) {
+  const textures = useMemo(
+    () => [createCloudTexture(31900), createCloudTexture(34700), createCloudTexture(38200)],
+    [],
+  )
+  useEffect(() => () => textures.forEach((texture) => texture.dispose()), [textures])
+  const layers = [
+    { position: [-24, 13, -82], scale: [126, 25, 1], opacity: 0.1 },
+    { position: [31, 20, -132], scale: [176, 34, 1], opacity: 0.08 },
+    { position: [-8, 29, -198], scale: [228, 43, 1], opacity: 0.06 },
+  ]
+
+  return (
+    <group ref={groupRef}>
+      {layers.map((layer, index) => (
+        <sprite
+          key={layer.position.join('-')}
+          position={layer.position}
+          scale={layer.scale}
+          renderOrder={2 + index}
+          frustumCulled={false}
+          userData={{ opacity: layer.opacity, baseX: layer.position[0] }}
+        >
+          <spriteMaterial
+            ref={(material) => {
+              materialRefs.current[index] = material
+            }}
+            map={textures[index]}
+            color="#c8d8ce"
+            transparent
+            opacity={0}
+            alphaTest={0.004}
+            depthWrite={false}
+            depthTest={false}
+            toneMapped={false}
+          />
+        </sprite>
+      ))}
+    </group>
+  )
+}
+
 function MysticMotes({ groupRef, materialRef, qualityScale = 1 }) {
   const geometry = useMemo(
     () => buildMysticMotes(Math.round(420 * qualityScale)),
@@ -2059,6 +2302,7 @@ export default function JourneyScene({
   const skyBridgeRef = useRef(null)
   const seatedFigureRef = useRef(null)
   const seatedFigureMaterialRef = useRef(null)
+  const seatedFigureSilhouetteMaterialRef = useRef(null)
   const cloudGroupRef = useRef(null)
   const cloudMaterialRefs = useRef([])
   const cloudbreakRef = useRef(null)
@@ -2067,6 +2311,8 @@ export default function JourneyScene({
   const skyAtmosphereMaterialRef = useRef(null)
   const valleyFogGroupRef = useRef(null)
   const valleyFogMaterialRefs = useRef([])
+  const openValleyAtmosphereRef = useRef(null)
+  const openValleyAtmosphereMaterialRefs = useRef([])
   const skyRigRef = useRef(null)
   const motesRef = useRef(null)
   const motesMaterialRef = useRef(null)
@@ -2220,6 +2466,15 @@ export default function JourneyScene({
         (1 - smoothstep(79, 86, cameraProgress)) *
         (presentationMode ? 0.42 : 1)
       const openVista = smoothstep(18, 25, cameraProgress)
+      const vistaComposition = smoothstep(
+        LOOKDEV_V2_COMPOSITION.vistaStart,
+        LOOKDEV_V2_COMPOSITION.vistaFull,
+        cameraProgress,
+      ) * (1 - smoothstep(
+        LOOKDEV_V2_COMPOSITION.vistaFadeStart,
+        LOOKDEV_V2_COMPOSITION.vistaFadeEnd,
+        cameraProgress,
+      ))
       const viewportAspect = size.width / Math.max(size.height, 1)
       const mobilePointer = coarsePointer || size.width <= 720
       const portraitFactor = 1 - smoothstep(0.62, 0.95, viewportAspect)
@@ -2260,6 +2515,7 @@ export default function JourneyScene({
       camera.position.addScaledVector(
         cameraScratch.forward,
         (presentationMode ? -1.8 : 0) -
+          vistaComposition * LOOKDEV_V2_COMPOSITION.pullBack -
           endingWide * ENDING_CAMERA.pullBack +
           portraitFactor * THREE.MathUtils.lerp(0.38, 1.05, portraitVista),
       )
@@ -2270,6 +2526,7 @@ export default function JourneyScene({
       )
       camera.position.y +=
         verticalBob +
+        vistaComposition * LOOKDEV_V2_COMPOSITION.cameraLift +
         endingLift * ENDING_CAMERA.cameraLift +
         pointerLookRef.current.y * 0.022 +
         portraitFactor * THREE.MathUtils.lerp(-0.08, 0.18, portraitVista)
@@ -2280,6 +2537,7 @@ export default function JourneyScene({
       )
       cameraScratch.target.y +=
         (presentationMode ? 0.12 : 0) +
+        vistaComposition * LOOKDEV_V2_COMPOSITION.targetLift +
         endingLift * ENDING_CAMERA.lift +
         pointerLookRef.current.y * 0.095 -
         portraitFactor * (1 - endingLift) * 0.08
@@ -2288,6 +2546,7 @@ export default function JourneyScene({
       const desiredFov =
         camera.userData.journeyBaseFov +
         openVista * 4.5 +
+        vistaComposition * LOOKDEV_V2_COMPOSITION.fov +
         endingWide * ENDING_CAMERA.fov +
         (presentationMode ? 15 : 0) +
         portraitFactor * THREE.MathUtils.lerp(7.5, 4.5, portraitVista)
@@ -2414,6 +2673,23 @@ export default function JourneyScene({
           Math.sin(state.clock.elapsedTime * 0.075 + index * 1.4) * (0.7 + index * 0.17)
       })
     }
+    if (openValleyAtmosphereRef.current) {
+      const atmospherePresence = smoothstep(18, 26, progress)
+      const atmosphereColor = new THREE.Color('#c6d8cf')
+        .lerp(new THREE.Color('#d5ad9f'), sunset * 0.48)
+        .lerp(new THREE.Color('#6e829d'), night * 0.68)
+      openValleyAtmosphereRef.current.children.forEach((layer, index) => {
+        const material = openValleyAtmosphereMaterialRefs.current[index]
+        if (material) {
+          material.opacity =
+            atmospherePresence * (layer.userData.opacity ?? 0.1) *
+            THREE.MathUtils.lerp(1, 0.42, night)
+          material.color.copy(atmosphereColor)
+        }
+        layer.position.x = layer.userData.baseX +
+          Math.sin(state.clock.elapsedTime * (0.025 + index * 0.006) + index) * (3.2 + index)
+      })
+    }
 
     const daylightExposure = THREE.MathUtils.lerp(
       CAVE_LOOK.exposure,
@@ -2534,6 +2810,11 @@ export default function JourneyScene({
       seatedFigureMaterialRef.current.uniforms.uJourneyOpacity.value =
         smoothstep(80, 82.8, progress) * (1 - smoothstep(97, 100, progress)) * 0.96
       seatedFigureMaterialRef.current.uniforms.uJourneyTime.value = state.clock.elapsedTime
+    }
+    if (seatedFigureSilhouetteMaterialRef.current) {
+      const silhouetteReveal = smoothstep(81.15, 82.65, progress)
+      seatedFigureSilhouetteMaterialRef.current.opacity =
+        silhouetteReveal * (1 - smoothstep(97, 100, progress)) * 0.82
     }
     if (seatedFigureRef.current) {
       seatedFigureRef.current.scale.setScalar(1)
@@ -2665,6 +2946,7 @@ export default function JourneyScene({
         }
         const uniforms = material.userData.journeyWaterUniforms
         if (uniforms) {
+          uniforms.uJourneySunset.value = sunset
           uniforms.uJourneyNight.value = night
           uniforms.uJourneyRiverGlow.value = riverGlow
           uniforms.uJourneySkyConnect.value = skyConnectionProgress
@@ -2785,9 +3067,14 @@ export default function JourneyScene({
         materialRefs={valleyFogMaterialRefs}
         layers={quality.fogLayers}
       />
+      <OpenValleyAtmosphere
+        groupRef={openValleyAtmosphereRef}
+        materialRefs={openValleyAtmosphereMaterialRefs}
+      />
       <SeatedStarFigure
         groupRef={seatedFigureRef}
         materialRef={seatedFigureMaterialRef}
+        silhouetteMaterialRef={seatedFigureSilhouetteMaterialRef}
         qualityScale={quality.particles}
       />
       <group ref={skyRigRef}>
