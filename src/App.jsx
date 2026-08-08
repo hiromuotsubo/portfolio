@@ -12,10 +12,11 @@ const PREVIEW_PROGRESS = {
   foghold: 13.5,
   day: 30,
   sunset: 46,
-  night: 56,
-  riverhold: 55,
-  river: 70,
-  final: 94,
+  night: 68,
+  riverhold: 70,
+  river: 80,
+  figure: 84,
+  final: 92,
   portfolio: 28,
   outro: 100,
 }[DEV_PREVIEW] ?? 0
@@ -84,12 +85,12 @@ const EXPERIENCE_PACE = [
   { start: 0, end: 11.5, minSeconds: 4.5 }, // Walk through the cave.
   { start: 11.5, end: 13.5, minSeconds: 1 }, // Reach the mist and respond immediately.
   { start: 13.5, end: 20, minSeconds: 2.5 }, // Hold to clear the mist.
-  { start: 20, end: 42, minSeconds: 7 }, // Let the clear blue valley breathe.
-  { start: 42, end: 51, minSeconds: 5 }, // Day to sunset.
-  { start: 51, end: 55, minSeconds: 2.5 }, // Sunset to night.
-  { start: 55, end: 65, minSeconds: 5.5 }, // Illuminate and connect the river.
-  { start: 65, end: 82, minSeconds: 3 }, // Luminous landscape.
-  { start: 82, end: 100, minSeconds: 5.5 }, // Let the night landscape settle before the ending.
+  { start: 20, end: 38, minSeconds: 6.5 }, // Let the clear blue valley breathe.
+  { start: 38, end: 54, minSeconds: 7.5 }, // Day drifts gradually into evening.
+  { start: 54, end: 70, minSeconds: 8 }, // Evening settles continuously into night.
+  { start: 70, end: 80, minSeconds: 5.5 }, // Illuminate and connect the river after night arrives.
+  { start: 80, end: 92, minSeconds: 6.5 }, // Look up slowly while the figure gathers from stars.
+  { start: 92, end: 100, minSeconds: 5 }, // Pull back, hold the scale, then return the figure to the sky.
 ]
 
 const getMaximumProgressRate = (progress) => {
@@ -107,16 +108,16 @@ const GATES = {
     label: 'HOLD',
   },
   river: {
-    at: 55,
-    end: 61,
+    at: 70,
+    end: 76,
     duration: 3300,
     label: 'HOLD',
   },
 }
 
 const SKY_CONNECTION = {
-  start: 61,
-  end: 65,
+  start: 76,
+  end: 80,
   duration: 2200,
 }
 
@@ -130,16 +131,16 @@ const STORY_MESSAGES = [
     align: 'left',
   },
   {
-    start: 67,
-    end: 78,
+    start: 76,
+    end: 84,
     number: '02',
     title: ['A river of light,', 'toward the Milky Way.'],
     tone: 'light',
     align: 'left',
   },
   {
-    start: 84,
-    end: 98,
+    start: 88,
+    end: 97,
     number: '03',
     title: ['Night settles', 'over the valley.'],
     tone: 'light',
@@ -278,8 +279,8 @@ function useAmbientAudio(progress, fogCompleted) {
     if (!audioReady || !audio?.tracks) return
     const now = audio.context.currentTime
     const outside = clamp((progress - 13.5) / 9, 0, 1)
-    const night = clamp((progress - 51) / 9, 0, 1)
-    const quietNight = clamp((progress - 58) / 15, 0, 1)
+    const night = clamp((progress - 52) / 18, 0, 1)
+    const quietNight = clamp((progress - 68) / 18, 0, 1)
     const valley = clamp((progress - 16) / 18, 0, 1)
     const levels = {
       cave: 0.2 * (1 - clamp((progress - 8) / 12, 0, 1)),
@@ -1297,7 +1298,7 @@ function App() {
   )
 
   const activeConfig = activeGate ? GATES[activeGate] : null
-  const isNight = progress >= 51
+  const isNight = progress >= 60
   const caveDepth = 1 - clamp((progress - 6.5) / 12, 0, 1)
   const openAir = clamp((progress - 11.5) / 8.5, 0, 1)
   const valleyMist = fogCompleted
@@ -1528,12 +1529,12 @@ function App() {
       >
         {activeConfig ? (
           <>
+            <span>{activeConfig.label}</span>
             <i
               className="hold-mark"
               style={{ '--hold-progress': `${holdProgress * 360}deg` }}
               aria-hidden="true"
             />
-            {holdProgress === 0 ? <span>{activeConfig.label}</span> : null}
           </>
         ) : (
           <>

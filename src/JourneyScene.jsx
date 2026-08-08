@@ -9,21 +9,21 @@ const MODEL_URL = '/journey/models/journey-v16-pbr-ktx2.glb?v=1-memory-pbr'
 
 // Creator controls: visual transition timing and cave brightness.
 const VISUAL_TIMING = {
-  sunsetStart: 42,
-  sunsetEnd: 51,
-  nightStart: 51,
-  nightEnd: 59,
+  sunsetStart: 30,
+  sunsetEnd: 54,
+  nightStart: 50,
+  nightEnd: 70,
 }
 
 const ENDING_CAMERA = {
-  liftStart: 72,
-  liftEnd: 88,
-  wideStart: 82,
+  liftStart: 78,
+  liftEnd: 90,
+  wideStart: 86,
   wideEnd: 100,
-  pullBack: 5.4,
+  pullBack: 6.8,
   cameraLift: 0.16,
   lift: 0.08,
-  fov: 16,
+  fov: 18,
 }
 
 const CAVE_LOOK = {
@@ -49,8 +49,11 @@ const storyProgressToClipProgress = (progress) => {
   if (progress <= 20) {
     return THREE.MathUtils.lerp(0.395, 0.447, smoothstep(13.5, 20, progress))
   }
-  if (progress <= 80) {
-    return THREE.MathUtils.lerp(0.447, 0.8, (progress - 20) / 60)
+  if (progress <= 70) {
+    return THREE.MathUtils.lerp(0.447, 0.72, (progress - 20) / 50)
+  }
+  if (progress <= 90) {
+    return THREE.MathUtils.lerp(0.72, 0.8, smoothstep(70, 90, progress))
   }
   return 0.8
 }
@@ -228,6 +231,122 @@ function createStarFieldMaterial(milkyWay = false) {
     blending: THREE.AdditiveBlending,
     toneMapped: false,
   })
+}
+
+function buildSeatedFigureGeometry(count) {
+  const positions = new Float32Array(count * 3)
+  const targets = new Float32Array(count * 3)
+
+  const placeEllipse = (index, centerX, centerY, radiusX, radiusY, seed) => {
+    const angle = seededRandom(seed) * Math.PI * 2
+    const radius = Math.sqrt(seededRandom(seed + 1))
+    targets[index * 3] = centerX + Math.cos(angle) * radiusX * radius
+    targets[index * 3 + 1] = centerY + Math.sin(angle) * radiusY * radius
+  }
+  const placeSegment = (index, fromX, fromY, toX, toY, thickness, seed) => {
+    const along = seededRandom(seed)
+    const dx = toX - fromX
+    const dy = toY - fromY
+    const length = Math.max(Math.hypot(dx, dy), 0.001)
+    const across = (seededRandom(seed + 1) - 0.5) * thickness
+    targets[index * 3] = fromX + dx * along - (dy / length) * across
+    targets[index * 3 + 1] = fromY + dy * along + (dx / length) * across
+  }
+
+  for (let index = 0; index < count; index += 1) {
+    const region = seededRandom(index + 19000)
+    const seed = index * 7 + 21000
+    if (region < 0.16) {
+      placeEllipse(index, 0.55, 3.65, 0.92, 1.02, seed)
+    } else if (region < 0.45) {
+      placeEllipse(index, 0.12, 1.42, 1.22, 2.02, seed)
+    } else if (region < 0.68) {
+      placeSegment(index, -0.28, 0.12, -3.28, -0.18, 1.25, seed)
+    } else if (region < 0.84) {
+      placeSegment(index, -3.28, -0.18, -0.9, -2.42, 0.78, seed)
+    } else {
+      placeSegment(index, 0.42, 2.42, -2.74, 0.12, 0.5, seed)
+    }
+
+    const scatterAngle = seededRandom(index + 25000) * Math.PI * 2
+    const scatterRadius = 7 + seededRandom(index + 27000) * 15
+    positions[index * 3] = Math.cos(scatterAngle) * scatterRadius
+    positions[index * 3 + 1] = Math.sin(scatterAngle) * scatterRadius * 0.72 + 0.7
+    positions[index * 3 + 2] = (seededRandom(index + 29000) - 0.5) * 8
+    targets[index * 3 + 2] = (seededRandom(index + 31000) - 0.5) * 0.7
+  }
+
+  const geometry = new THREE.BufferGeometry()
+  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
+  geometry.setAttribute('aJourneyFigureTarget', new THREE.BufferAttribute(targets, 3))
+  geometry.computeBoundingSphere()
+  return geometry
+}
+
+function createSeatedFigureMaterial() {
+  return new THREE.ShaderMaterial({
+    uniforms: {
+      uJourneyMorph: { value: 0 },
+      uJourneyOpacity: { value: 0 },
+      uJourneyTime: { value: 0 },
+    },
+    vertexShader: `
+      attribute vec3 aJourneyFigureTarget;
+      uniform float uJourneyMorph;
+      uniform float uJourneyTime;
+      varying float vJourneySeed;
+      void main() {
+        vJourneySeed = aJourneyFigureTarget.x + aJourneyFigureTarget.y * 0.73;
+        vec3 gathered = aJourneyFigureTarget;
+        gathered.x += sin(uJourneyTime * 0.32 + vJourneySeed * 2.1) * 0.035;
+        gathered.y += cos(uJourneyTime * 0.27 + vJourneySeed * 1.7) * 0.028;
+        vec3 finalPosition = mix(position, gathered, uJourneyMorph);
+        vec4 viewPosition = modelViewMatrix * vec4(finalPosition, 1.0);
+        gl_PointSize = 1.35 + uJourneyMorph * 0.9;
+        gl_Position = projectionMatrix * viewPosition;
+      }
+    `,
+    fragmentShader: `
+      uniform float uJourneyOpacity;
+      uniform float uJourneyTime;
+      varying float vJourneySeed;
+      void main() {
+        float distanceFromCenter = length(gl_PointCoord - vec2(0.5));
+        float softness = 1.0 - smoothstep(0.08, 0.5, distanceFromCenter);
+        float twinkle = 0.84 + 0.16 * sin(uJourneyTime * 0.8 + vJourneySeed * 9.0);
+        float alpha = softness * uJourneyOpacity * twinkle;
+        if (alpha < 0.01) discard;
+        gl_FragColor = vec4(vec3(0.78, 0.88, 1.0), alpha);
+      }
+    `,
+    transparent: true,
+    depthWrite: false,
+    depthTest: false,
+    blending: THREE.AdditiveBlending,
+    toneMapped: false,
+  })
+}
+
+function SeatedStarFigure({ groupRef, materialRef, qualityScale = 1 }) {
+  const geometry = useMemo(
+    () => buildSeatedFigureGeometry(Math.round(760 * qualityScale)),
+    [qualityScale],
+  )
+  const material = useMemo(() => createSeatedFigureMaterial(), [])
+
+  useEffect(() => {
+    materialRef.current = material
+    return () => {
+      geometry.dispose()
+      material.dispose()
+    }
+  }, [geometry, material, materialRef])
+
+  return (
+    <group ref={groupRef} position={[0, -6.5, -58]}>
+      <points geometry={geometry} material={material} frustumCulled={false} renderOrder={4} />
+    </group>
+  )
 }
 
 function createCloudTexture(seed) {
@@ -1408,6 +1527,8 @@ export default function JourneyScene({
   const milkyMaterialRef = useRef(null)
   const milkyPointsRef = useRef(null)
   const skyBridgeRef = useRef(null)
+  const seatedFigureRef = useRef(null)
+  const seatedFigureMaterialRef = useRef(null)
   const cloudGroupRef = useRef(null)
   const cloudMaterialRefs = useRef([])
   const valleyFogGroupRef = useRef(null)
@@ -1697,7 +1818,11 @@ export default function JourneyScene({
     const valleyFogArrival = smoothstep(9.3, 13.2, progress)
     const holdFogRemaining = activeGate === 'fog' ? 1 - clamp01(holdProgress) : 1
     const valleyMist = fogCompleted ? 0 : valleyFogArrival * holdFogRemaining
-    const valleyNight = smoothstep(51, 59, progress)
+    const valleyNight = smoothstep(
+      VISUAL_TIMING.nightStart,
+      VISUAL_TIMING.nightEnd,
+      progress,
+    )
     if (valleyFogGroupRef.current) {
       const fogColor = new THREE.Color('#dbe5dc')
         .lerp(new THREE.Color('#e7b3a2'), sunset * 0.52)
@@ -1834,6 +1959,30 @@ export default function JourneyScene({
       )
     }
 
+    const figureGather = smoothstep(80, 80.85, progress)
+    const figureRelease = smoothstep(96, 100, progress)
+    const figurePresence = figureGather * (1 - figureRelease)
+    if (seatedFigureMaterialRef.current) {
+      seatedFigureMaterialRef.current.uniforms.uJourneyMorph.value = figurePresence
+      seatedFigureMaterialRef.current.uniforms.uJourneyOpacity.value =
+        smoothstep(79.5, 81, progress) * (1 - smoothstep(97, 100, progress)) * 0.94
+      seatedFigureMaterialRef.current.uniforms.uJourneyTime.value = state.clock.elapsedTime
+    }
+    if (seatedFigureRef.current) {
+      const landscapeScale = THREE.MathUtils.lerp(
+        1,
+        0.24,
+        smoothstep(86, 97, progress),
+      )
+      seatedFigureRef.current.scale.setScalar(landscapeScale)
+      seatedFigureRef.current.position.y = THREE.MathUtils.lerp(
+        -6.5,
+        -13.5,
+        smoothstep(86, 97, progress),
+      )
+      seatedFigureRef.current.visible = figurePresence > 0.002
+    }
+
     const openValley = smoothstep(16.5, 22, progress)
     if (motesMaterialRef.current) {
       motesMaterialRef.current.opacity =
@@ -1863,7 +2012,7 @@ export default function JourneyScene({
     const riverPromptGlow = activeGate === 'river'
       ? 0.018 + gateArrivalPulse * 0.027 + gateBreath * 0.006
       : 0
-    const riverGlow = Math.max(smoothstep(55, 61, progress), riverPromptGlow)
+    const riverGlow = Math.max(smoothstep(70, 76, progress), riverPromptGlow)
     if (riverMysticLightRef.current) {
       riverMysticLightRef.current.intensity =
         night * (riverGlow * 1.35 + skyConnectionProgress * 1.8)
@@ -2045,6 +2194,11 @@ export default function JourneyScene({
           materialRef={milkyMaterialRef}
           pointsRef={milkyPointsRef}
           milkyWay
+          qualityScale={quality.particles}
+        />
+        <SeatedStarFigure
+          groupRef={seatedFigureRef}
+          materialRef={seatedFigureMaterialRef}
           qualityScale={quality.particles}
         />
       </group>
