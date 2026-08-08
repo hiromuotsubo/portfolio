@@ -16,6 +16,7 @@ const PREVIEW_PROGRESS = {
   riverready: 70,
   riverhold: 70,
   river: 80,
+  forming: 82,
   figure: 84,
   final: 92,
   portfolio: 28,
@@ -900,7 +901,7 @@ function App() {
   const [holdProgress, setHoldProgress] = useState(PREVIEW_HOLD_PROGRESS)
   const [holdOrigin, setHoldOrigin] = useState({ x: 50, y: 50 })
   const [skyConnectionProgress, setSkyConnectionProgress] = useState(
-    ['riverhold', 'river', 'final', 'outro'].includes(DEV_PREVIEW) ? 1 : 0,
+    ['riverhold', 'river', 'forming', 'figure', 'final', 'outro'].includes(DEV_PREVIEW) ? 1 : 0,
   )
   const [isSkyConnecting, setIsSkyConnecting] = useState(false)
   const [fogCompleted, setFogCompleted] = useState(PREVIEW_PROGRESS >= 20)
