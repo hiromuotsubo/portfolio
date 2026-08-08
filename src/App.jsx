@@ -13,6 +13,7 @@ const PREVIEW_PROGRESS = {
   day: 30,
   sunset: 46,
   night: 68,
+  riverready: 70,
   riverhold: 70,
   river: 80,
   figure: 84,
@@ -22,9 +23,10 @@ const PREVIEW_PROGRESS = {
 }[DEV_PREVIEW] ?? 0
 const PREVIEW_GATE = {
   foghold: 'fog',
+  riverready: 'river',
   riverhold: 'river',
 }[DEV_PREVIEW] ?? null
-const PREVIEW_HOLD_PROGRESS = PREVIEW_GATE ? 0.62 : 0
+const PREVIEW_HOLD_PROGRESS = ['foghold', 'riverhold'].includes(DEV_PREVIEW) ? 0.62 : 0
 const PREVIEW_ENTERED = Boolean(DEV_PREVIEW)
 const PORTFOLIO_PAGES = ['home', 'about', 'project', 'contact']
 const PORTFOLIO_PATHS = {

@@ -5972,3 +5972,59 @@ textarea,
     padding: 68px 0 34px !important;
   }
 }
+
+/* Final HOLD geometry override: the ring never shifts as its label fades. */
+.journey-ui__operation.is-hold,
+.journey-ui__operation.is-hold.is-holding {
+  position: absolute;
+  display: block;
+  width: 54px;
+  min-width: 54px;
+  height: 54px;
+  min-height: 54px;
+  column-gap: 0;
+}
+
+.journey-ui__operation.is-hold > span {
+  position: absolute;
+  top: 50%;
+  right: calc(100% + 13px);
+  width: max-content;
+  transform: translateY(-50%);
+  transition: opacity 180ms ease, visibility 0s linear 0s;
+}
+
+.journey-ui__operation.is-hold .hold-mark,
+.journey-ui__operation.is-hold.is-holding .hold-mark {
+  position: absolute;
+  inset: 0;
+  width: 54px;
+  height: 54px;
+}
+
+.journey-ui__operation.is-hold.is-holding > span {
+  visibility: hidden;
+  opacity: 0;
+  animation: none;
+  transition: opacity 140ms ease, visibility 0s linear 140ms;
+}
+
+@media (max-width: 720px), (max-aspect-ratio: 4 / 5) {
+  .journey-ui__operation.is-hold,
+  .journey-ui__operation.is-hold.is-holding {
+    width: 56px;
+    min-width: 56px;
+    height: 56px;
+    min-height: 56px;
+  }
+
+  .journey-ui__operation.is-hold .hold-mark,
+  .journey-ui__operation.is-hold.is-holding .hold-mark {
+    width: 56px;
+    height: 56px;
+  }
+
+  .journey-ui__operation.is-hold > span {
+    right: calc(100% + 14px);
+  }
+}
