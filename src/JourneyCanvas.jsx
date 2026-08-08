@@ -5,9 +5,9 @@ import * as THREE from 'three'
 import JourneyScene from './JourneyScene.jsx'
 
 const QUALITY_PRESETS = {
-  low: { name: 'low', dpr: 0.9, particles: 0.42, shadows: false, fogLayers: 3 },
-  medium: { name: 'medium', dpr: 1.25, particles: 0.7, shadows: true, fogLayers: 5 },
-  high: { name: 'high', dpr: 1.75, particles: 1, shadows: true, fogLayers: 7 },
+  low: { name: 'low', dpr: 0.85, particles: 0.42, shadows: false, fogLayers: 3 },
+  medium: { name: 'medium', dpr: 1.15, particles: 0.7, shadows: false, fogLayers: 5 },
+  high: { name: 'high', dpr: 1.5, particles: 1, shadows: true, fogLayers: 7 },
 }
 const QUALITY_ORDER = ['low', 'medium', 'high']
 
@@ -22,20 +22,24 @@ const getInitialQuality = () => {
 
 function AdaptiveQualityController({ tier, onTierChange }) {
   const { gl, setDpr } = useThree()
-  const sampleRef = useRef({ elapsed: 0, frames: 0, strongSamples: 0 })
+  const sampleRef = useRef({ elapsed: 0, frames: 0, strongSamples: 0, cooldown: 0 })
 
   useEffect(() => {
     const quality = QUALITY_PRESETS[tier]
     setDpr(quality.dpr)
     gl.shadowMap.enabled = quality.shadows
     gl.shadowMap.needsUpdate = true
+    sampleRef.current.elapsed = 0
+    sampleRef.current.frames = 0
+    sampleRef.current.cooldown = 5
   }, [gl, setDpr, tier])
 
   useFrame((_, delta) => {
     const sample = sampleRef.current
+    sample.cooldown = Math.max(0, sample.cooldown - delta)
     sample.elapsed += Math.min(delta, 0.1)
     sample.frames += 1
-    if (sample.elapsed < 2.5 || document.visibilityState !== 'visible') return
+    if (sample.elapsed < 2.5 || sample.cooldown > 0 || document.visibilityState !== 'visible') return
 
     const fps = sample.frames / sample.elapsed
     const index = QUALITY_ORDER.indexOf(tier)
@@ -77,6 +81,7 @@ export default function JourneyCanvas({
   fogCompleted,
   presentationMode,
   outroMode,
+  mobileLook,
   onAssetsProgress,
   onListenerPose,
 }) {
@@ -109,6 +114,7 @@ export default function JourneyCanvas({
           fogCompleted={fogCompleted}
           presentationMode={presentationMode}
           outroMode={outroMode}
+          mobileLook={mobileLook}
           onListenerPose={onListenerPose}
           quality={quality}
         />

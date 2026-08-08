@@ -526,6 +526,50 @@ function buildMysticMotes(count) {
   return geometry
 }
 
+function buildDistantBirdGeometry() {
+  const positions = []
+  const birds = [
+    { x: 0, y: 0, size: 1 },
+    { x: 5.8, y: -2.1, size: 0.72 },
+    { x: 10.4, y: 1.4, size: 0.56 },
+  ]
+  birds.forEach(({ x, y, size }) => {
+    positions.push(
+      x - size * 1.6, y, 0,
+      x, y - size * 0.52, 0,
+      x, y - size * 0.52, 0,
+      x + size * 1.6, y, 0,
+    )
+  })
+  const geometry = new THREE.BufferGeometry()
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
+  return geometry
+}
+
+function DistantBirds({ groupRef, materialRef }) {
+  const geometry = useMemo(() => buildDistantBirdGeometry(), [])
+  useEffect(() => () => geometry.dispose(), [geometry])
+  return (
+    <lineSegments
+      ref={groupRef}
+      geometry={geometry}
+      position={[24, 42, -210]}
+      renderOrder={-1}
+      frustumCulled={false}
+    >
+      <lineBasicMaterial
+        ref={materialRef}
+        color="#263e42"
+        transparent
+        opacity={0}
+        depthWrite={false}
+        depthTest
+        toneMapped={false}
+      />
+    </lineSegments>
+  )
+}
+
 function cloneMaterial(material) {
   const clone = material.clone()
   if ('roughness' in clone) clone.roughness = Math.max(0.72, clone.roughness ?? 0.8)
@@ -673,10 +717,20 @@ float journeyCanopyGrain = journeyNoise(
   journeyTerrainUv * 22.0 + vec2(journeyFine * 3.1, vJourneyWorldPosition.y * 0.24)
 );
 float journeyCanopyOpenings = smoothstep(0.76, 0.94, journeyCanopyGrain);
+float journeyCanopyShadow = smoothstep(
+  0.48,
+  0.78,
+  journeyNoise(journeyTerrainUv * 34.0 + vec2(journeyMacro * 7.0, -journeyFine * 5.0))
+);
 journeyPaint *= mix(
   vec3(1.0),
   mix(vec3(0.88, 0.91, 0.86), vec3(1.045, 1.07, 1.015), journeyCanopyGrain),
-  journeyForestSurface * 0.34
+  journeyForestSurface * 0.48
+);
+journeyPaint = mix(
+  journeyPaint,
+  mix(vec3(0.035, 0.11, 0.066), vec3(0.13, 0.27, 0.12), journeyCanopyGrain),
+  journeyForestSurface * journeyCanopyShadow * 0.24
 );
 journeyPaint = mix(
   journeyPaint,
@@ -748,7 +802,7 @@ vec3 journeyTexY = texture2D(map, vJourneyWorldPosition.xz * journeyTextureScale
 vec3 journeyTexZ = texture2D(map, vJourneyWorldPosition.xy * journeyTextureScale).rgb;
 vec3 journeyTriplanar = journeyTexX * journeyBlend.x + journeyTexY * journeyBlend.y + journeyTexZ * journeyBlend.z;
 journeyTriplanar = pow(max(journeyTriplanar, vec3(0.04)), vec3(0.91));
-vec3 journeyTextureValue = mix(vec3(1.0), journeyTriplanar * 1.06, 0.14);
+vec3 journeyTextureValue = mix(vec3(1.0), journeyTriplanar * 1.08, 0.30);
 diffuseColor.rgb *= journeyTextureValue;`,
       )
     }
@@ -763,7 +817,7 @@ vec3 journeyWorldDetail =
   vec3(journeyNormalX.z, journeyNormalX.y, journeyNormalX.x) * journeyBlend.x +
   vec3(journeyNormalY.x, journeyNormalY.z, journeyNormalY.y) * journeyBlend.y +
   journeyNormalZ * journeyBlend.z;
-normal = normalize(normal + journeyWorldDetail * 0.17);`,
+normal = normalize(normal + journeyWorldDetail * 0.27);`,
       )
     }
     if (triplanarRoughnessMap) {
@@ -784,7 +838,7 @@ totalEmissiveRadiance += journeyPaint * uJourneyNight * 0.055;
 totalEmissiveRadiance += vec3(0.018, 0.038, 0.072) * uJourneyNight;`,
     )
   }
-  material.customProgramCacheKey = () => `journey-alpine-${isFarRidge ? 'far' : 'near'}-v8-natural-density`
+  material.customProgramCacheKey = () => `journey-alpine-${isFarRidge ? 'far' : 'near'}-v9-forest-grain`
 }
 
 function applyWetGravelDetail(material, variant = 'bed') {
@@ -1598,6 +1652,7 @@ export default function JourneyScene({
   fogCompleted = false,
   presentationMode = false,
   outroMode = false,
+  mobileLook = { x: 0, y: 0 },
   onListenerPose,
   quality = { name: 'high', particles: 1, shadows: true, fogLayers: 7 },
 }) {
@@ -1673,6 +1728,8 @@ export default function JourneyScene({
   const skyRigRef = useRef(null)
   const motesRef = useRef(null)
   const motesMaterialRef = useRef(null)
+  const distantBirdsRef = useRef(null)
+  const distantBirdsMaterialRef = useRef(null)
   const riverRippleRef = useRef(null)
   const riverRippleMaterialRefs = useRef([])
   const riverReactionRef = useRef({ age: 0, fading: false })
@@ -1836,13 +1893,13 @@ export default function JourneyScene({
       )
       pointerLookRef.current.x = THREE.MathUtils.damp(
         pointerLookRef.current.x,
-        state.pointer.x * pointerStrength,
+        (state.pointer.x + mobileLook.x) * pointerStrength,
         5.2,
         delta,
       )
       pointerLookRef.current.y = THREE.MathUtils.damp(
         pointerLookRef.current.y,
-        state.pointer.y * pointerStrength,
+        (state.pointer.y + mobileLook.y) * pointerStrength,
         5.2,
         delta,
       )
@@ -2172,6 +2229,15 @@ export default function JourneyScene({
         .lerp(new THREE.Color('#ffb178'), sunset)
         .lerp(new THREE.Color('#7aa5e8'), night)
     }
+    if (distantBirdsRef.current && distantBirdsMaterialRef.current) {
+      const discovery = smoothstep(0.18, 0.62, Math.abs(pointerLookRef.current.x))
+      distantBirdsMaterialRef.current.opacity =
+        openValley * (1 - night) * discovery * 0.38
+      distantBirdsRef.current.position.x =
+        24 + Math.sin(state.clock.elapsedTime * 0.17) * 4.2
+      distantBirdsRef.current.position.y =
+        42 + Math.sin(state.clock.elapsedTime * 0.23) * 1.1
+    }
 
     const riverPromptGlow = activeGate === 'river'
       ? 0.018 + gateArrivalPulse * 0.027 + gateBreath * 0.006
@@ -2345,6 +2411,10 @@ export default function JourneyScene({
         groupRef={motesRef}
         materialRef={motesMaterialRef}
         qualityScale={quality.particles}
+      />
+      <DistantBirds
+        groupRef={distantBirdsRef}
+        materialRef={distantBirdsMaterialRef}
       />
       <ValleyFogBanks
         groupRef={valleyFogGroupRef}
