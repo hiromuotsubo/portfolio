@@ -17,6 +17,8 @@
 .journey-3d {
   --outro-screen-width: clamp(176px, 19vw, 304px);
   --outro-screen-height: calc(var(--outro-screen-width) * 0.5625);
+  --outro-letter-height: clamp(37px, 5.9vw, 88px);
+  --outro-letter-width: calc(var(--outro-letter-height) * 0.64);
   --portfolio-card-width: min(54vw, 960px);
   --portfolio-card-height: calc(var(--portfolio-card-width) * 0.5625);
   --portfolio-start-scale: 0.32;
@@ -249,7 +251,7 @@
 }
 
 .journey-3d.is-outro .journey-outro__ridge {
-  animation: outro-ridge-life 6.4s ease both;
+  display: none;
 }
 
 .journey-3d.is-outro .journey-outro__ridge i:nth-child(1) {
@@ -269,7 +271,7 @@
 }
 
 .journey-3d.is-outro .journey-outro__m {
-  animation: outro-m-in 6.4s ease both;
+  animation: outro-m-in 6.4s cubic-bezier(.62, 0, .22, 1) both;
 }
 
 .journey-3d.is-outro .paper-texture,
@@ -1122,56 +1124,56 @@
 }
 
 @keyframes outro-scene-card {
-  0%, 8% {
+  0%, 15% {
     width: 100%;
     height: 100%;
     opacity: 1;
     filter: saturate(1) contrast(1) brightness(1) blur(0);
     transform: translate(-50%, -50%) scale(1);
   }
-  31%, 62% {
+  46%, 54% {
     width: var(--outro-screen-width);
     height: var(--outro-screen-height);
     opacity: 1;
     filter: saturate(0.88) contrast(0.98) brightness(1.18) blur(0);
     transform: translate(-50%, -50%) scale(1);
   }
-  74%, 100% {
-    width: var(--outro-screen-width);
-    height: var(--outro-screen-height);
+  72%, 100% {
+    width: var(--outro-letter-width);
+    height: var(--outro-letter-height);
     opacity: 0;
-    filter: saturate(0.62) contrast(0.9) brightness(1.2) blur(0);
-    transform: translate(-50%, -50%) scale(0.965);
+    filter: saturate(0.66) contrast(0.92) brightness(1.16) blur(0.35px);
+    transform: translate(-50%, -50%) scale(1);
   }
 }
 
 @keyframes outro-watercolor-wash {
-  0%, 9% {
+  0%, 15% {
     opacity: 0;
     transform: scale(1.035) rotate(-0.15deg);
   }
-  32%, 60% {
+  46%, 54% {
     opacity: 0.16;
     transform: scale(1) rotate(0);
   }
-  74%, 100% {
+  72%, 100% {
     opacity: 0;
     transform: scale(0.985) rotate(0.1deg);
   }
 }
 
 @keyframes outro-watercolor-matte {
-  0%, 17% {
+  0%, 22% {
     opacity: 0;
     background-position: 50% 47%;
     transform: scale(1.045);
   }
-  36%, 62% {
+  46%, 54% {
     opacity: 1;
     background-position: 50% 51%;
     transform: scale(1.005);
   }
-  74%, 100% {
+  72%, 100% {
     opacity: 0;
     background-position: 50% 52%;
     transform: scale(0.985);
@@ -1179,22 +1181,22 @@
 }
 
 @keyframes outro-copy-in {
-  0%, 20% {
+  0%, 34% {
     opacity: 0;
   }
-  32%, 100% {
+  46%, 100% {
     opacity: 1;
   }
 }
 
 @keyframes outro-slot-close {
-  0%, 67% {
+  0%, 54% {
     width: var(--outro-screen-width);
     height: var(--outro-screen-height);
   }
-  84%, 100% {
-    width: 0.62em;
-    height: 1em;
+  72%, 100% {
+    width: var(--outro-letter-width);
+    height: var(--outro-letter-height);
   }
 }
 
@@ -1220,17 +1222,13 @@
 }
 
 @keyframes outro-m-in {
-  0%, 67% {
+  0%, 54% {
     opacity: 0;
-    background-size: auto 176%;
+    transform: scale(0.96);
   }
-  82% {
+  72%, 100% {
     opacity: 1;
-    background-size: auto 158%;
-  }
-  100% {
-    opacity: 1;
-    background-size: auto 146%;
+    transform: scale(1);
   }
 }
 
@@ -1274,6 +1272,7 @@
 @media (max-width: 720px) {
   .journey-3d {
     --outro-screen-width: clamp(112px, 28vw, 154px);
+    --outro-letter-height: clamp(27px, 9.2vw, 42px);
     --portfolio-card-width: 86vw;
     --portfolio-card-height: 48.375vw;
     --portfolio-start-scale: 0.4;
@@ -5138,8 +5137,7 @@ textarea,
 /* Restore the live Journey frame shrinking into the m position. */
 .journey-outro__copy {
   display: grid;
-  grid-template-columns: auto var(--outro-screen-width) auto;
-  justify-content: center;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   padding-inline: clamp(16px, 3vw, 54px);
   font-family: var(--font-display);
 }
@@ -5149,11 +5147,20 @@ textarea,
   align-self: center;
 }
 
+.journey-outro__prefix {
+  justify-self: end;
+}
+
+.journey-outro__suffix {
+  justify-self: start;
+}
+
 .journey-outro__slot {
   overflow: hidden;
 }
 
 .journey-outro__m {
+  color: var(--outro-green);
   background: none;
   -webkit-text-fill-color: currentColor;
   filter: none;
@@ -5179,6 +5186,10 @@ textarea,
 /* Safe areas and portrait composition keep the controls clear of browser UI
    without shrinking the WebGL world. */
 @media (max-width: 720px), (max-aspect-ratio: 4 / 5) {
+  .journey-3d {
+    --outro-letter-height: clamp(34px, 10.4vw, 54px);
+  }
+
   .journey-ui__header {
     top: max(20px, calc(env(safe-area-inset-top) + 12px));
     left: max(19px, calc(env(safe-area-inset-left) + 14px));

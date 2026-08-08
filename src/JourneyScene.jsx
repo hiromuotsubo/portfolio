@@ -290,6 +290,9 @@ function buildSeatedFigureGeometry(count) {
       placeSegment(index, -0.86, 0.46, 1.18, 0.14, 0.68, seed)
     }
 
+    // Face the seated figure toward the Milky Way at the centre-left of the sky.
+    targets[index * 3] *= -1
+
     const scatterAngle = seededRandom(index + 25000) * Math.PI * 2
     const scatterRadius = 7 + seededRandom(index + 27000) * 15
     positions[index * 3] = Math.cos(scatterAngle) * scatterRadius
@@ -360,6 +363,9 @@ function createSeatedSilhouetteTexture() {
   context.lineJoin = 'round'
   context.strokeStyle = 'rgba(4, 11, 19, 0.96)'
   context.fillStyle = 'rgba(4, 11, 19, 0.96)'
+  context.save()
+  context.translate(canvas.width, 0)
+  context.scale(-1, 1)
 
   // Head and a forward-curving back.
   context.beginPath()
@@ -395,6 +401,7 @@ function createSeatedSilhouetteTexture() {
   context.moveTo(173, 184)
   context.bezierCurveTo(208, 247, 255, 283, 315, 286)
   context.stroke()
+  context.restore()
 
   const texture = new THREE.CanvasTexture(canvas)
   texture.colorSpace = THREE.SRGBColorSpace
@@ -1087,7 +1094,13 @@ vec3 journeyWorldDetail =
   vec3(journeyNormalX.z, journeyNormalX.y, journeyNormalX.x) * journeyBlend.x +
   vec3(journeyNormalY.x, journeyNormalY.z, journeyNormalY.y) * journeyBlend.y +
   journeyNormalZ * journeyBlend.z;
-normal = normalize(normal + journeyWorldDetail * 0.27);`,
+float journeyForestNormalMask = 1.0 - smoothstep(28.0, 56.0, vJourneyWorldPosition.y);
+float journeyCanopyNormalX = journeyNoise(vJourneyWorldPosition.xz * vec2(0.62, 0.84) + 19.0) - 0.5;
+float journeyCanopyNormalZ = journeyNoise(vJourneyWorldPosition.zx * vec2(0.73, 0.57) - 31.0) - 0.5;
+vec3 journeyCanopyNormal = vec3(journeyCanopyNormalX, 0.0, journeyCanopyNormalZ);
+normal = normalize(
+  normal + journeyWorldDetail * 0.27 + journeyCanopyNormal * journeyForestNormalMask * 0.13
+);`,
       )
     }
     if (triplanarRoughnessMap) {
@@ -1098,7 +1111,14 @@ float journeyRoughX = texture2D(uJourneyTriplanarRoughness, vJourneyWorldPositio
 float journeyRoughY = texture2D(uJourneyTriplanarRoughness, vJourneyWorldPosition.xz * journeyTextureScale).g;
 float journeyRoughZ = texture2D(uJourneyTriplanarRoughness, vJourneyWorldPosition.xy * journeyTextureScale).g;
 float journeyProjectedRoughness = dot(vec3(journeyRoughX, journeyRoughY, journeyRoughZ), journeyBlend);
-roughnessFactor = mix(roughnessFactor, max(0.68, journeyProjectedRoughness), 0.48);`,
+float journeyForestRoughnessMask = 1.0 - smoothstep(30.0, 58.0, vJourneyWorldPosition.y);
+float journeyCanopyRoughness = journeyNoise(vJourneyWorldPosition.xz * vec2(0.19, 0.31) + 41.0);
+roughnessFactor = mix(roughnessFactor, max(0.68, journeyProjectedRoughness), 0.48);
+roughnessFactor = clamp(
+  roughnessFactor + (journeyCanopyRoughness - 0.5) * journeyForestRoughnessMask * 0.12,
+  0.66,
+  1.0
+);`,
       )
     }
     shader.fragmentShader = shader.fragmentShader.replace(
@@ -1108,7 +1128,7 @@ totalEmissiveRadiance += journeyPaint * uJourneyNight * 0.055;
 totalEmissiveRadiance += vec3(0.018, 0.038, 0.072) * uJourneyNight;`,
     )
   }
-  material.customProgramCacheKey = () => `journey-alpine-${isFarRidge ? 'far' : 'near'}-v20-forest-depth`
+  material.customProgramCacheKey = () => `journey-alpine-${isFarRidge ? 'far' : 'near'}-v21-canopy-normal`
 }
 
 function applyWetGravelDetail(material, variant = 'bed') {
@@ -1277,10 +1297,13 @@ vec2 journeyWaterPlane = vJourneyWaterPosition.xz;
 float journeyWaterHeight = journeyWaterFlow(journeyWaterPlane, journeyWaterTime);
 float journeyWaterHeightX = journeyWaterFlow(journeyWaterPlane + vec2(0.22, 0.0), journeyWaterTime);
 float journeyWaterHeightZ = journeyWaterFlow(journeyWaterPlane + vec2(0.0, 0.22), journeyWaterTime);
+float journeyWaterMicro = journeyWaterNoise(journeyWaterPlane * vec2(0.72, 1.36) + vec2(journeyWaterTime * 0.09, -journeyWaterTime * 0.34));
+float journeyWaterMicroX = journeyWaterNoise((journeyWaterPlane + vec2(0.055, 0.0)) * vec2(0.72, 1.36) + vec2(journeyWaterTime * 0.09, -journeyWaterTime * 0.34));
+float journeyWaterMicroZ = journeyWaterNoise((journeyWaterPlane + vec2(0.0, 0.055)) * vec2(0.72, 1.36) + vec2(journeyWaterTime * 0.09, -journeyWaterTime * 0.34));
 vec3 journeyWaterPerturbation = vec3(
-  journeyWaterHeight - journeyWaterHeightX,
+  journeyWaterHeight - journeyWaterHeightX + (journeyWaterMicro - journeyWaterMicroX) * 0.32,
   0.0,
-  journeyWaterHeight - journeyWaterHeightZ
+  journeyWaterHeight - journeyWaterHeightZ + (journeyWaterMicro - journeyWaterMicroZ) * 0.32
 );
 normal = normalize(normal + journeyWaterPerturbation * (0.3 + uJourneyTravelWind * 0.24));`,
       )
@@ -1456,7 +1479,7 @@ gl_FragColor.rgb = mix(gl_FragColor.rgb, diffuseColor.rgb, journeyPigmentStrengt
 gl_FragColor.rgb += vec3(0.16, 0.72, 0.68) * journeyFineCurrent * (1.0 - uJourneyNight) * 0.045;`,
       )
   }
-  material.customProgramCacheKey = () => 'journey-water-reflection-v22-shoals-flow'
+  material.customProgramCacheKey = () => 'journey-water-reflection-v23-micro-ripples'
 }
 
 function createClearRiverMaterial() {
@@ -3077,11 +3100,11 @@ export default function JourneyScene({
         silhouetteMaterialRef={seatedFigureSilhouetteMaterialRef}
         qualityScale={quality.particles}
       />
+      <DriftingClouds
+        groupRef={cloudGroupRef}
+        materialRefs={cloudMaterialRefs}
+      />
       <group ref={skyRigRef}>
-        <DriftingClouds
-          groupRef={cloudGroupRef}
-          materialRefs={cloudMaterialRefs}
-        />
         <CloudbreakLight
           spriteRef={cloudbreakRef}
           materialRef={cloudbreakMaterialRef}
