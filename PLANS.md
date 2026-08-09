@@ -1,6 +1,6 @@
-# Journey long-horizon look development execution plan
+# Journey Look Development Phase 2 execution plan
 
-This plan is a living checkpoint. A pass is complete only after browser capture, reference comparison, evaluation, and a log update.
+Phase 1 established the shader, water, cloud, and review baseline. Phase 2 is a Blender-led environment-art pass. A pass is complete only after Blender/export integration where applicable, browser capture, reference comparison, a second refinement, evaluation, and a log update.
 
 ## Safety and baselines
 
@@ -11,21 +11,24 @@ This plan is a living checkpoint. A pass is complete only after browser capture,
 
 ## Passes
 
-1. **Current Scene audit** — inspect source assets, shader branches, draw calls, timings, interactions, and the complete supplied video.
-2. **Reference analysis** — compare reality, target art direction, daytime before, and nighttime before across mountain, forest, river, riverbank, sky, cloud, atmosphere, lighting, composition, and scale.
-3. **Mountain / forest pass** — establish large forest masses, canopy clusters, crown-scale breakup, drainage, and distance-aware detail.
-4. **Vegetation transition pass** — blend rock, scrub, sparse forest, dense forest, grass, and riverbank using altitude, slope, valley moisture, and noise.
-5. **River / riverbank pass** — add water-depth color, transparent shallows, riverbed cues, reflection breakup, flow, wet gravel, and irregular bank transitions.
-6. **Sky / cloud pass** — restore thin world-space cloud layers, peak-touching cloud, distant cloud, and a credible opening for the existing light shaft.
-7. **Atmosphere / depth pass** — separate foreground, midground, background, far background, and sky with progressive contrast, saturation, detail, and haze.
-8. **Lighting pass** — use directional light to explain ridges, valleys, rock faces, canopy, and the cloud-opening-to-lit-ridge relationship in day, evening, and night.
-9. **Composition pass** — make small framing changes only when necessary to share mountain, sky, water, far distance, light, and negative space without reducing mountain scale or changing the camera story.
-10. **Hero Frame A** — iterate the post-fog daytime frame until it reads as a place before it reads as a WebGL terrain.
-11. **Hero Frame B** — iterate the final wide night frame until person < river < mountain < sky reads immediately.
-12. **Performance validation** — compare renderer statistics, asset size, build output, frame pacing, and mobile quality; remove detail whose visual benefit is too small.
-13. **Final visual review** — replay every narrative beat, compare fixed before/after frames, list remaining weaknesses honestly, and update the SOTD assessment.
+1. **Phase 1 audit** — reread the repository rules, completed cycles, rejected canopy-normal and cloud-band tests, and the Phase 1 renderer baseline.
+2. **Reference comparison** — compare Original Before, Phase 1 After, reality, target art direction, and the supplied Phase 1 motion capture at fixed day/night frames.
+3. **Massif structure analysis** — inspect GLB object bounds, topology, materials, and camera path to identify safe structural additions without changing the hero massif scale.
+4. **Distance-layer architecture** — author independent midground and far-background ridge silhouettes with their own depth, value, and atmospheric response.
+5. **Mountain material zoning** — preserve the hero mesh while improving rock, scrub, sparse forest, dense forest, grass, drainage, and valley-shadow zoning.
+6. **Forest canopy asset development** — use Blender to author reusable low-poly canopy clusters and WebGL instancing/LOD rather than relying on one procedural colour noise field.
+7. **Midground forest silhouette** — establish recognisable crown edges and stand masses where the valley floor meets the mountain.
+8. **Vegetation transition** — integrate canopy assets with slope-, altitude-, valley-, and moisture-aware material transitions.
+9. **Riverbank overlap assets** — author irregular Blender shoreline patches, gravel bars, and wet-stone clusters that interrupt the source river edge.
+10. **River refinement** — integrate the overlap assets with depth colour, bed visibility, reflection, and flow without breaking the river-to-Milky-Way transition.
+11. **Cloud depth improvement** — replace the single-plane read with crossed world-space cloud cards and separated peak/far/mist depth groups.
+12. **Atmosphere / distant layers** — tune contrast, saturation, detail, and atmospheric colour independently for foreground through far background.
+13. **Blender → WebGL integration** — export a dedicated Phase 2 environment GLB, optimise it, load it independently from the immutable story/camera GLB, and verify in browser.
+14. **Hero Frame A review** — complete at least two visual comparisons and refinements against Phase 1 Day and both references.
+15. **Hero Frame B review** — complete at least two visual comparisons and refinements against Phase 1 Night while preserving person, river, Milky Way, and pull-back.
+16. **Performance validation** — compare draw calls, triangles, points, textures, programs, Journey chunk, and frame pacing against Phase 1.
+17. **Final visual review** — replay all fixed narrative checkpoints, record rejected approaches, list remaining prototype cues honestly, and update the award-level assessment.
 
 ## Cycle gate
 
 For every major pass: inspect current browser frame, capture, compare with references, identify at most three dominant CG cues, change the highest-impact cue, build and run, recapture, evaluate visual impact, log the result, then either iterate with a new hypothesis or proceed.
-
