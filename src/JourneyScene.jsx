@@ -6,6 +6,7 @@ import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader.js'
 
 // Versioned query prevents a previously cached GLB from reviving removed assets.
 const MODEL_URL = '/journey/models/journey-v16-pbr-ktx2.glb?v=1-memory-pbr'
+const PHASE2_ENVIRONMENT_URL = '/journey/models/journey-phase2-environment.glb?v=5-distance-forest'
 
 // Creator controls: visual transition timing and cave brightness.
 const VISUAL_TIMING = {
@@ -34,10 +35,10 @@ const LOOKDEV_V2_COMPOSITION = {
   vistaFull: 28,
   vistaFadeStart: 56,
   vistaFadeEnd: 68,
-  pullBack: 3.6,
+  pullBack: 4.55,
   cameraLift: 0.34,
   targetLift: 0,
-  fov: 7.4,
+  fov: 10.2,
 }
 
 const CAVE_LOOK = {
@@ -474,12 +475,12 @@ function createCloudTexture(seed) {
   context.save()
   context.filter = 'blur(20px)'
 
-  for (let index = 0; index < 15; index += 1) {
-    const centerX = 105 + seededRandom(seed + index * 17) * 558
-    const centerY = 116 + seededRandom(seed + index * 29) * 52
-    const radiusX = 62 + seededRandom(seed + index * 41) * 86
-    const radiusY = 22 + seededRandom(seed + index * 53) * 28
-    const alpha = 0.27 + seededRandom(seed + index * 67) * 0.2
+  for (let index = 0; index < 18; index += 1) {
+    const centerX = 82 + seededRandom(seed + index * 17) * 604
+    const centerY = 58 + seededRandom(seed + index * 29) * 164
+    const radiusX = 48 + seededRandom(seed + index * 41) * 92
+    const radiusY = 26 + seededRandom(seed + index * 53) * 42
+    const alpha = 0.19 + seededRandom(seed + index * 67) * 0.2
     context.beginPath()
     context.ellipse(centerX, centerY, radiusX, radiusY, 0, 0, Math.PI * 2)
     context.fillStyle = `rgba(255, 255, 252, ${alpha})`
@@ -983,7 +984,7 @@ vec3 journeyCrownLit = mix(
   smoothstep(0.2, 0.9, journeyCrownCellsLarge * 0.68 + journeyCrownCellsSmall * 0.32)
 );
 journeyCrownLit *= mix(0.68, 1.12, journeyMacro * 0.55 + journeyValleyMoisture * 0.45);
-journeyPaint = mix(journeyPaint, journeyCrownLit, journeyCrownOcclusion * 0.58);
+journeyPaint = mix(journeyPaint, journeyCrownLit, journeyCrownOcclusion * 0.74);
 vec2 journeyTreeUv = vec2(
   vJourneyWorldPosition.x + vJourneyWorldPosition.z * 0.22,
   vJourneyWorldPosition.y - vJourneyWorldPosition.z * 0.035
@@ -1052,7 +1053,7 @@ float journeyForestShadow = journeyForestSurface * smoothstep(
   0.88,
   journeyFbm(journeyTerrainUv * vec2(2.8, 8.6) + vec2(9.0, -24.0))
 );
-journeyPaint = mix(journeyPaint, journeyConiferDark, journeyForestShadow * 0.22);
+journeyPaint = mix(journeyPaint, journeyConiferDark, journeyForestShadow * 0.3);
 float journeyClearing = journeyForestSurface * (1.0 - journeyVegetationDensity) *
   smoothstep(0.58, 0.94, vJourneyWorldNormal.y);
 vec3 journeyGrassland = mix(vec3(0.19, 0.31, 0.12), vec3(0.34, 0.43, 0.17), journeyFine);
@@ -1480,7 +1481,7 @@ vec3 journeyDayShallowWater = mix(
   uJourneySunset * 0.62
 );
 vec3 journeyDayDeepWater = mix(
-  vec3(0.004, 0.255, 0.34),
+  vec3(0.003, 0.19, 0.29),
   vec3(0.055, 0.12, 0.17),
   uJourneySunset * 0.58
 );
@@ -1521,7 +1522,7 @@ vec3 journeyLandscapeReflection = mix(
 diffuseColor.rgb = mix(
   journeyClearBody,
   journeyLandscapeReflection,
-  0.065 + journeyWaterFresnel * 0.3 + journeyReflectionBand * 0.09
+  0.045 + journeyWaterFresnel * 0.18 + journeyReflectionBand * 0.055
 );
 float journeyBankContourNoise = journeyWaterNoise(
   vJourneyWaterPosition.xz * vec2(0.09, 0.055) + vec2(43.0, -21.0)
@@ -1789,7 +1790,7 @@ function addForestCanopyPoints(mountain, groups, texture) {
   const heightRange = Math.max(bounds.max.y - bounds.min.y, 1)
   // Sample enough crowns to form continuous stands at desktop resolution.
   // The source mesh is already dense, so this remains one shared Points draw.
-  const step = Math.max(1, Math.floor(positions.count / 8200))
+  const step = Math.max(1, Math.floor(positions.count / 16800))
   const canopyPositions = []
   const canopyColors = []
 
@@ -1797,7 +1798,7 @@ function addForestCanopyPoints(mountain, groups, texture) {
     const height = (positions.getY(index) - bounds.min.y) / heightRange
     const upward = normals.getY(index)
     const seed = Math.abs(Math.sin(index * 12.9898 + positions.getX(index) * 4.17))
-    if (height > 0.69 || upward < 0.16 || seed < 0.14) continue
+    if (height > 0.72 || upward < 0.12 || seed < 0.055) continue
     const jitter = (seed - 0.5) * 0.72
     canopyPositions.push(
       positions.getX(index) + normals.getX(index) * 0.56 + jitter,
@@ -1819,8 +1820,8 @@ function addForestCanopyPoints(mountain, groups, texture) {
     depthTest: true,
     depthWrite: false,
     fog: true,
-    opacity: 0.84,
-    size: 2.75,
+    opacity: 0.72,
+    size: 1.3,
     sizeAttenuation: false,
     transparent: true,
     vertexColors: true,
@@ -2079,6 +2080,98 @@ function prepareWorld(source) {
   return { root, groups }
 }
 
+function preparePhase2Environment(source) {
+  const root = source.clone(true)
+  const cloudTexture = createCloudTexture(240809)
+  const groups = {
+    ridges: [],
+    forest: [],
+    shore: [],
+    clouds: [],
+  }
+
+  root.traverse((object) => {
+    if (!object.isMesh) return
+    const identity = object.name.toUpperCase()
+    object.frustumCulled = true
+    object.castShadow = false
+    object.receiveShadow = true
+
+    if (identity.includes('P2_CLOUD_')) {
+      object.material = new THREE.MeshBasicMaterial({
+        map: cloudTexture,
+        color: '#e8ede7',
+        alphaTest: 0.015,
+        transparent: true,
+        opacity: 0,
+        depthWrite: false,
+        depthTest: true,
+        side: THREE.DoubleSide,
+        toneMapped: false,
+        fog: true,
+      })
+      object.renderOrder = 1
+      object.userData.journeyBasePosition = object.position.clone()
+      groups.clouds.push(object)
+      return
+    }
+
+    const material = cloneMaterial(object.material)
+    material.dithering = true
+    material.transparent = true
+    material.opacity = 0
+    material.depthWrite = true
+    material.depthTest = true
+    material.side = THREE.DoubleSide
+    object.material = material
+
+    if (identity.includes('P2_RIDGE_')) {
+      const far = identity.includes('_FAR')
+      material.color?.set(far ? '#829a9b' : '#617c74')
+      material.roughness = 0.98
+      if ('emissive' in material) {
+        material.emissive.set(far ? '#31494c' : '#243d39')
+        material.emissiveIntensity = 0.04
+      }
+      applyAlpineIllustration(material, true)
+      object.renderOrder = -1
+      groups.ridges.push(object)
+      return
+    }
+
+    if (identity.includes('P2_FOREST_')) {
+      const isCanopyShell = identity.includes('MID_CANOPY')
+      material.color?.set(identity.includes('VALLEY_EDGE') ? '#315f35' : '#4a7542')
+      material.roughness = 1
+      if ('emissive' in material) {
+        material.emissive.set('#173a20')
+        material.emissiveIntensity = 0.045
+      }
+      if (isCanopyShell) applyAlpineIllustration(material, false)
+      object.renderOrder = 1
+      groups.forest.push(object)
+      return
+    }
+
+    if (identity.includes('P2_SHORE_')) {
+      const wet = identity.includes('_WET_')
+      const stone = identity.includes('STONE')
+      material.color?.set(wet ? '#374946' : stone ? '#666b64' : '#747268')
+      material.roughness = wet ? 0.86 : 0.98
+      if ('emissive' in material) {
+        material.emissive.set(wet ? '#1f3533' : '#393d37')
+        material.emissiveIntensity = wet ? 0.035 : 0.018
+      }
+      applyWetGravelDetail(material, wet ? 'phase2-wet' : 'phase2-dry')
+      object.userData.journeyPhase2Kind = stone ? 'stone' : wet ? 'wet' : 'dry'
+      object.renderOrder = wet ? 2 : 1
+      groups.shore.push(object)
+    }
+  })
+
+  return { root, groups }
+}
+
 function StarField({ materialRef, pointsRef, milkyWay = false, qualityScale = 1 }) {
   const geometry = useMemo(
     () => buildStarField(
@@ -2151,15 +2244,15 @@ function DriftingClouds({ groupRef, materialRefs }) {
   )
 
   const clouds = [
-    { position: [-112, 118, -226], scale: [168, 31, 1], opacity: 0.38, speed: 1.55, tone: 0.05, depthTest: true },
-    { position: [94, 142, -346], scale: [226, 42, 1], opacity: 0.3, speed: 1.08, tone: 0.02, depthTest: true },
-    { position: [8, 106, -188], scale: [126, 25, 1], opacity: 0.4, speed: 1.7, tone: 0.12, depthTest: true },
-    { position: [-46, 164, -438], scale: [264, 48, 1], opacity: 0.24, speed: 0.82, tone: 0.04, depthTest: true },
-    { position: [124, 101, -218], scale: [142, 27, 1], opacity: 0.34, speed: 1.48, tone: 0.15, depthTest: true },
+    { position: [-112, 168, -226], scale: [178, 46, 1], opacity: 0.3, speed: 1.55, tone: 0.05, depthTest: true },
+    { position: [82, 188, -346], scale: [204, 58, 1], opacity: 0.26, speed: 1.08, tone: 0.02, depthTest: true },
+    { position: [8, 142, -188], scale: [132, 39, 1], opacity: 0.3, speed: 1.7, tone: 0.12, depthTest: true },
+    { position: [-46, 202, -438], scale: [248, 64, 1], opacity: 0.2, speed: 0.82, tone: 0.04, depthTest: true },
+    { position: [124, 154, -218], scale: [148, 43, 1], opacity: 0.28, speed: 1.48, tone: 0.15, depthTest: true },
     { position: [-126, 82, -184], scale: [108, 34, 1], opacity: 0.39, speed: 1.72, tone: 0.18, depthTest: false },
-    { position: [10, 96, -176], scale: [86, 29, 1], opacity: 0.36, speed: 1.28, tone: 0.08, depthTest: false },
+    { position: [10, 196, -176], scale: [108, 44, 1], opacity: 0.16, speed: 1.28, tone: 0.08, depthTest: false },
     { position: [122, 71, -198], scale: [102, 35, 1], opacity: 0.34, speed: 1.58, tone: 0.2, depthTest: false },
-    { position: [62, 112, -262], scale: [148, 34, 1], opacity: 0.27, speed: 0.94, tone: 0.03, depthTest: false },
+    { position: [62, 172, -262], scale: [176, 52, 1], opacity: 0.18, speed: 0.94, tone: 0.03, depthTest: false },
   ]
 
   return (
@@ -2394,7 +2487,12 @@ export default function JourneyScene({
     [ktx2Loader],
   )
   const gltf = useGLTF(MODEL_URL, true, true, configureLoader)
+  const phase2Gltf = useGLTF(PHASE2_ENVIRONMENT_URL)
   const { root, groups } = useMemo(() => prepareWorld(gltf.scene), [gltf.scene])
+  const { root: phase2Root, groups: phase2Groups } = useMemo(
+    () => preparePhase2Environment(phase2Gltf.scene),
+    [phase2Gltf.scene],
+  )
   const camera = useMemo(
     () => root.getObjectByName('CAM_V13_MASTER_ANIMATED'),
     [root],
@@ -2775,7 +2873,7 @@ export default function JourneyScene({
         const material = cloudMaterialRefs.current[index]
         if (material) {
           material.opacity =
-            openSky * cloudNightFade * (cloud.userData.opacity ?? 0.5)
+            openSky * cloudNightFade * (cloud.userData.opacity ?? 0.5) * 0.55
           material.color.copy(cloudColor).lerp(
             new THREE.Color('#879da3'),
             cloud.userData.tone ?? 0,
@@ -2877,12 +2975,12 @@ export default function JourneyScene({
     if (sunRef.current) {
       const dayIntensity = THREE.MathUtils.lerp(
         CAVE_LOOK.sunIntensity,
-        2.28,
+        2.92,
         caveRelease,
       )
       sunRef.current.intensity = THREE.MathUtils.lerp(dayIntensity, 0.52, night)
       sunRef.current.color
-        .set('#fff0ce')
+        .set('#fff2bd')
         .lerp(new THREE.Color('#ffad78'), sunset * 0.86)
         .lerp(new THREE.Color('#8ca9d8'), night)
       sunRef.current.position.x = THREE.MathUtils.lerp(-90, 40, sunset)
@@ -2891,7 +2989,7 @@ export default function JourneyScene({
     if (skyLightRef.current) {
       const dayIntensity = THREE.MathUtils.lerp(
         CAVE_LOOK.skyIntensity,
-        0.94,
+        0.78,
         caveRelease,
       )
       skyLightRef.current.intensity = THREE.MathUtils.lerp(dayIntensity, 1.08, night)
@@ -2908,7 +3006,7 @@ export default function JourneyScene({
     if (ambientRef.current) {
       const dayIntensity = THREE.MathUtils.lerp(
         CAVE_LOOK.ambientIntensity,
-        0.1,
+        0.075,
         caveRelease,
       )
       ambientRef.current.intensity = THREE.MathUtils.lerp(dayIntensity, 0.23, night)
@@ -2980,6 +3078,63 @@ export default function JourneyScene({
     }
 
     const openValley = smoothstep(16.5, 22, progress)
+    phase2Groups.ridges.forEach((mesh, index) => {
+      mesh.visible = openValley > 0.01
+      const material = mesh.material
+      material.opacity = openValley
+      material.color
+        .set(index === 0 ? '#617c74' : '#829a9b')
+        .lerp(new THREE.Color(index === 0 ? '#8b6f65' : '#a48b82'), sunset * 0.48)
+        .lerp(new THREE.Color(index === 0 ? '#223f58' : '#34516a'), night * 0.84)
+      if ('emissiveIntensity' in material) {
+        material.emissiveIntensity = THREE.MathUtils.lerp(0.035, 0.016, night)
+      }
+      const uniforms = material.userData.journeyAlpineUniforms
+      if (uniforms) {
+        uniforms.uJourneySunset.value = sunset
+        uniforms.uJourneyNight.value = night
+        uniforms.uJourneyRiverLight.value = night * skyConnectionProgress * 0.16
+        uniforms.uJourneyDiscovery.value = 0
+        uniforms.uJourneyTime.value = state.clock.elapsedTime
+      }
+    })
+    phase2Groups.forest.forEach((mesh) => {
+      const isCanopyShell = mesh.name.toUpperCase().includes('MID_CANOPY')
+      mesh.visible = openValley > 0.02 && isCanopyShell
+      const material = mesh.material
+      material.opacity = openValley * THREE.MathUtils.lerp(isCanopyShell ? 0.24 : 0.46, isCanopyShell ? 0.12 : 0.24, night)
+      material.color
+        .set(isCanopyShell ? '#4a7542' : '#315f35')
+        .lerp(new THREE.Color('#5b4931'), sunset * 0.42)
+        .lerp(new THREE.Color(isCanopyShell ? '#173545' : '#102a36'), night * 0.82)
+      const uniforms = material.userData.journeyAlpineUniforms
+      if (uniforms) {
+        uniforms.uJourneySunset.value = sunset
+        uniforms.uJourneyNight.value = night
+        uniforms.uJourneyRiverLight.value = night * skyConnectionProgress * 0.08
+        uniforms.uJourneyDiscovery.value = 0
+        uniforms.uJourneyTime.value = state.clock.elapsedTime
+      }
+    })
+    phase2Groups.shore.forEach((mesh) => {
+      mesh.visible = openValley > 0.02 && mesh.userData.journeyPhase2Kind === 'wet'
+      const kind = mesh.userData.journeyPhase2Kind
+      const baseOpacity = kind === 'wet' ? 0.32 : 0
+      mesh.material.opacity = openValley * baseOpacity * THREE.MathUtils.lerp(1, 0.54, night)
+    })
+    phase2Groups.clouds.forEach((cloud, index) => {
+      const isFarCloudSlab = cloud.name.toUpperCase().includes('_FAR')
+      cloud.visible = isFarCloudSlab && openValley > 0.02 && night < 0.98
+      const material = cloud.material
+      material.opacity = isFarCloudSlab ? openValley * (1 - night) * 0.09 : 0
+      material.color
+        .set('#e9eee7')
+        .lerp(new THREE.Color('#efb7a0'), sunset * 0.58)
+        .lerp(new THREE.Color('#8195a8'), night * 0.82)
+      const base = cloud.userData.journeyBasePosition
+      cloud.position.x = base.x + Math.sin(state.clock.elapsedTime * (0.018 + index * 0.004) + index) * (1.2 + index * 0.35)
+      cloud.position.y = base.y + Math.sin(state.clock.elapsedTime * 0.011 + index * 1.7) * 0.5
+    })
     const discoverySignal = Math.max(
       pointerLookRef.current.x,
       pointerLookRef.current.y * 0.88,
@@ -3158,6 +3313,7 @@ export default function JourneyScene({
   return (
     <>
       <primitive object={root} />
+      <primitive object={phase2Root} />
       <SkyAtmosphere
         meshRef={skyAtmosphereRef}
         materialRef={skyAtmosphereMaterialRef}
