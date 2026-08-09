@@ -642,3 +642,43 @@ This pass supersedes the plate-based Phase 3 assessment above.
 - Performance: 9,880 tree cards, 4,600 canopy instances and 156 stones are instanced; JavaScript remains 304.81 kB gzip. The cloud solution adds fifteen transparent plane draws but avoids volumetric raymarching and runtime terrain raycasts.
 
 Remaining visual weakness: the inherited massif base is still smoother than the Kamikochi reference, close bank geometry is broad, and clouds lack true self-shadowed volume. These are now limitations of the source geometry/low-cost WebGL representation rather than a Day-to-Night world-coherence failure.
+
+## Mountain Surface LookDev — no tree objects
+
+### Cycle 12 — Remove object-based forest
+
+**Problem:** Instanced trees and canopy geometry floated above the terrain, crossed the river and made the valley read as assets placed on a green mesh.
+
+**Hypothesis:** Removing object silhouettes first would expose the actual mountain-surface problem and prevent isolated tree assets from masking it.
+
+**Implementation:** Disabled Phase 2 forest geometry, source foliage, source canopy and runtime canopy points. Removed the mounted hero forest/canopy groups and their animation updates.
+
+**Before:** Object trees created obvious scale and placement errors. **After:** The valley is spatially clean, but the first browser frame exposed a smooth green lower massif. **Evaluation:** **ACCEPT as removal; surface quality required another cycle.**
+
+### Cycle 13 — Procedural surface hierarchy
+
+**Problem:** A tree-free mountain initially read as a green terrain because colour variation did not provide a material response or canopy scale.
+
+**Hypothesis:** Large forest/grass/rock zoning, elongated medium-scale canopy grouping and fine response variation could establish the hierarchy without drawing individual crowns.
+
+**Implementation:** Added warped large/medium/fine domains, slope and moisture-biased forest masks, cool valley forest, warm sun-facing vegetation, irregular erosion/rock veins, procedural normal response and forest-specific roughness.
+
+**Before:** Smooth green surface. **After:** Forest masses, gullies and rock/vegetation contrast appeared, but the Day comparison showed insufficient mid-distance grain. **Evaluation:** **REFINE.** The procedural-only version was not accepted as final.
+
+### Cycle 14 — Triplanar alpine canopy material
+
+**Problem:** Increasing procedural contrast alone risked moss-like blobs and repeated mathematical noise.
+
+**Hypothesis:** A diffuse, shadow-light-neutral aerial canopy material could supply organic crown variation while procedural masks prevented it from becoming one repeated texture.
+
+**Implementation:** Generated `public/journey/textures/surface/alpine-forest-canopy-v1.jpg`, applied it with warped triplanar projection, and modulated it with the biome, valley, altitude, rock, medium-cluster, normal and roughness fields. A first low-frequency blend was **REFINED** after browser comparison; the accepted scale exposes more medium crown grain while preserving large forest masses.
+
+**After:** Day Center/Left/Right contains no floating trees, river trees or isolated tree assets. Lower slopes read through forest mass, warm/cool material response and irregular rock/valley structure; the texture remains fixed to the 3D massif during pointer movement. **Evaluation:** **ACCEPT.**
+
+### Cycle 15 — Camera lock and person scale
+
+**Problem:** Pointer look could fight authored zoom/FOV/look-up/pull-back motion, and the seated figure competed with the landscape.
+
+**Implementation:** Added zero-weight cursor windows for the vista reveal, night look-up and final pull-back, plus velocity-based locking during active camera travel. Temporary locks ease back after their transitions. Reduced the figure to 0.74 of the prior scale while retaining its world placement and camera-driven pull-back.
+
+**Evaluation:** **REFINE then ACCEPT.** The first night lock did not restore input and was replaced by a bounded look-up window plus a separate ending lock. Opposite pointer positions at the `riverready` checkpoint now preserve the camera frame; Day remains explorable. Formed and wide checkpoints keep the person readable first and very small after pull-back.
