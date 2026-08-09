@@ -1269,8 +1269,8 @@ float journeyGravelStone = 1.0 - smoothstep(
 float journeyGravelFine = journeyGravelHash(floor(vJourneyGravelPosition.xz * 2.35) + 73.0);
 float journeyGravelMacro = journeyGravelNoise(vJourneyGravelPosition.xz * 0.11 + 9.0);
 float journeyGravelMeso = journeyGravelNoise(vJourneyGravelPosition.xz * 0.54 - 17.0);
-vec3 journeyGravelDark = ${isSubmergedBed ? 'vec3(0.055, 0.18, 0.15)' : isRiverBar ? 'vec3(0.045, 0.17, 0.145)' : 'vec3(0.31, 0.34, 0.31)'};
-vec3 journeyGravelLight = ${isSubmergedBed ? 'vec3(0.20, 0.38, 0.31)' : isRiverBar ? 'vec3(0.19, 0.34, 0.27)' : 'vec3(0.62, 0.59, 0.50)'};
+vec3 journeyGravelDark = ${isSubmergedBed ? 'vec3(0.055, 0.18, 0.15)' : isRiverBar ? 'vec3(0.19, 0.215, 0.20)' : 'vec3(0.31, 0.34, 0.31)'};
+vec3 journeyGravelLight = ${isSubmergedBed ? 'vec3(0.20, 0.38, 0.31)' : isRiverBar ? 'vec3(0.56, 0.535, 0.46)' : 'vec3(0.62, 0.59, 0.50)'};
 vec3 journeyGravelColor = mix(
   journeyGravelDark,
   journeyGravelLight,
@@ -1435,8 +1435,21 @@ journeyFineCurrent = smoothstep(0.76, 0.96, journeyFineCurrent) *
   smoothstep(0.32, 0.88, journeyWaterRipple);
 float journeyWaterSparkSeed = fract(sin(dot(floor(vJourneyWaterPosition.xz * 1.45), vec2(12.9898, 78.233))) * 43758.5453);
 float journeyWaterSparkle = pow(journeyWaterSparkSeed, 18.0) * smoothstep(0.66, 0.94, journeyWaterRipple * journeyWaterCrossRipple);
-float journeyRiverbedCell = journeyWaterHash(floor(vJourneyWaterPosition.xz * vec2(0.54, 0.78)));
-float journeyRiverbedFine = journeyWaterHash(floor(vJourneyWaterPosition.xz * vec2(1.36, 1.72)) + 19.0);
+vec2 journeyBedUv = vJourneyWaterPosition.xz * vec2(0.62, 0.82);
+vec2 journeyBedCellId = floor(journeyBedUv);
+vec2 journeyBedLocal = fract(journeyBedUv) - 0.5;
+vec2 journeyBedOffset = vec2(
+  journeyWaterHash(journeyBedCellId + 7.3),
+  journeyWaterHash(journeyBedCellId + 29.1)
+) - 0.5;
+float journeyBedRadius = mix(0.17, 0.39, journeyWaterHash(journeyBedCellId + 51.0));
+float journeyBedPebble = 1.0 - smoothstep(
+  journeyBedRadius - 0.045,
+  journeyBedRadius + 0.055,
+  length((journeyBedLocal - journeyBedOffset * 0.3) * vec2(0.88, 1.12))
+);
+float journeyRiverbedCell = journeyWaterHash(journeyBedCellId);
+float journeyRiverbedFine = journeyWaterHash(floor(vJourneyWaterPosition.xz * vec2(1.58, 1.92)) + 19.0);
 float journeyRiverbedVariation = clamp(journeyRiverbedCell * 0.68 + journeyRiverbedFine * 0.32, 0.0, 1.0);
 float journeyRiverPath = clamp((8.0 - vJourneyWaterPosition.z) / 227.0, 0.0, 1.0);
 float journeyRiverHead = 1.0 - smoothstep(uJourneyRiverGlow - 0.045, uJourneyRiverGlow + 0.035, journeyRiverPath);
@@ -1444,12 +1457,12 @@ float journeyGroundRiver = 1.0 - smoothstep(1.35, 3.8, vJourneyWaterPosition.y);
 float journeyRiverMask = journeyRiverHead * smoothstep(0.01, 0.075, uJourneyRiverGlow) * journeyGroundRiver;
 float journeyRiverCurrent = 0.58 + journeyWaterRipple * 0.24 + journeyWaterCrossRipple * 0.18;
 vec3 journeyDayShallowWater = mix(
-  vec3(0.055, 0.43, 0.35),
+  vec3(0.025, 0.56, 0.46),
   vec3(0.13, 0.29, 0.25),
   uJourneySunset * 0.62
 );
 vec3 journeyDayDeepWater = mix(
-  vec3(0.012, 0.16, 0.22),
+  vec3(0.004, 0.255, 0.34),
   vec3(0.055, 0.12, 0.17),
   uJourneySunset * 0.58
 );
@@ -1458,13 +1471,18 @@ vec3 journeyNightDeepWater = vec3(0.004, 0.035, 0.11);
 vec3 journeyShallowWater = mix(journeyDayShallowWater, journeyNightShallowWater, uJourneyNight);
 vec3 journeyDeepWater = mix(journeyDayDeepWater, journeyNightDeepWater, uJourneyNight);
 vec3 journeyClearBody = mix(journeyShallowWater, journeyDeepWater, journeyOpticalDepth);
-vec3 journeyWetRiverbed = mix(vec3(0.08, 0.18, 0.15), vec3(0.30, 0.34, 0.27), journeyRiverbedVariation);
+vec3 journeyWetRiverbed = mix(
+  vec3(0.065, 0.14, 0.125),
+  vec3(0.48, 0.46, 0.37),
+  clamp(journeyRiverbedVariation * 0.58 + journeyBedPebble * 0.56, 0.0, 1.0)
+);
 float journeyBedVisibility = (1.0 - journeyOpticalDepth) *
   (0.66 + journeyWaterRipple * 0.1) * (0.74 + journeyBankShallow * 0.26);
-journeyClearBody = mix(journeyClearBody, journeyWetRiverbed, journeyBedVisibility * mix(0.46, 0.2, uJourneyNight));
+float journeyShoreBedReveal = journeyBedVisibility * (0.52 + journeyBankShallow * 0.48);
+journeyClearBody = mix(journeyClearBody, journeyWetRiverbed, journeyShoreBedReveal * mix(0.48, 0.2, uJourneyNight));
 journeyClearBody *= 0.96 + journeyWaterRipple * 0.16;
 vec3 journeyDaySkyReflection = mix(
-  vec3(0.19, 0.48, 0.62),
+  vec3(0.16, 0.43, 0.56),
   vec3(0.44, 0.27, 0.27),
   uJourneySunset * 0.52
 );
@@ -1503,8 +1521,17 @@ vec3 journeyBankGravel = mix(
 diffuseColor.rgb = mix(
   diffuseColor.rgb,
   journeyBankGravel,
-  journeyExposedBank * mix(0.58, 0.46, uJourneyNight)
+  journeyExposedBank * mix(0.38, 0.4, uJourneyNight)
 );
+float journeyCausticThread = smoothstep(
+  0.76,
+  0.96,
+  0.5 + 0.5 * sin(
+    vJourneyWaterPosition.z * 0.38 - uJourneyTime * 0.58 +
+    journeyWaterNoise(vJourneyWaterPosition.xz * 0.19) * 6.4
+  )
+) * journeyBedVisibility * (1.0 - journeyExposedBank);
+diffuseColor.rgb += vec3(0.24, 0.62, 0.52) * journeyCausticThread * (1.0 - uJourneyNight) * 0.11;
 float journeyCurrentVein = smoothstep(
   0.72,
   0.95,
@@ -1555,12 +1582,12 @@ totalEmissiveRadiance += vec3(0.32, 0.82, 1.0) * journeyConnectionPulse * uJourn
         `#include <opaque_fragment>
 // Keep the physical highlights, but prevent the low-angle daylight reflection
 // from washing the emerald body into a flat white strip.
-float journeyPigmentStrength = mix(0.78, 0.32, uJourneyNight);
+float journeyPigmentStrength = mix(0.9, 0.32, uJourneyNight);
 gl_FragColor.rgb = mix(gl_FragColor.rgb, diffuseColor.rgb, journeyPigmentStrength);
 gl_FragColor.rgb += vec3(0.16, 0.72, 0.68) * journeyFineCurrent * (1.0 - uJourneyNight) * 0.045;`,
       )
   }
-  material.customProgramCacheKey = () => 'journey-water-reflection-v23-micro-ripples'
+  material.customProgramCacheKey = () => 'journey-water-reflection-v24-clear-bed'
 }
 
 function createClearRiverMaterial() {

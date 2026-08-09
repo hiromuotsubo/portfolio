@@ -91,3 +91,37 @@ Three comparisons were made. Crown hierarchy materially improved the right lower
 ### Next step
 
 Improve river and bank silhouettes next because their pale geometric boundaries currently reinforce the synthetic read. Reassess the left foreground during the atmosphere and final composition cycles rather than adding brute-force trees now.
+
+## Cycle 2 — River and riverbank
+
+### Problem
+
+The river read as a pale cyan sheet, the authored bank edge stayed too explicit, and the procedural riverbed was only random square variation.
+
+### Hypothesis
+
+Water will read more clearly when deep body color, bank shallows, discrete submerged stones, angle-dependent reflection, and flow highlights use separate masks. Gravel needs neutral stone variation rather than a green material.
+
+### Reference difference
+
+The reality reference shows a turquoise centre, visible stones near shallow edges, interrupted reflections, and dry grey gravel bars with irregular green incursions.
+
+### Implementation
+
+Added elliptical submerged pebble cells, shallow-weighted bed visibility, more distinct deep and shallow turquoise, reduced broad bank overlay, restrained caustic threads, and neutral wet/dry gravel variation. Kept the existing river-to-Milky-Way emissive logic intact.
+
+### Before
+
+`/private/tmp/journey-cycle1c-day.png`
+
+### After
+
+`/private/tmp/journey-cycle2b-day.png`
+
+### Evaluation
+
+The first iteration overexposed the riverbed and made the whole river grey. A second iteration restricted the bed to shallows and restored the central turquoise body. Depth and near-surface variation improved, but the river's authored outer silhouette remains visible and cannot be fully removed without changing the source mesh or adding a dedicated bank-overlap asset.
+
+### Next step
+
+Restore readable world-space clouds and stronger aerial layering; then judge water value again under the final daytime atmosphere.
