@@ -812,6 +812,31 @@ float journeyTreeCanopy(vec2 point, float densitySeed) {
   crown *= smoothstep(0.03, 0.12, local.y) * (1.0 - smoothstep(0.82, 0.98, local.y));
   crown *= smoothstep(0.2, 0.58, seed);
   return crown;
+}
+
+float journeyCanopyCells(vec2 point, float seedOffset) {
+  vec2 cell = floor(point);
+  vec2 local = fract(point);
+  float nearest = 1.0;
+  float crownSeed = 0.0;
+  for (int y = -1; y <= 1; y++) {
+    for (int x = -1; x <= 1; x++) {
+      vec2 neighbour = vec2(float(x), float(y));
+      vec2 id = cell + neighbour;
+      vec2 offset = vec2(
+        journeyHash(id + seedOffset),
+        journeyHash(id + seedOffset + 37.17)
+      );
+      vec2 delta = neighbour + offset - local;
+      float distanceToCrown = length(delta * vec2(0.9, 1.16));
+      if (distanceToCrown < nearest) {
+        nearest = distanceToCrown;
+        crownSeed = journeyHash(id + seedOffset + 91.3);
+      }
+    }
+  }
+  float crown = 1.0 - smoothstep(0.28, 0.62, nearest);
+  return crown * mix(0.62, 1.0, crownSeed);
 }`,
       )
       .replace(
@@ -876,6 +901,14 @@ journeyPaint = mix(journeyPaint, journeyRock, journeyRockMask * 0.67);
 float journeyForestSurface =
   (1.0 - smoothstep(0.62, 0.9, journeyAltitude)) *
   (1.0 - smoothstep(0.68, 0.96, journeyRockMask));
+float journeyValleyMoisture = smoothstep(
+  0.18,
+  0.83,
+  journeyFbm(vec2(
+    journeyTerrainUv.x * 0.74 + journeyTerrainUv.y * 0.22,
+    journeyTerrainUv.y * 1.72 - journeyAltitude * 1.8
+  ) + vec2(-18.0, 47.0)) + journeyWetGully * 0.34
+);
 float journeyCanopyGrain = journeyNoise(
   journeyTerrainUv * 22.0 + vec2(journeyFine * 3.1, vJourneyWorldPosition.y * 0.24)
 );
@@ -931,6 +964,26 @@ vec3 journeyConiferLight = vec3(0.12, 0.285, 0.105);
 vec3 journeyCrownColor = mix(journeyConiferDark, journeyConiferLight, journeyCanopyTexture);
 journeyCrownColor *= mix(0.72, 1.16, journeyTreeBands);
 journeyPaint = mix(journeyPaint, journeyCrownColor, journeyCrownPresence * 0.67);
+// Crown-scale cellular breakup makes the green read as thousands of trees,
+// while two offset frequencies avoid a tiled procedural carpet.
+float journeyCrownCellsLarge = journeyCanopyCells(
+  journeyCrownUv * vec2(0.72, 0.92) + vec2(journeyMacro * 2.1, 0.0),
+  113.0
+);
+float journeyCrownCellsSmall = journeyCanopyCells(
+  journeyCrownUv * vec2(1.46, 1.78) + vec2(19.0, -7.0),
+  271.0
+);
+float journeyCrownCellField = max(journeyCrownCellsLarge, journeyCrownCellsSmall * 0.72);
+float journeyCrownOcclusion = smoothstep(0.16, 0.78, journeyCrownCellField) *
+  journeyForestSurface * mix(0.52, 1.0, journeyVegetationDensity);
+vec3 journeyCrownLit = mix(
+  vec3(0.016, 0.068, 0.036),
+  vec3(0.17, 0.355, 0.105),
+  smoothstep(0.2, 0.9, journeyCrownCellsLarge * 0.68 + journeyCrownCellsSmall * 0.32)
+);
+journeyCrownLit *= mix(0.68, 1.12, journeyMacro * 0.55 + journeyValleyMoisture * 0.45);
+journeyPaint = mix(journeyPaint, journeyCrownLit, journeyCrownOcclusion * 0.58);
 vec2 journeyTreeUv = vec2(
   vJourneyWorldPosition.x + vJourneyWorldPosition.z * 0.22,
   vJourneyWorldPosition.y - vJourneyWorldPosition.z * 0.035
@@ -954,16 +1007,24 @@ float journeyForestStand = smoothstep(
   0.82,
   journeyFbm(journeyTerrainUv * vec2(1.35, 3.8) + vec2(-17.0, 12.0))
 );
+float journeyVerticalStand = smoothstep(
+  0.32,
+  0.76,
+  journeyFbm(vec2(
+    journeyCrownUv.x * 0.42 + journeyCrownUv.y * 0.08,
+    journeyCrownUv.y * 2.9 + journeyMacro * 1.7
+  ) + vec2(61.0, -28.0))
+);
 vec3 journeyForestStandColor = mix(
-  vec3(0.018, 0.085, 0.047),
-  vec3(0.115, 0.285, 0.105),
-  journeyForestStand
+  vec3(0.012, 0.062, 0.034),
+  vec3(0.13, 0.31, 0.095),
+  journeyForestStand * 0.62 + journeyVerticalStand * 0.38
 );
 journeyPaint = mix(
   journeyPaint,
   journeyForestStandColor,
-  journeyForestSurface * (0.24 + journeyVegetationDensity * 0.34) *
-    mix(0.52, 1.0, journeyForestPatch)
+  journeyForestSurface * (0.34 + journeyVegetationDensity * 0.42) *
+    mix(0.48, 1.0, journeyForestPatch) * mix(0.72, 1.0, journeyValleyMoisture)
 );
 float journeyScrubTransition =
   smoothstep(0.3, 0.5, journeyAltitude) *
@@ -976,15 +1037,15 @@ float journeyLowerForestBelt =
   (1.0 - smoothstep(16.0, 48.0, vJourneyWorldPosition.y)) *
   (0.34 + smoothstep(0.08, 0.42, journeySteepness) * 0.66);
 vec3 journeyLowerForestColor = mix(
-  vec3(0.018, 0.078, 0.042),
-  vec3(0.095, 0.235, 0.085),
+  vec3(0.012, 0.058, 0.031),
+  vec3(0.105, 0.265, 0.075),
   journeyCanopyGrain * 0.56 + journeyVegetationDensity * 0.44
 );
 journeyPaint = mix(
   journeyPaint,
   journeyLowerForestColor,
-  journeyLowerForestBelt * (0.3 + journeyVegetationDensity * 0.24) *
-    mix(0.48, 1.0, journeyForestPatch)
+  journeyLowerForestBelt * (0.43 + journeyVegetationDensity * 0.31) *
+    mix(0.45, 1.0, journeyForestPatch) * mix(0.74, 1.0, journeyValleyMoisture)
 );
 float journeyForestShadow = journeyForestSurface * smoothstep(
   0.54,
@@ -1148,7 +1209,7 @@ totalEmissiveRadiance += journeyPaint * uJourneyNight * 0.055;
 totalEmissiveRadiance += vec3(0.018, 0.038, 0.072) * uJourneyNight;`,
     )
   }
-  material.customProgramCacheKey = () => `journey-alpine-${isFarRidge ? 'far' : 'near'}-v23-forest-transition`
+  material.customProgramCacheKey = () => `journey-alpine-${isFarRidge ? 'far' : 'near'}-v24-canopy-hierarchy`
 }
 
 function applyWetGravelDetail(material, variant = 'bed') {
@@ -1681,7 +1742,9 @@ function addForestCanopyPoints(mountain, groups, texture) {
   mountain.geometry.computeBoundingBox()
   const bounds = mountain.geometry.boundingBox
   const heightRange = Math.max(bounds.max.y - bounds.min.y, 1)
-  const step = Math.max(1, Math.floor(positions.count / 3600))
+  // Sample enough crowns to form continuous stands at desktop resolution.
+  // The source mesh is already dense, so this remains one shared Points draw.
+  const step = Math.max(1, Math.floor(positions.count / 8200))
   const canopyPositions = []
   const canopyColors = []
 
@@ -1689,15 +1752,15 @@ function addForestCanopyPoints(mountain, groups, texture) {
     const height = (positions.getY(index) - bounds.min.y) / heightRange
     const upward = normals.getY(index)
     const seed = Math.abs(Math.sin(index * 12.9898 + positions.getX(index) * 4.17))
-    if (height > 0.7 || seed < 0.3) continue
+    if (height > 0.69 || upward < 0.16 || seed < 0.14) continue
     const jitter = (seed - 0.5) * 0.72
     canopyPositions.push(
       positions.getX(index) + normals.getX(index) * 0.56 + jitter,
       positions.getY(index) + upward * 0.56 + 0.08,
       positions.getZ(index) + normals.getZ(index) * 0.56 - jitter * 0.58,
     )
-    const light = 0.64 + seed * 0.38
-    canopyColors.push(0.24 * light, 0.56 * light, 0.27 * light)
+    const light = 0.56 + seed * 0.42
+    canopyColors.push(0.11 * light, 0.39 * light, 0.12 * light)
   }
   if (!canopyPositions.length) return
 
@@ -1711,8 +1774,8 @@ function addForestCanopyPoints(mountain, groups, texture) {
     depthTest: true,
     depthWrite: false,
     fog: true,
-    opacity: 0.72,
-    size: 4.2,
+    opacity: 0.84,
+    size: 2.75,
     sizeAttenuation: false,
     transparent: true,
     vertexColors: true,
@@ -2738,7 +2801,7 @@ export default function JourneyScene({
 
     const daylightExposure = THREE.MathUtils.lerp(
       CAVE_LOOK.exposure,
-      1.08,
+      1.0,
       caveRelease,
     )
     state.gl.toneMappingExposure = THREE.MathUtils.lerp(
@@ -2769,7 +2832,7 @@ export default function JourneyScene({
     if (sunRef.current) {
       const dayIntensity = THREE.MathUtils.lerp(
         CAVE_LOOK.sunIntensity,
-        3,
+        2.28,
         caveRelease,
       )
       sunRef.current.intensity = THREE.MathUtils.lerp(dayIntensity, 0.52, night)
@@ -2783,7 +2846,7 @@ export default function JourneyScene({
     if (skyLightRef.current) {
       const dayIntensity = THREE.MathUtils.lerp(
         CAVE_LOOK.skyIntensity,
-        1.32,
+        0.94,
         caveRelease,
       )
       skyLightRef.current.intensity = THREE.MathUtils.lerp(dayIntensity, 1.08, night)
@@ -2800,7 +2863,7 @@ export default function JourneyScene({
     if (ambientRef.current) {
       const dayIntensity = THREE.MathUtils.lerp(
         CAVE_LOOK.ambientIntensity,
-        0.15,
+        0.1,
         caveRelease,
       )
       ambientRef.current.intensity = THREE.MathUtils.lerp(dayIntensity, 0.23, night)

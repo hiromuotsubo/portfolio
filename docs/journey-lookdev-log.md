@@ -58,3 +58,36 @@ The dominant daytime CG cues are: (1) lower mountain detail collapsing into low-
 
 Establish a repeatable browser capture and performance baseline, then begin with mountain / forest because it occupies the greatest image area.
 
+## Cycle 1 — Mountain, forest, and vegetation hierarchy
+
+### Problem
+
+The lower massif read as continuous green material, especially on the left foreground slope. Existing high-frequency noise was visible only as mottling and the scene's broad fill light compressed forest values.
+
+### Hypothesis
+
+The forest needs three coordinated scales—stand, crown cluster, and crown—plus darker valley-moisture stands and less fill-light compression. Increasing procedural noise alone will not establish scale.
+
+### Reference difference
+
+Kamikochi's real canopy contains dark large stands, lighter crown clusters, and small crown occlusion. The target look keeps that hierarchy legible even under soft painterly light.
+
+### Implementation
+
+Added crown-cell distance fields at two offset frequencies, vertical stand breakup, valley-moisture weighting, darker lower-forest values, and denser shared canopy points. Rebalanced daytime exposure, sun, hemisphere, and ambient contributions toward directional form while retaining the existing evening and night transitions.
+
+### Before
+
+`/private/tmp/journey-baseline-day.png`
+
+### After
+
+`/private/tmp/journey-cycle1c-day.png`
+
+### Evaluation
+
+Three comparisons were made. Crown hierarchy materially improved the right lower mountain and valley shadows. Increasing point count alone made little visible difference and is not treated as a successful primary technique. Lighting rebalance recovered midtone separation across the massif. The left foreground remains too smooth and the cellular field can still read as mottling instead of tree crowns; this cycle is an improvement, not completion.
+
+### Next step
+
+Improve river and bank silhouettes next because their pale geometric boundaries currently reinforce the synthetic read. Reassess the left foreground during the atmosphere and final composition cycles rather than adding brute-force trees now.
