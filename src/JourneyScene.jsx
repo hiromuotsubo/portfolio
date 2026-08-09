@@ -2276,6 +2276,68 @@ function DriftingClouds({ groupRef, materialRefs }) {
   )
 }
 
+function DayHeroEnvironment({ groupRef, dayMaterialRef, sunsetMaterialRef }) {
+  const [dayTexture, sunsetTexture] = useTexture([
+    '/journey/textures/phase3/day-hero-environment-v1.jpg',
+    '/journey/textures/phase3/day-hero-sunset-v1.jpg',
+  ])
+  const textures = useMemo(() => [dayTexture, sunsetTexture], [dayTexture, sunsetTexture])
+  textures.forEach((texture) => {
+    texture.colorSpace = THREE.SRGBColorSpace
+    texture.wrapS = THREE.ClampToEdgeWrapping
+    texture.wrapT = THREE.ClampToEdgeWrapping
+    texture.minFilter = THREE.LinearMipmapLinearFilter
+    texture.magFilter = THREE.LinearFilter
+    texture.generateMipmaps = true
+  })
+
+  useEffect(() => {
+    textures.forEach((texture) => {
+      texture.anisotropy = 8
+      texture.needsUpdate = true
+    })
+  }, [textures])
+
+  return (
+    <group
+      ref={groupRef}
+      position={[0, 58, -244]}
+      scale={[580, 326.25, 1]}
+    >
+      <mesh renderOrder={8} frustumCulled={false}>
+        <planeGeometry args={[1, 1]} />
+        <meshBasicMaterial
+          ref={dayMaterialRef}
+          map={dayTexture}
+          color="#ffffff"
+          transparent
+          opacity={0}
+          depthWrite={false}
+          depthTest={false}
+          side={THREE.DoubleSide}
+          fog={false}
+          toneMapped={false}
+        />
+      </mesh>
+      <mesh position={[0, 0, 0.01]} renderOrder={9} frustumCulled={false}>
+        <planeGeometry args={[1, 1]} />
+        <meshBasicMaterial
+          ref={sunsetMaterialRef}
+          map={sunsetTexture}
+          color="#ffffff"
+          transparent
+          opacity={0}
+          depthWrite={false}
+          depthTest={false}
+          side={THREE.DoubleSide}
+          fog={false}
+          toneMapped={false}
+        />
+      </mesh>
+    </group>
+  )
+}
+
 function HeroForestScaleCues({ surfaceMeshes, groupRef, materialRefs }) {
   const coniferRef = useRef(null)
   const broadleafRef = useRef(null)
@@ -2757,6 +2819,9 @@ export default function JourneyScene({
   const heroForestMaterialRefs = useRef([])
   const heroRiverbankRef = useRef(null)
   const heroRiverbankMaterialRef = useRef(null)
+  const dayHeroEnvironmentRef = useRef(null)
+  const dayHeroEnvironmentMaterialRef = useRef(null)
+  const sunsetHeroEnvironmentMaterialRef = useRef(null)
   const skyRigRef = useRef(null)
   const motesRef = useRef(null)
   const motesMaterialRef = useRef(null)
@@ -3271,6 +3336,29 @@ export default function JourneyScene({
     }
 
     const openValley = smoothstep(16.5, 22, progress)
+    if (
+      dayHeroEnvironmentRef.current &&
+      dayHeroEnvironmentMaterialRef.current &&
+      sunsetHeroEnvironmentMaterialRef.current
+    ) {
+      const dayHeroArrival = smoothstep(18.2, 23.5, progress)
+      const dayHeroDeparture = 1 - smoothstep(56, 68, progress)
+      const dayHeroPresence = dayHeroArrival * dayHeroDeparture
+      const sunsetHeroBlend = smoothstep(30, 54, progress)
+      dayHeroEnvironmentRef.current.visible = dayHeroPresence > 0.002
+      dayHeroEnvironmentMaterialRef.current.opacity =
+        dayHeroPresence * (1 - sunsetHeroBlend) * 0.955
+      sunsetHeroEnvironmentMaterialRef.current.opacity =
+        dayHeroPresence * sunsetHeroBlend * 0.965
+      // The matte is a world-space environment plane rather than a camera child.
+      // Small view changes therefore reveal a restrained offset instead of moving
+      // like a fixed background layer.
+      dayHeroEnvironmentRef.current.quaternion.copy(camera.quaternion)
+      dayHeroEnvironmentRef.current.position.x =
+        Math.sin(state.clock.elapsedTime * 0.018) * 0.32 - pointerLookRef.current.x * 5.4
+      dayHeroEnvironmentRef.current.position.y =
+        58 - pointerLookRef.current.y * 2.6
+    }
     if (heroForestRef.current) {
       heroForestRef.current.visible = openValley > 0.02
       heroForestMaterialRefs.current.forEach((material, index) => {
@@ -3527,6 +3615,11 @@ export default function JourneyScene({
       <HeroRiverbankPatches
         groupRef={heroRiverbankRef}
         materialRef={heroRiverbankMaterialRef}
+      />
+      <DayHeroEnvironment
+        groupRef={dayHeroEnvironmentRef}
+        dayMaterialRef={dayHeroEnvironmentMaterialRef}
+        sunsetMaterialRef={sunsetHeroEnvironmentMaterialRef}
       />
       <SkyAtmosphere
         meshRef={skyAtmosphereRef}
