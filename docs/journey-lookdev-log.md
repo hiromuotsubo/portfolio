@@ -449,3 +449,85 @@ Current assessment: **Good portfolio quality, closer to a strong award candidate
 1. Reauthor the lower massif into genuinely separate terrain/forest regions with a baked canopy normal/height atlas and LOD rather than an overlaid shell.
 2. Replace the source river bars and outer bank with one unified meandering bank mesh and baked wet/dry/stone masks.
 3. Build a compact 3D cloud volume (signed-distance raymarch or low-resolution volume texture with temporal reprojection) that can self-overlap and receive sunset light.
+
+## Phase 3 — DAY HERO target-matching pass
+
+### Initial visual gap
+
+The supplied Target reads as nature because it contains a complete scale ladder: water and stones, individual trees, forest masses, multiple ridges, atmospheric mountains, clouds and directional light. The Phase 2 Day frame still read first as a single close terrain because its tree evidence was too abstract, the water was pale, the sky was mostly empty and the broad lower massif retained one continuous curvature.
+
+### Cycle 1 — Forest scale evidence
+
+#### Problem
+
+Surface noise suggested vegetation but did not let the eye infer thousands of trees.
+
+#### Hypothesis
+
+A small number of clearly photographic tree silhouettes would provide more scale information than additional material noise.
+
+#### Implementation
+
+Tested synthetic cone trees and code-drawn crown atlases, rejected both, then generated transparent Japanese alpine conifer and riverside broadleaf clusters. Integrated them as two instanced draws raycast along the existing river corridor and reduced their final size after the first browser comparison.
+
+#### Evaluation
+
+**REFINE.** The valley now reads as containing trees and therefore gives the mountain a stronger scale reference. The repeated atlas silhouettes and limited mountain-slope density remain below the Target.
+
+### Cycle 2 — River and bank
+
+#### Problem
+
+The river read as a pale reflective polygon and its pale bars exposed authored contours.
+
+#### Hypothesis
+
+Deeper pigment, restrained reflection and irregular gravel overlap would make the channel read before the mesh edge.
+
+#### Implementation
+
+Deepened the turquoise channel, increased shallow/deep colour separation, reduced white sky/mountain reflection, and added four irregular gravel patches. The first large brown patch was rejected; the accepted version is smaller, lighter and lower-opacity.
+
+#### Evaluation
+
+Water is **ACCEPT**; bank is **REFINE**. The channel now reads as cold water, while the retained gravel still lacks the Target's individual wet/dry stone hierarchy.
+
+### Cycle 3 — Cloud and atmosphere
+
+#### Problem
+
+Phase 2 clouds were almost invisible; the first Phase 3 generated-cloud arrangement became one bright horizontal band.
+
+#### Hypothesis
+
+Separating high sky clouds from two mountain wisps and limiting opacity would preserve negative space and avoid a camera-following background layer.
+
+#### Implementation
+
+Generated a photoreal additive alpine cloud atlas, tested nine sprites, rejected the band, and retained three high world-space clouds plus two depth-tested mountain wisps. Reduced near-mountain haze and ambient fill, strengthened the directional Day light, and kept cloud motion independent of pointer input.
+
+#### Evaluation
+
+**REFINE.** Clouds are visibly present in the sky and no longer form a horizon strip. They remain card-like and do not have Target-level self-shadow or cumulus volume.
+
+### Cycle 4 — Composition and performance
+
+#### Problem
+
+The mountain filled the frame without enough water or sky to establish its scale. An attempted second slope-forest pass performed hundreds of raycasts against the high-poly massif and stalled first render.
+
+#### Hypothesis
+
+A modest fixed-camera FOV/pull-back change plus bank-scale objects would improve the composition more efficiently than runtime slope scattering.
+
+#### Implementation
+
+Adjusted the fixed composition from FOV 10.2 to 13.6 with a larger pull-back and small camera/target lift, preserving the story route. Removed the slope-raycast experiment. Added localhost-only production access to the existing fixed preview states for repeatable QA.
+
+#### Evaluation
+
+Composition is **ACCEPT** and the raycast expansion is **REJECT**. The final frame shows more sky, river and valley while the mountain remains dominant.
+
+## Phase 3 final assessment
+
+Phase 3 makes a larger screenshot-level difference than the earlier micro-shader passes: recognisable trees, deeper water, greater sky/water balance, visible clouds and stronger directional form are all evident without inspecting code. The frame is still not a SOTD-level match to `target_day_hero_sotd.png`. The base massif's smooth lower topology, sparse/repeated tree cards, simple gravel bars and non-volumetric clouds remain the dominant prototype cues. The next high-impact pass should replace the lower massif with offline-authored forest/rock regions and baked canopy data rather than add more runtime scatter.

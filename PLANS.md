@@ -36,3 +36,7 @@ For every major pass: inspect current browser frame, capture, compare with refer
 ## Phase 2 completion record
 
 All 17 passes were executed. Mountain/forest, river/riverbank, and cloud/atmosphere each received an initial Blender/WebGL implementation, browser review, rejection or acceptance decision, and a second refinement. The final asset retains only adopted geometry. Fixed Day, sunset, night, forming, figure, and wide frames, build, lint, and renderer metrics were reviewed. Remaining source-massif, gravel-bar, and card-cloud limitations are documented in `docs/journey-lookdev-log.md`; they are not treated as visually complete or SOTD-level.
+
+## Phase 3 — DAY HERO target-matching completion record
+
+Phase 3 used the fixed Day checkpoint as the primary quality gate and records the Target gap in `docs/journey-dayhero-gap.md`. The accepted direction widens the fixed composition without changing the camera story, adds photographic conifer/broadleaf scale cues, deepens the river, introduces irregular gravel overlap, restores world-space clouds, and increases directional light hierarchy. Synthetic cone trees, code-drawn atlases, an oversized bank patch, a nine-cloud horizon band, and additional runtime massif raycasts were rejected after browser review. Final validation uses the local-only `?preview=day` checkpoint at 1280 × 720; localhost production previews now retain this QA checkpoint while the public site does not expose it.
