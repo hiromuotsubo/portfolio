@@ -580,3 +580,65 @@ Generated a sunset transformation from the accepted Day plate while preserving c
 ### Final assessment
 
 All requested category gaps are scored 1; none remains at 2 or 3. The fixed Day browser frame has moved from a visible prototype terrain to a portfolio-cover landscape in the same visual-quality band as the supplied Target. Phase 3 is assessed as an **SOTD-level candidate** on the requested Day Hero visual gate, with the explicit architectural note that Day/Sunset are now a realtime hybrid of live camera/input and art-directed environment plates, returning to the authored 3D system for Night and later chapters.
+
+## Final Environment Pass — realtime world coherence
+
+This pass supersedes the plate-based Phase 3 assessment above.
+
+### Cycle 7 — Remove the static representation split
+
+**Problem:** Day/Sunset looked polished when still but behaved as a single depth layer. Night returned to the original terrain, so the same valley appeared to switch representations.
+
+**Hypothesis:** Removing both full-landscape plates and keeping one terrain/river/sky graph through all time states would restore place continuity, even before adding detail.
+
+**Implementation:** Removed the Day Hero plate component, texture loading, camera-facing plane transforms and progress-based plate crossfade from the render path. Day, Sunset and Night now share the same massif, ridges, river, banks, clouds and forest groups.
+
+**Evaluation:** **ACCEPT.** The representation cut is gone. Static Day initially lost the plate's density, so the next cycles rebuilt that density as world-space layers.
+
+### Cycle 8 — Spatial forest hierarchy
+
+**Problem:** The recovered realtime scene exposed a smooth green massif and sparse scale cues. A first attempt using large opaque canopy polyhedra read as dark blobs; a high-cost massif raycast approach also stalled initial render.
+
+**Hypothesis:** A small number of draw calls can still create readable forest mass if bank trees, slope trees and fine canopy pieces occupy distinct depth/size bands.
+
+**Implementation:** Kept the raycast approach rejected. Added instanced conifer/broadleaf cards for near banks, midground stands and mountain slopes, plus 4,600 small low-poly canopy masses. Refined the first oversized tree pass into smaller, denser, vertically irregular stands so it reads as forest texture at distance and individual crowns near the river.
+
+**Evaluation:** **ACCEPT with limitation.** Forest now produces obvious differential parallax and the mountain first reads as forest-bearing rather than uniformly green. Some distant cards remain more graphic than the reality reference.
+
+### Cycle 9 — River and riverbank continuity
+
+**Problem:** The foreground water was an over-bright cyan sheet and bank transitions lacked particle scale.
+
+**Hypothesis:** A darker deep channel, quieter shallow pigment and irregular overlap geometry would preserve the river as a depth line while reducing the cutout edge.
+
+**Implementation:** Reduced Day shallow/deep cyan, retained procedural riverbed/flow/reflection, activated irregular gravel bars, hid source guide rocks, and added 156 lightweight wet/dry bank stones. Additional bank trees overlap the water/ground boundary in world space.
+
+**Evaluation:** **REFINE then ACCEPT.** The first stones rendered as black/white due instance-colour interaction and were replaced by a time-tinted uniform material. The river now reads from deep teal center to lighter shallows, though the source bank surface remains the weakest close-up element.
+
+### Cycle 10 — Cloud depth and pointer parallax
+
+**Problem:** One camera-facing cloud treatment still read as a sky card and the original pointer translation produced too little motion separation.
+
+**Hypothesis:** Several fixed-world lobes at different depths, combined with restrained camera translation, would make the space legible without game-like exaggeration.
+
+**Implementation:** Rebuilt five cloud groups as fifteen offset world planes across high sky, far sky and mountain-attached mist depths. Clouds drift in world space and do not read pointer input. Increased pointer camera translation while retaining the existing target damping and cursor-dependent light.
+
+**Evaluation:** **ACCEPT.** Fixed Day Left/Center/Right/Up captures show foreground vegetation moving most, riverbank and forest less, massif less again, and far cloud/ridge least. Cloud cards remain a realtime approximation but no longer collapse into the same motion layer as the mountain.
+
+### Cycle 11 — Time and human-scale review
+
+**Problem:** The final gate required proof that the spatial solution survived Sunset, Night, figure formation and pull-back.
+
+**Implementation:** Reviewed fixed Day, Sunset, Night, figure and wide checkpoints at one viewport. Person placement was moved farther down-valley while keeping its geometry scale at 1; the existing camera pull-back supplies the visible reduction.
+
+**Evaluation:** **ACCEPT.** Ridge, valley, river and tree masses remain registered through all time states. The person is readable at formation and subordinate in the wide frame. No full-landscape background image is referenced by the scene code.
+
+### Final environment assessment
+
+- Static quality: strong realtime portfolio quality; below the generated Target in micro-detail.
+- Spatial quality: clear multi-layer parallax; a decisive improvement over the Phase 3 plate.
+- Motion quality: shared material/light progression removes the Day/Sunset/Night representation cut.
+- World consistency: one mountain, river, forest and atmosphere system across the story.
+- Performance: 9,880 tree cards, 4,600 canopy instances and 156 stones are instanced; JavaScript remains 304.81 kB gzip. The cloud solution adds fifteen transparent plane draws but avoids volumetric raymarching and runtime terrain raycasts.
+
+Remaining visual weakness: the inherited massif base is still smoother than the Kamikochi reference, close bank geometry is broad, and clouds lack true self-shadowed volume. These are now limitations of the source geometry/low-cost WebGL representation rather than a Day-to-Night world-coherence failure.
