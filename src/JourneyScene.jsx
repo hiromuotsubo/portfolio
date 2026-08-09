@@ -472,14 +472,14 @@ function createCloudTexture(seed) {
   const context = canvas.getContext('2d')
   context.clearRect(0, 0, canvas.width, canvas.height)
   context.save()
-  context.filter = 'blur(24px)'
+  context.filter = 'blur(20px)'
 
-  for (let index = 0; index < 12; index += 1) {
+  for (let index = 0; index < 15; index += 1) {
     const centerX = 105 + seededRandom(seed + index * 17) * 558
     const centerY = 116 + seededRandom(seed + index * 29) * 52
     const radiusX = 62 + seededRandom(seed + index * 41) * 86
-    const radiusY = 12 + seededRandom(seed + index * 53) * 18
-    const alpha = 0.1 + seededRandom(seed + index * 67) * 0.12
+    const radiusY = 22 + seededRandom(seed + index * 53) * 28
+    const alpha = 0.27 + seededRandom(seed + index * 67) * 0.2
     context.beginPath()
     context.ellipse(centerX, centerY, radiusX, radiusY, 0, 0, Math.PI * 2)
     context.fillStyle = `rgba(255, 255, 252, ${alpha})`
@@ -2133,15 +2133,15 @@ function DriftingClouds({ groupRef, materialRefs }) {
   )
 
   const clouds = [
-    { position: [-96, 108, -214], scale: [154, 28, 1], opacity: 0.28, speed: 2.1, tone: 0.05, depthTest: true },
-    { position: [84, 132, -332], scale: [218, 38, 1], opacity: 0.23, speed: 1.6, tone: 0.02, depthTest: true },
-    { position: [12, 94, -176], scale: [116, 22, 1], opacity: 0.27, speed: 2.4, tone: 0.12, depthTest: true },
-    { position: [-38, 154, -420], scale: [250, 44, 1], opacity: 0.18, speed: 1.2, tone: 0.04, depthTest: true },
-    { position: [112, 91, -204], scale: [132, 24, 1], opacity: 0.25, speed: 2.2, tone: 0.15, depthTest: true },
-    { position: [-126, 88, -176], scale: [146, 22, 1], opacity: 0.62, speed: 2.5, tone: 0.18, depthTest: false },
-    { position: [24, 94, -168], scale: [112, 18, 1], opacity: 0.55, speed: 1.9, tone: 0.08, depthTest: false },
-    { position: [108, 86, -188], scale: [138, 21, 1], opacity: 0.52, speed: 2.3, tone: 0.2, depthTest: false },
-    { position: [66, 108, -248], scale: [184, 25, 1], opacity: 0.44, speed: 1.35, tone: 0.03, depthTest: false },
+    { position: [-112, 118, -226], scale: [168, 31, 1], opacity: 0.38, speed: 1.55, tone: 0.05, depthTest: true },
+    { position: [94, 142, -346], scale: [226, 42, 1], opacity: 0.3, speed: 1.08, tone: 0.02, depthTest: true },
+    { position: [8, 106, -188], scale: [126, 25, 1], opacity: 0.4, speed: 1.7, tone: 0.12, depthTest: true },
+    { position: [-46, 164, -438], scale: [264, 48, 1], opacity: 0.24, speed: 0.82, tone: 0.04, depthTest: true },
+    { position: [124, 101, -218], scale: [142, 27, 1], opacity: 0.34, speed: 1.48, tone: 0.15, depthTest: true },
+    { position: [-126, 82, -184], scale: [108, 34, 1], opacity: 0.39, speed: 1.72, tone: 0.18, depthTest: false },
+    { position: [10, 96, -176], scale: [86, 29, 1], opacity: 0.36, speed: 1.28, tone: 0.08, depthTest: false },
+    { position: [122, 71, -198], scale: [102, 35, 1], opacity: 0.34, speed: 1.58, tone: 0.2, depthTest: false },
+    { position: [62, 112, -262], scale: [148, 34, 1], opacity: 0.27, speed: 0.94, tone: 0.03, depthTest: false },
   ]
 
   return (
@@ -2270,9 +2270,9 @@ function OpenValleyAtmosphere({ groupRef, materialRefs }) {
   )
   useEffect(() => () => textures.forEach((texture) => texture.dispose()), [textures])
   const layers = [
-    { position: [-24, 13, -82], scale: [126, 25, 1], opacity: 0.1 },
-    { position: [31, 20, -132], scale: [176, 34, 1], opacity: 0.08 },
-    { position: [-8, 29, -198], scale: [228, 43, 1], opacity: 0.06 },
+    { position: [-24, 13, -82], scale: [126, 25, 1], opacity: 0.15 },
+    { position: [31, 20, -132], scale: [176, 34, 1], opacity: 0.115 },
+    { position: [-8, 29, -198], scale: [228, 43, 1], opacity: 0.082 },
   ]
 
   return (

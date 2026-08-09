@@ -125,3 +125,37 @@ The first iteration overexposed the riverbed and made the whole river grey. A se
 ### Next step
 
 Restore readable world-space clouds and stronger aerial layering; then judge water value again under the final daytime atmosphere.
+
+## Cycle 3 — Sky, cloud, light, and atmosphere
+
+### Problem
+
+Cloud objects existed in world space but were nearly invisible because low texture alpha was multiplied by low material opacity. The few visible traces formed one thin horizontal line and did not explain the existing light shaft.
+
+### Hypothesis
+
+Sparse cloud masses at several world depths and offset heights can create parallax and explain the ridge light without a camera-following background layer.
+
+### Reference difference
+
+Both references use cloud and haze to separate peaks and soften selected geometry. The current frame had an empty gradient sky and exposed every ridge with similar acuity.
+
+### Implementation
+
+Increased internal cloud density, separated far sky cloud from peak-touching cloud, redistributed cloud height and width, and strengthened three low-opacity open-valley atmosphere layers. Cloud position continues to drift only with time and travel wind, never cursor input. The existing pointer-discovered light shaft remains in place.
+
+### Before
+
+`/private/tmp/journey-cycle2b-day.png`
+
+### After
+
+`/private/tmp/journey-cycle3c-day.png` and `/private/tmp/journey-cycle3-sunset.png`
+
+### Evaluation
+
+The first cloud increase produced an artificial continuous white band and was rejected. The second arrangement separated the band into left-peak, central, right-peak, and distant layers. Day and sunset now retain visible clouds and a clearer source region for the shaft, although the sprite-based cloud remains flatter than a true volumetric solution.
+
+### Next step
+
+Validate night Hero Frame B, person scale, cloud fade, final pull-back, renderer cost, and the full narrative checkpoints.
