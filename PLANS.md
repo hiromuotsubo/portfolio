@@ -32,3 +32,7 @@ Phase 1 established the shader, water, cloud, and review baseline. Phase 2 is a 
 ## Cycle gate
 
 For every major pass: inspect current browser frame, capture, compare with references, identify at most three dominant CG cues, change the highest-impact cue, build and run, recapture, evaluate visual impact, log the result, then either iterate with a new hypothesis or proceed.
+
+## Phase 2 completion record
+
+All 17 passes were executed. Mountain/forest, river/riverbank, and cloud/atmosphere each received an initial Blender/WebGL implementation, browser review, rejection or acceptance decision, and a second refinement. The final asset retains only adopted geometry. Fixed Day, sunset, night, forming, figure, and wide frames, build, lint, and renderer metrics were reviewed. Remaining source-massif, gravel-bar, and card-cloud limitations are documented in `docs/journey-lookdev-log.md`; they are not treated as visually complete or SOTD-level.

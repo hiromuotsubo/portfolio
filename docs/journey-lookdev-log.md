@@ -214,3 +214,238 @@ For a future major asset pass, split the massif into near/mid/far material regio
 The lower mountain is improved but still inherits the broad curvature of one authored massif. Peak clouds are world-space and no longer cursor-following, but remain sprite-based and flatter than volumetric cloud. The riverbank silhouette still reveals the authored bar mesh in some angles. These are asset-structure limits, not reasons to claim SOTD-level completion.
 
 Current assessment: **Good portfolio quality**, approaching a strong award-candidate experience through story and interaction, but not yet a SOTD-level visual candidate. A SOTD-level next pass would require authored near/mid/far forest assets, a bank-overlap or signed-distance shoreline asset, and deeper cloud volume while retaining the current interaction and performance discipline.
+
+## Phase 2 — Blender-led environment art
+
+### Direct baseline
+
+- Phase 2 starting commit: `89a933b`
+- Direct Day Before: `phase1_day_after.png`
+- Direct Night Before: `phase1_night_after.png`
+- Supplied Phase 1 motion: `current_journey_after.mov` (82.67 s, 2968 × 1564, 60 fps)
+- Phase 1 renderer baseline: 31 draw calls, 641,188 triangles, 9,931 points, 18 textures, 14 programs
+- Phase 1 Journey chunk: 301.57 kB gzip
+
+### Phase 2 initial diagnosis
+
+| Area | Phase 1 After | Reference difference | Structural hypothesis |
+| --- | --- | --- | --- |
+| Massif | The hero scale is strong, but the full valley still reads as one connected surface with one broad curvature and one acuity level. | Real valleys reveal overlapping ridges, independent silhouette planes, and occluded landform layers. | Keep the hero massif unchanged and add separately authored mid/far ridges and forest-edge assets with independent atmosphere. |
+| Forest | Colour hierarchy improved, but most canopy evidence remains shader mottling or front-facing point symbols. | The reality reference has crown silhouettes, stand edges, occlusion, and recognisable vertical tree rhythm. | Build low-poly canopy cluster assets in Blender and instance only in the important midground band; retain shader detail at distance. |
+| Riverbank | Shallow colour and bed variation improved, but the outer river and gravel silhouettes disclose the source meshes. | Real wet stones, gravel, grass, and water overlap instead of sharing one clean border. | Add irregular shoreline strips and stone-cluster overlap geometry from Blender, then use material masks only for fine transition. |
+| Cloud | Clouds are world-space but remain broad flat cards, especially during lateral look movement. | Reference clouds have several depth lobes, peak attachment, and local self-overlap. | Author crossed cloud-card clusters and mountain-attached mist groups at multiple depths; avoid cursor-driven motion. |
+| Atmosphere | Global depth improved modestly, but the central valley has too few independent depth anchors. | Target frames lower far contrast continuously and let distant silhouettes dissolve into warm/cool air. | Give every new ridge/cloud layer its own material response and distance fade rather than increasing global fog. |
+| Night | Person scale and Milky Way read, but mountain value is still too continuous and blue. | A convincing night landscape retains near/far occlusion and weak reflected-light zones. | Let independent ridge and forest silhouette assets survive at night with restrained value separation. |
+
+### Phase 2 Cycle 0 — Audit and architecture
+
+#### Problem
+
+Phase 1 exhausted the highest-value shader-only changes. Repeating noise or normal adjustments would not change the connected silhouette, bank boundary, or cloud card structure.
+
+#### Hypothesis
+
+A small dedicated environment GLB—independent from the immutable story/camera model—can add real depth and overlap at low cost while keeping every narrative animation untouched.
+
+#### Implementation
+
+Reviewed the complete Phase 1 log, supplied Original/Phase 1/reference stills, and the 82.67-second Phase 1 video. Added a Phase 2 execution plan and a Blender GLB audit script. A backup ref is created before asset work.
+
+#### Evaluation
+
+The dominant Phase 2 cues are structural: connected massif silhouette, missing crown-edge geometry, authored river edge, and one-plane cloud lobes. Shader changes remain useful only as integration and finishing tools.
+
+#### Next step
+
+Audit the source GLB in Blender, author a lightweight environment layer, export, integrate, and compare the first fixed Day frame.
+
+### Phase 2 Cycle 1 — Blender massif and forest structure
+
+#### Problem
+
+The shader hierarchy improved Phase 1, but the lower massif still read as one surface. A real forest needed geometric relief and independent distance anchors without touching the animated hero model.
+
+#### Hypothesis
+
+A decimated shell extracted from the actual massif can add crown-scale relief while separate mid/far ridges provide real occlusion layers. Both can live in a dedicated GLB and inherit the existing day/evening/night response.
+
+#### Implementation
+
+Used Blender 5.2 LTS and Blender Python to import `journey-v15-web.glb`, audit the 280,000-polygon hero massif and camera samples, extract the lower forest region, displace it at three frequencies, decimate it, and smooth its normals. Authored two procedural ridge layers behind the immutable massif and exported an independent environment GLB. WebGL loads it separately, so the original story/camera asset remains untouched.
+
+#### Before
+
+`phase1_day_after.png`
+
+#### After
+
+`/private/tmp/journey-phase2-cycle4-day.png` and `/private/tmp/journey-phase2-final-day.png`
+
+#### Evaluation
+
+The first canopy-cluster approach produced black cones and was rejected. Rounded low-poly crowns then read as dark beads and were rejected. A heavily decimated shell exposed large triangular facets and was also rejected. The retained shell uses a substantially higher mesh ratio, smaller relief, smooth normals, and low-opacity material integration. It is visually quieter but removes the obvious object symbols. The separately authored ridges survive as true geometry, although the central opening limits how much of them can be seen from the fixed camera.
+
+#### Next step
+
+Use the material only to finish scale hierarchy: denser but smaller screen-space crowns, stronger crown occlusion, and directional light separation rather than another object layer.
+
+### Phase 2 Cycle 2 — Forest scale, light, and Hero A composition
+
+#### Problem
+
+At the fixed Day frame, the retained shell was structurally correct but too subtle. The left lower slope still collapsed into broad green, and the mountain occupied enough of the frame to make the river and sky secondary.
+
+#### Hypothesis
+
+Tree evidence should move below symbol size: more samples, smaller crowns, deeper crown-cell occlusion, and stronger directional daylight. A small FOV and pull-back adjustment can expose sky and water without shrinking the massif or altering the camera story.
+
+#### Implementation
+
+Increased shared canopy sampling from approximately 8,200 to 16,800 candidates while reducing crown point size from 2.75 to 1.3 pixels. Strengthened crown-cell occlusion and forest shadow, increased warm directional light, reduced flat hemisphere/ambient fill, and widened only the established daytime vista offset. The authored animation, targets, story ranges, cursor look, night route, and ending camera remain unchanged.
+
+#### Before
+
+`phase1_day_after.png`
+
+#### After
+
+`/private/tmp/journey-phase2-final-day.png`
+
+#### Evaluation
+
+The daylight now separates ridges, valleys, forest stands, river, and sky more clearly. The river occupies a more useful foreground area and the massif retains its overwhelming scale. The visual difference is meaningful but not transformational: the left foreground still inherits the smooth curvature of the source terrain, so the frame remains below the target reference's environmental density.
+
+#### Next step
+
+Refine river and bank overlap, then judge the complete frame rather than pushing forest contrast into procedural noise.
+
+### Phase 2 Cycle 3 — River and riverbank overlap
+
+#### Problem
+
+Phase 1 water retained a broad pale reflection and the outer bank edge remained explicit. The first Blender bank pass added visible little stones and a narrow beige strip, making the authored boundary more obvious.
+
+#### Hypothesis
+
+Keep only a restrained wet overlap at the waterline, darken the optical centre, and reduce broad Fresnel reflection. A weak or visibly regular geometry pass should be removed rather than justified by its implementation effort.
+
+#### Implementation
+
+Authored paired wet/dry shoreline ribbons and stone clusters in Blender for evaluation. Rejected the dry ribbons and stones after browser review, removed them from the final GLB, and retained only two incomplete wet shoreline patches. Reduced sky/mountain reflection weight, deepened the central turquoise, and preserved all river-to-Milky-Way masks and timing.
+
+#### Before
+
+`/private/tmp/journey-phase2-cycle10-day.png`
+
+#### After
+
+`/private/tmp/journey-phase2-final-day.png`
+
+#### Evaluation
+
+The water centre has clearer depth and the most artificial Phase 2 bank line is gone. The source gravel-bar silhouette can still be read at some angles; fully solving it would require reauthoring the base river and bank topology, not more overlap strips.
+
+#### Next step
+
+Complete the cloud/atmosphere review and remove every rejected object from the final exported asset before performance validation.
+
+### Phase 2 Cycle 4 — Cloud depth and atmosphere
+
+#### Problem
+
+Crossed cloud planes exposed their edges as three bright horizontal bands. Even after rotating them into shallow slabs, several cloud clusters still read as layered strips rather than volume.
+
+#### Hypothesis
+
+One distant three-layer world-space slab, combined with existing nearer world-space cloud sprites at independent depths, will produce quieter parallax than several crossed clusters. The texture itself also needs vertical lobe variation rather than ellipses constrained to one horizon band.
+
+#### Implementation
+
+Rebuilt the Blender cloud as three parallel depth-offset cards, spread cloud texture lobes vertically, repositioned the near/mid clouds at separate heights, and retained only the far Blender slab in the final GLB. Cloud movement remains time/wind driven; no cloud position reads cursor input. The existing cursor-discovered shaft and illuminated ridge response are unchanged.
+
+#### Before
+
+`/private/tmp/journey-phase2-cycle5-day.png`
+
+#### After
+
+`/private/tmp/journey-phase2-final-day.png` and `/private/tmp/journey-phase2-final-sunset.png`
+
+#### Evaluation
+
+The crossed-plane solution was rejected. The retained atmosphere is restrained and no longer exposes card intersections, but cloud volume is still the weakest adopted Phase 2 improvement. It is quieter and structurally world-space, not yet comparable to a true low-cost volumetric cloud field.
+
+#### Next step
+
+Validate all narrative checkpoints and renderer cost, then report this limitation rather than overstate it.
+
+### Phase 2 Cycle 5 — Night Hero B and regression review
+
+#### Problem
+
+New layers could have damaged night values, person recognition, the river-to-sky connection, or the final pull-back even if Day improved.
+
+#### Hypothesis
+
+If Phase 2 materials use the same story uniforms and fade rules, the new environment can remain subordinate at night while preserving the established hierarchy.
+
+#### Implementation
+
+Reviewed fixed sunset, night, forming, figure, and wide previews in the browser. Removed unused/rejected objects from the GLB, leaving six exported objects: forest shell, two ridges, two wet shoreline patches, and one far cloud slab. No person scale, figure timing, HOLD, cursor interaction, camera animation, pull-back, or ending logic was changed.
+
+#### Before
+
+`phase1_night_after.png`
+
+#### After
+
+`/private/tmp/journey-phase2-final-forming.png`, `/private/tmp/journey-phase2-final-figure.png`, and `/private/tmp/journey-phase2-final-wide.png`
+
+#### Evaluation
+
+The person remains recognisable during formation and becomes small in the wide frame. River, mountain, and Milky Way maintain the intended visual path. Night mountain depth remains painterly and subdued rather than becoming a bright blue object. Hero B is stable and slightly more spacious, but the fundamental massif form remains the same.
+
+## Phase 2 performance
+
+- Phase 1: 31 calls, 641,188 visible triangles, 9,931 points, 18 textures, 14 programs, Journey 301.57 kB gzip.
+- Phase 2 Day checkpoint: 38 calls, 448,020 visible triangles, 18,827 points, 18 textures, 19 programs, Journey 302.42 kB gzip.
+- Dedicated Blender environment GLB: 6 objects, 31,993 vertices, 62,026 triangles, approximately 1.3 MB uncompressed GLB.
+
+The seven extra calls and five programs are the direct cost of independent distance/overlap layers. Texture count is unchanged and JavaScript transfer grew by less than 1 kB gzip. The measured visible triangle count is lower at the wider Day composition; the asset still adds 62,026 authored triangles to the potential scene total. This is acceptable for desktop high quality, but further environment layers should reuse materials or use LOD rather than continue adding calls.
+
+## Phase 2 final assessment
+
+### Phase 1 difference
+
+Phase 2 introduces a real Blender-authored environment layer instead of only modifying the hero massif shader: a lower-massif canopy shell, independent mid/far ridges, wet shoreline overlap, and a distant cloud depth slab. WebGL integrates these with existing time, atmosphere, and night uniforms. Day composition, forest scale, directional light, and water reflection were refined around those assets.
+
+### Rejected approaches
+
+- Individual cone trees: immediately read as black synthetic objects.
+- Rounded crown clusters: read as beads/dots rather than forest.
+- Aggressively decimated canopy shell: produced broad triangular facets.
+- Continuous forest-edge ribbons: produced dark contour lines across the valley.
+- Dry bank ribbons and explicit stone clusters: reinforced the river-mesh edge.
+- Multiple crossed cloud clusters: exposed plane intersections as horizontal bands.
+
+### Hero Frame A
+
+Compared with Original Before, Phase 1 added material hierarchy and water depth. Phase 2 adds a broader sky/water balance, warmer directional form, finer crown-scale evidence, a restrained canopy relief layer, darker water centre, and independent environment geometry. The frame is clearer and more inviting than Phase 1, but the smooth left foreground and limited visible far silhouettes still prevent reference-level natural density.
+
+### Hero Frame B
+
+Compared with Original Before and Phase 1, Phase 2 preserves the strongest result: person < river < mountain < sky. The wider night frame retains the small seated figure, flowing luminous river, massive mountains, and Milky Way. Improvement is evolutionary rather than a new composition because the night route and pull-back were intentionally preserved.
+
+### Remaining prototype feel
+
+The source massif's broad continuous curvature is still perceptible on the lower left. The central valley opening hides most authored far ridges from the fixed Hero A camera. The source gravel bars reveal designed topology in places. The adopted cloud is world-space and depth layered, but still uses cards and does not have convincing self-shadow or volume. These keep the image from matching the supplied target art direction.
+
+### SOTD assessment
+
+Current assessment: **Good portfolio quality, closer to a strong award candidate, but not a SOTD-level visual candidate**. Story, pacing, interaction, night scale, and a coherent painterly system are strong. The Day environment still reveals its base terrain topology before it fully reads as a living alpine valley, and the cloud/shoreline systems remain visibly lightweight.
+
+### Next highest-impact steps
+
+1. Reauthor the lower massif into genuinely separate terrain/forest regions with a baked canopy normal/height atlas and LOD rather than an overlaid shell.
+2. Replace the source river bars and outer bank with one unified meandering bank mesh and baked wet/dry/stone masks.
+3. Build a compact 3D cloud volume (signed-distance raymarch or low-resolution volume texture with temporal reprojection) that can self-overlap and receive sunset light.
