@@ -159,3 +159,58 @@ The first cloud increase produced an artificial continuous white band and was re
 ### Next step
 
 Validate night Hero Frame B, person scale, cloud fade, final pull-back, renderer cost, and the full narrative checkpoints.
+
+## Cycle 4 — Night depth, final scale, and forest relief
+
+### Problem
+
+Night mountains shared one lifted blue value, and the final daytime review still showed a smooth left foreground despite the color hierarchy.
+
+### Hypothesis
+
+At night, lower emissive contribution plus stronger distance-weighted haze will separate near and far without changing geometry. During day, restrained screen-derivative canopy relief can let directional light reveal crowns without adding geometry.
+
+### Reference difference
+
+The target look preserves cool shadow depth rather than turning the whole mountain blue. Real forest canopy changes the surface normal at crown scale, not only its color.
+
+### Implementation
+
+Darkened night atmospheric pigment, increased only the distance-weighted night haze, and reduced mountain night emissive. Tested a canopy-cell normal reconstruction: the first strength read as reptile-like scales and was rejected; the retained version uses less than half the relief and normal blend. Person scale, figure timing, camera path, and pull-back were unchanged.
+
+### Before
+
+`current_night_before.png` and `/private/tmp/journey-cycle3c-day.png`
+
+### After
+
+`/private/tmp/journey-final-wide.png`, `/private/tmp/journey-final-night.png`, and `/private/tmp/journey-final-day.png`
+
+### Evaluation
+
+The wide frame preserves the intended hierarchy: person < river < mountain < sky. The person is identifiable during formation and small in the final frame. Night near/far separation improved modestly. Subtle canopy relief helps the left slope, but the underlying single massif still limits true forest silhouette and distance separation.
+
+### Next step
+
+For a future major asset pass, split the massif into near/mid/far material regions or author a baked forest canopy displacement/normal atlas. That is a materially different asset task and should retain the current camera animation.
+
+## Research findings applied
+
+- Kamikochi's own visual descriptions consistently frame the Azusa River as the connecting thread between forest, distant Hotaka peaks, and atmospheric events; composition therefore needs a readable river path and layered mountain backdrop, not only a large mountain.
+- Clear alpine water reads through visible bed material near shore, a deeper coloured centre, and angle-dependent reflection rather than one uniform transparency value.
+- `THREE.FogExp2` is useful for global distance integration, but local height- and material-aware haze is still needed to avoid flattening the foreground.
+- React Three Fiber performance guidance favours shared geometry/materials and instancing. The retained forest pass therefore adds shader detail and one shared Points draw instead of thousands of tree objects.
+
+## Final validation
+
+- Build: passed.
+- Lint: passed.
+- Browser checkpoints: cave, fog HOLD, day, sunset, night, river HOLD, forming, figure, wide, and outro all rendered a canvas with zero current runtime errors.
+- Renderer at the final wide checkpoint: 31 draw calls, 641,188 triangles, 9,931 points, 6 lines, 11 geometries, 18 textures, and 14 programs.
+- Production Journey chunk: 1,095.89 kB uncompressed / 301.57 kB gzip after the final forest-relief pass.
+
+## Remaining weaknesses and assessment
+
+The lower mountain is improved but still inherits the broad curvature of one authored massif. Peak clouds are world-space and no longer cursor-following, but remain sprite-based and flatter than volumetric cloud. The riverbank silhouette still reveals the authored bar mesh in some angles. These are asset-structure limits, not reasons to claim SOTD-level completion.
+
+Current assessment: **Good portfolio quality**, approaching a strong award-candidate experience through story and interaction, but not yet a SOTD-level visual candidate. A SOTD-level next pass would require authored near/mid/far forest assets, a bank-overlap or signed-distance shoreline asset, and deeper cloud volume while retaining the current interaction and performance discipline.

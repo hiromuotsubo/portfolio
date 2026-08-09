@@ -1111,7 +1111,7 @@ journeyPaint -= vec3(0.034, 0.049, 0.052) * journeyRockDetail * (0.66 + uJourney
 journeyPaint = mix(journeyPaint, vec3(0.032, 0.075, 0.067), journeyDrainage * 0.36);
 vec3 journeyDayHaze = vec3(0.48, 0.65, 0.66);
 vec3 journeySunsetHaze = vec3(0.72, 0.50, 0.43);
-vec3 journeyNightHaze = vec3(0.18, 0.27, 0.41);
+vec3 journeyNightHaze = vec3(0.105, 0.17, 0.31);
 vec3 journeyAtmosphere = mix(journeyDayHaze, journeySunsetHaze, uJourneySunset * 0.72);
 journeyAtmosphere = mix(journeyAtmosphere, journeyNightHaze, uJourneyNight);
 float journeyViewDistance = length(vViewPosition);
@@ -1119,7 +1119,7 @@ float journeyDistanceHaze = smoothstep(62.0, 330.0, journeyViewDistance);
 journeyPaint = mix(
   journeyPaint,
   journeyAtmosphere,
-  journeyDistanceHaze * ${isFarRidge ? '0.62' : '0.22'}
+  journeyDistanceHaze * ${isFarRidge ? 'mix(0.62, 0.72, uJourneyNight)' : 'mix(0.22, 0.34, uJourneyNight)'}
 );
 float journeyFootMist = smoothstep(76.0, 265.0, journeyViewDistance) *
   (1.0 - smoothstep(9.0, 31.0, vJourneyWorldPosition.y)) *
@@ -1180,8 +1180,26 @@ float journeyCanopyNormalX = journeyNoise(vJourneyWorldPosition.xz * vec2(0.62, 
 float journeyCanopyNormalZ = journeyNoise(vJourneyWorldPosition.zx * vec2(0.73, 0.57) - 31.0) - 0.5;
 vec3 journeyCanopyNormal = vec3(journeyCanopyNormalX, 0.0, journeyCanopyNormalZ);
 normal = normalize(
-  normal + journeyWorldDetail * 0.27 + journeyCanopyNormal * journeyForestNormalMask * 0.13
-);`,
+  normal + journeyWorldDetail * 0.27 + journeyCanopyNormal * journeyForestNormalMask * 0.19
+);
+float journeyCanopyRelief = max(
+  journeyCanopyCells(vec2(
+    vJourneyWorldPosition.x + vJourneyWorldPosition.z * 0.21,
+    vJourneyWorldPosition.y - vJourneyWorldPosition.z * 0.055
+  ) * 0.34, 407.0),
+  journeyCanopyCells(vec2(
+    vJourneyWorldPosition.x - vJourneyWorldPosition.z * 0.13,
+    vJourneyWorldPosition.y + vJourneyWorldPosition.z * 0.035
+  ) * 0.66 + vec2(13.0, -9.0), 613.0) * 0.48
+);
+vec3 journeyReliefPosition = vJourneyWorldPosition +
+  normalize(vJourneyWorldNormal) * (journeyCanopyRelief - 0.28) * 0.22;
+vec3 journeyReliefNormal = normalize(cross(
+  dFdx(journeyReliefPosition),
+  dFdy(journeyReliefPosition)
+));
+journeyReliefNormal *= sign(dot(journeyReliefNormal, normal));
+normal = normalize(mix(normal, journeyReliefNormal, journeyForestNormalMask * 0.15));`,
       )
     }
     if (triplanarRoughnessMap) {
@@ -1205,8 +1223,8 @@ roughnessFactor = clamp(
     shader.fragmentShader = shader.fragmentShader.replace(
       '#include <emissivemap_fragment>',
       `#include <emissivemap_fragment>
-totalEmissiveRadiance += journeyPaint * uJourneyNight * 0.055;
-totalEmissiveRadiance += vec3(0.018, 0.038, 0.072) * uJourneyNight;`,
+totalEmissiveRadiance += journeyPaint * uJourneyNight * 0.034;
+totalEmissiveRadiance += vec3(0.01, 0.024, 0.055) * uJourneyNight;`,
     )
   }
   material.customProgramCacheKey = () => `journey-alpine-${isFarRidge ? 'far' : 'near'}-v24-canopy-hierarchy`
