@@ -26,3 +26,7 @@ Journey exists to let a visitor re-experience the awe of standing before the vas
 - Hero Frame B: the final night-wide composition with river, seated person, mountain, Milky Way, and sky.
 - Additional regression frames: cave exit, fog HOLD, evening, river HOLD, figure formation, and ending.
 
+## Delivery workflow
+
+- After requested changes are implemented, visually or technically verified, and committed, push the completed commits to the current upstream branch even when the user does not explicitly repeat a push request.
+- Do not push unfinished, failing, or knowingly broken work merely to satisfy this default; finish the relevant verification first.
