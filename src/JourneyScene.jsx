@@ -662,6 +662,21 @@ const getAlpineWatercolorTexture = () => {
   return alpineWatercolorTexture
 }
 
+let alpineForestSurfaceTexture = null
+const getAlpineForestSurfaceTexture = () => {
+  if (alpineForestSurfaceTexture) return alpineForestSurfaceTexture
+  alpineForestSurfaceTexture = new THREE.TextureLoader().load(
+    '/journey/textures/surface/alpine-forest-canopy-v1.jpg',
+  )
+  alpineForestSurfaceTexture.colorSpace = THREE.SRGBColorSpace
+  alpineForestSurfaceTexture.wrapS = THREE.RepeatWrapping
+  alpineForestSurfaceTexture.wrapT = THREE.RepeatWrapping
+  alpineForestSurfaceTexture.minFilter = THREE.LinearMipmapLinearFilter
+  alpineForestSurfaceTexture.magFilter = THREE.LinearFilter
+  alpineForestSurfaceTexture.needsUpdate = true
+  return alpineForestSurfaceTexture
+}
+
 function buildMysticMotes(count) {
   const positions = new Float32Array(count * 3)
   for (let index = 0; index < count; index += 1) {
@@ -739,6 +754,7 @@ function applyAlpineIllustration(material, isFarRidge) {
     uJourneyDiscovery: { value: 0 },
     uJourneyTime: { value: 0 },
     uJourneyWatercolor: { value: getAlpineWatercolorTexture() },
+    uJourneyForestSurface: { value: getAlpineForestSurfaceTexture() },
     uJourneyTriplanarNormal: { value: triplanarNormalMap },
     uJourneyTriplanarRoughness: { value: triplanarRoughnessMap },
   }
@@ -771,6 +787,7 @@ uniform float uJourneyRiverLight;
 uniform float uJourneyDiscovery;
 uniform float uJourneyTime;
 uniform sampler2D uJourneyWatercolor;
+uniform sampler2D uJourneyForestSurface;
 uniform sampler2D uJourneyTriplanarNormal;
 uniform sampler2D uJourneyTriplanarRoughness;
 
@@ -984,7 +1001,7 @@ vec3 journeyCrownLit = mix(
   smoothstep(0.2, 0.9, journeyCrownCellsLarge * 0.68 + journeyCrownCellsSmall * 0.32)
 );
 journeyCrownLit *= mix(0.68, 1.12, journeyMacro * 0.55 + journeyValleyMoisture * 0.45);
-journeyPaint = mix(journeyPaint, journeyCrownLit, journeyCrownOcclusion * 0.74);
+journeyPaint = mix(journeyPaint, journeyCrownLit, journeyCrownOcclusion * 0.22);
 vec2 journeyTreeUv = vec2(
   vJourneyWorldPosition.x + vJourneyWorldPosition.z * 0.22,
   vJourneyWorldPosition.y - vJourneyWorldPosition.z * 0.035
@@ -997,7 +1014,7 @@ float journeyTreeDistanceFade = 1.0 - smoothstep(255.0, 430.0, length(vViewPosit
 float journeyTreePresence = journeyTreeSilhouettes * journeyForestSurface *
   mix(0.32, 1.0, journeyVegetationDensity) * journeyTreeDistanceFade;
 vec3 journeyTreeColor = mix(vec3(0.012, 0.052, 0.026), vec3(0.065, 0.17, 0.06), journeyCanopyMass);
-journeyPaint = mix(journeyPaint, journeyTreeColor, journeyTreePresence * 0.34);
+journeyPaint = mix(journeyPaint, journeyTreeColor, journeyTreePresence * 0.06);
 float journeyForestPatch = smoothstep(
   0.3,
   0.74,
@@ -1058,6 +1075,120 @@ float journeyClearing = journeyForestSurface * (1.0 - journeyVegetationDensity) 
   smoothstep(0.58, 0.94, vJourneyWorldNormal.y);
 vec3 journeyGrassland = mix(vec3(0.19, 0.31, 0.12), vec3(0.34, 0.43, 0.17), journeyFine);
 journeyPaint = mix(journeyPaint, journeyGrassland, journeyClearing * 0.34);
+// Surface-only forest hierarchy. Large masses establish the biome, elongated
+// mid-frequency breakup suggests overlapping canopy groups, and the fine term
+// changes material response without drawing isolated tree silhouettes.
+vec2 journeySurfaceDomain = vec2(
+  vJourneyWorldPosition.x * 0.021 + vJourneyWorldPosition.z * 0.008,
+  vJourneyWorldPosition.z * 0.018 - vJourneyWorldPosition.y * 0.015
+);
+float journeySurfaceWarp = journeyFbm(journeySurfaceDomain * 1.34 + vec2(73.0, -41.0));
+float journeySurfaceLarge = journeyFbm(
+  journeySurfaceDomain + vec2(journeySurfaceWarp * 1.8, -journeyMacro * 1.25)
+);
+float journeySurfaceMedium = journeyFbm(vec2(
+  journeySurfaceDomain.x * 5.1 + journeySurfaceDomain.y * 0.76,
+  journeySurfaceDomain.y * 9.4 - journeySurfaceDomain.x * 0.38
+) + vec2(-29.0, 84.0));
+float journeySurfaceFine = journeyNoise(vec2(
+  journeySurfaceDomain.x * 31.0 + journeySurfaceMedium * 3.7,
+  journeySurfaceDomain.y * 37.0 - journeySurfaceLarge * 4.2
+) + vec2(17.0, -63.0));
+float journeySurfaceFacing = dot(
+  normalize(vJourneyWorldNormal),
+  normalize(vec3(-0.46, 0.72, 0.38))
+) * 0.5 + 0.5;
+float journeySurfaceValleyShade = smoothstep(0.62, 0.12, journeySurfaceFacing) *
+  (0.46 + journeySteepness * 0.54);
+float journeyForestBiome = smoothstep(
+  0.18,
+  0.78,
+  journeySurfaceLarge * 0.64 + journeyValleyMoisture * 0.28 +
+    journeyWetGully * 0.24 - journeyAltitude * 0.18 - journeyRockMask * 0.24
+);
+float journeySurfaceForestMask = journeyForestSurface * mix(0.68, 1.0, journeyForestBiome);
+float journeyCanopyResponse = clamp(
+  journeySurfaceMedium * 0.58 + journeySurfaceFine * 0.24 + journeySurfaceLarge * 0.18,
+  0.0,
+  1.0
+);
+vec3 journeyShadowForest = mix(
+  vec3(0.018, 0.075, 0.043),
+  vec3(0.052, 0.145, 0.068),
+  journeyValleyMoisture
+);
+vec3 journeySunForest = mix(
+  vec3(0.07, 0.19, 0.055),
+  vec3(0.31, 0.43, 0.085),
+  journeyCanopyResponse
+);
+vec3 journeySurfaceForest = mix(
+  journeyShadowForest,
+  journeySunForest,
+  clamp(journeyCanopyResponse * 0.72 + journeySurfaceFacing * 0.38, 0.0, 1.0)
+);
+journeySurfaceForest *= mix(0.48, 1.38, smoothstep(0.16, 0.86, journeySurfaceMedium));
+journeySurfaceForest *= mix(0.8, 1.2, journeySurfaceFine);
+journeySurfaceForest = mix(
+  journeySurfaceForest,
+  journeyShadowForest * 0.72,
+  journeyWetGully * 0.58 + journeySurfaceValleyShade * 0.18
+);
+journeySurfaceForest *= mix(0.76, 1.18, journeySurfaceLarge);
+journeyPaint = mix(journeyPaint, journeySurfaceForest, journeySurfaceForestMask * 0.96);
+vec3 journeySurfaceBlend = pow(abs(normalize(vJourneyWorldNormal)), vec3(5.0));
+journeySurfaceBlend /= max(
+  journeySurfaceBlend.x + journeySurfaceBlend.y + journeySurfaceBlend.z,
+  0.0001
+);
+float journeyForestTextureScale = 0.038;
+vec2 journeyForestWarpOffset = vec2(
+  (journeySurfaceLarge - 0.5) * 0.16,
+  (journeySurfaceWarp - 0.5) * 0.14
+);
+vec3 journeyForestTexX = texture2D(
+  uJourneyForestSurface,
+  vJourneyWorldPosition.zy * journeyForestTextureScale + journeyForestWarpOffset
+).rgb;
+vec3 journeyForestTexY = texture2D(
+  uJourneyForestSurface,
+  vJourneyWorldPosition.xz * journeyForestTextureScale + journeyForestWarpOffset.yx
+).rgb;
+vec3 journeyForestTexZ = texture2D(
+  uJourneyForestSurface,
+  vJourneyWorldPosition.xy * journeyForestTextureScale - journeyForestWarpOffset
+).rgb;
+vec3 journeyForestTexture =
+  journeyForestTexX * journeySurfaceBlend.x +
+  journeyForestTexY * journeySurfaceBlend.y +
+  journeyForestTexZ * journeySurfaceBlend.z;
+float journeyForestTextureLuma = dot(journeyForestTexture, vec3(0.22, 0.62, 0.16));
+float journeyForestTextureRelief = smoothstep(0.18, 0.82, journeyForestTextureLuma);
+journeyForestTexture = mix(
+  journeySurfaceForest * mix(0.54, 1.38, journeyForestTextureRelief),
+  journeyForestTexture * vec3(0.72, 0.93, 0.62),
+  0.72
+);
+float journeyForestTextureMix = journeySurfaceForestMask *
+  mix(0.7, 0.94, journeyForestBiome) * (1.0 - journeyRockMask * 0.72);
+journeyPaint = mix(journeyPaint, journeyForestTexture, journeyForestTextureMix);
+float journeySurfaceRockVein = smoothstep(
+  0.7,
+  0.94,
+  journeyFbm(vec2(
+    journeySurfaceDomain.x * 3.2 + vJourneyWorldPosition.y * 0.022,
+    journeySurfaceDomain.y * 8.7 - vJourneyWorldPosition.x * 0.006
+  ) + vec2(92.0, -18.0)) + journeySteepness * 0.31 + journeyAltitude * 0.14
+);
+float journeyBrokenRock = journeySurfaceRockVein *
+  smoothstep(0.16, 0.88, journeySteepness + journeyAltitude * 0.24) *
+  mix(0.46, 1.0, 1.0 - journeyForestBiome);
+vec3 journeySurfaceRock = mix(
+  vec3(0.16, 0.19, 0.17),
+  vec3(0.46, 0.43, 0.34),
+  journeySurfaceFine * 0.42 + smoothstep(0.4, 0.86, journeySurfaceFacing) * 0.58
+);
+journeyPaint = mix(journeyPaint, journeySurfaceRock, journeyBrokenRock * 0.86);
 float journeyRiverGrass =
   (1.0 - smoothstep(5.0, 17.0, vJourneyWorldPosition.y)) *
   smoothstep(0.55, 0.92, vJourneyWorldNormal.y) *
@@ -1176,7 +1307,7 @@ vec3 journeyWorldDetail =
   vec3(journeyNormalX.z, journeyNormalX.y, journeyNormalX.x) * journeyBlend.x +
   vec3(journeyNormalY.x, journeyNormalY.z, journeyNormalY.y) * journeyBlend.y +
   journeyNormalZ * journeyBlend.z;
-float journeyForestNormalMask = 1.0 - smoothstep(28.0, 56.0, vJourneyWorldPosition.y);
+float journeyForestNormalMask = journeySurfaceForestMask;
 float journeyCanopyNormalX = journeyNoise(vJourneyWorldPosition.xz * vec2(0.62, 0.84) + 19.0) - 0.5;
 float journeyCanopyNormalZ = journeyNoise(vJourneyWorldPosition.zx * vec2(0.73, 0.57) - 31.0) - 0.5;
 vec3 journeyCanopyNormal = vec3(journeyCanopyNormalX, 0.0, journeyCanopyNormalZ);
@@ -1200,7 +1331,31 @@ vec3 journeyReliefNormal = normalize(cross(
   dFdy(journeyReliefPosition)
 ));
 journeyReliefNormal *= sign(dot(journeyReliefNormal, normal));
-normal = normalize(mix(normal, journeyReliefNormal, journeyForestNormalMask * 0.15));`,
+normal = normalize(mix(normal, journeyReliefNormal, journeyForestNormalMask * 0.25));
+vec3 journeySurfaceResponsePosition = vJourneyWorldPosition +
+  normalize(vJourneyWorldNormal) *
+  (journeySurfaceMedium * 0.32 + journeySurfaceFine * 0.1 - 0.2) * journeyForestNormalMask;
+vec3 journeySurfaceResponseNormal = normalize(cross(
+  dFdx(journeySurfaceResponsePosition),
+  dFdy(journeySurfaceResponsePosition)
+));
+journeySurfaceResponseNormal *= sign(dot(journeySurfaceResponseNormal, normal));
+normal = normalize(mix(normal, journeySurfaceResponseNormal, journeyForestNormalMask * 0.2));`,
+      )
+    }
+    if (!triplanarNormalMap) {
+      shader.fragmentShader = shader.fragmentShader.replace(
+        '#include <normal_fragment_maps>',
+        `#include <normal_fragment_maps>
+vec3 journeySurfaceResponsePosition = vJourneyWorldPosition +
+  normalize(vJourneyWorldNormal) *
+  (journeySurfaceMedium * 0.72 + journeySurfaceFine * 0.2 - 0.46) * journeySurfaceForestMask;
+vec3 journeySurfaceResponseNormal = normalize(cross(
+  dFdx(journeySurfaceResponsePosition),
+  dFdy(journeySurfaceResponsePosition)
+));
+journeySurfaceResponseNormal *= sign(dot(journeySurfaceResponseNormal, normal));
+normal = normalize(mix(normal, journeySurfaceResponseNormal, journeySurfaceForestMask * 0.3));`,
       )
     }
     if (triplanarRoughnessMap) {
@@ -1211,12 +1366,25 @@ float journeyRoughX = texture2D(uJourneyTriplanarRoughness, vJourneyWorldPositio
 float journeyRoughY = texture2D(uJourneyTriplanarRoughness, vJourneyWorldPosition.xz * journeyTextureScale).g;
 float journeyRoughZ = texture2D(uJourneyTriplanarRoughness, vJourneyWorldPosition.xy * journeyTextureScale).g;
 float journeyProjectedRoughness = dot(vec3(journeyRoughX, journeyRoughY, journeyRoughZ), journeyBlend);
-float journeyForestRoughnessMask = 1.0 - smoothstep(30.0, 58.0, vJourneyWorldPosition.y);
+float journeyForestRoughnessMask = journeySurfaceForestMask;
 float journeyCanopyRoughness = journeyNoise(vJourneyWorldPosition.xz * vec2(0.19, 0.31) + 41.0);
 roughnessFactor = mix(roughnessFactor, max(0.68, journeyProjectedRoughness), 0.48);
 roughnessFactor = clamp(
-  roughnessFactor + (journeyCanopyRoughness - 0.5) * journeyForestRoughnessMask * 0.12,
+  roughnessFactor + (journeyCanopyRoughness - 0.5) * journeyForestRoughnessMask * 0.18,
   0.66,
+  1.0
+);`,
+      )
+    }
+    if (!triplanarRoughnessMap) {
+      shader.fragmentShader = shader.fragmentShader.replace(
+        '#include <roughnessmap_fragment>',
+        `#include <roughnessmap_fragment>
+roughnessFactor = clamp(
+  mix(roughnessFactor, 0.88, journeySurfaceForestMask * 0.72) +
+    (journeySurfaceFine - 0.5) * journeySurfaceForestMask * 0.18 -
+    journeyBrokenRock * 0.16,
+  0.58,
   1.0
 );`,
       )
@@ -1228,7 +1396,7 @@ totalEmissiveRadiance += journeyPaint * uJourneyNight * 0.034;
 totalEmissiveRadiance += vec3(0.01, 0.024, 0.055) * uJourneyNight;`,
     )
   }
-  material.customProgramCacheKey = () => `journey-alpine-${isFarRidge ? 'far' : 'near'}-v24-canopy-hierarchy`
+  material.customProgramCacheKey = () => `journey-alpine-${isFarRidge ? 'far' : 'near'}-v25-surface-forest`
 }
 
 function applyWetGravelDetail(material, variant = 'bed') {
@@ -1751,89 +1919,6 @@ function buildRiverAuroraGeometry() {
   return geometry
 }
 
-function createForestCanopyTexture() {
-  const canvas = document.createElement('canvas')
-  canvas.width = 64
-  canvas.height = 64
-  const context = canvas.getContext('2d')
-  const gradient = context.createLinearGradient(0, 6, 0, 60)
-  gradient.addColorStop(0, 'rgba(180, 214, 153, 0.82)')
-  gradient.addColorStop(0.46, 'rgba(58, 118, 67, 0.96)')
-  gradient.addColorStop(1, 'rgba(20, 57, 35, 0.96)')
-  context.fillStyle = gradient
-  context.beginPath()
-  context.moveTo(32, 4)
-  context.lineTo(43, 25)
-  context.lineTo(38, 24)
-  context.lineTo(51, 43)
-  context.lineTo(42, 41)
-  context.lineTo(56, 59)
-  context.lineTo(8, 59)
-  context.lineTo(22, 41)
-  context.lineTo(13, 43)
-  context.lineTo(26, 24)
-  context.lineTo(21, 25)
-  context.closePath()
-  context.fill()
-  const texture = new THREE.CanvasTexture(canvas)
-  texture.colorSpace = THREE.SRGBColorSpace
-  texture.needsUpdate = true
-  return texture
-}
-
-function addForestCanopyPoints(mountain, groups, texture) {
-  const positions = mountain.geometry?.attributes?.position
-  const normals = mountain.geometry?.attributes?.normal
-  if (!positions || !normals) return
-  mountain.geometry.computeBoundingBox()
-  const bounds = mountain.geometry.boundingBox
-  const heightRange = Math.max(bounds.max.y - bounds.min.y, 1)
-  // Sample enough crowns to form continuous stands at desktop resolution.
-  // The source mesh is already dense, so this remains one shared Points draw.
-  const step = Math.max(1, Math.floor(positions.count / 16800))
-  const canopyPositions = []
-  const canopyColors = []
-
-  for (let index = 0; index < positions.count; index += step) {
-    const height = (positions.getY(index) - bounds.min.y) / heightRange
-    const upward = normals.getY(index)
-    const seed = Math.abs(Math.sin(index * 12.9898 + positions.getX(index) * 4.17))
-    if (height > 0.72 || upward < 0.12 || seed < 0.055) continue
-    const jitter = (seed - 0.5) * 0.72
-    canopyPositions.push(
-      positions.getX(index) + normals.getX(index) * 0.56 + jitter,
-      positions.getY(index) + upward * 0.56 + 0.08,
-      positions.getZ(index) + normals.getZ(index) * 0.56 - jitter * 0.58,
-    )
-    const light = 0.56 + seed * 0.42
-    canopyColors.push(0.11 * light, 0.39 * light, 0.12 * light)
-  }
-  if (!canopyPositions.length) return
-
-  const geometry = new THREE.BufferGeometry()
-  geometry.setAttribute('position', new THREE.Float32BufferAttribute(canopyPositions, 3))
-  geometry.setAttribute('color', new THREE.Float32BufferAttribute(canopyColors, 3))
-  const material = new THREE.PointsMaterial({
-    alphaMap: texture,
-    alphaTest: 0.1,
-    color: '#ffffff',
-    depthTest: true,
-    depthWrite: false,
-    fog: true,
-    opacity: 0.72,
-    size: 1.3,
-    sizeAttenuation: false,
-    transparent: true,
-    vertexColors: true,
-  })
-  const canopy = new THREE.Points(geometry, material)
-  canopy.name = 'JOURNEY_FOREST_CANOPY'
-  canopy.renderOrder = 1
-  canopy.frustumCulled = true
-  mountain.add(canopy)
-  groups.canopy.push(canopy)
-}
-
 function prepareWorld(source) {
   const root = source.clone(true)
   const groups = {
@@ -2051,14 +2136,6 @@ function prepareWorld(source) {
     materials.forEach((material) => {
       material.needsUpdate = true
     })
-  })
-
-  const forestCanopyTexture = createForestCanopyTexture()
-  groups.mountains.forEach((mountain) => {
-    const identity = `${mountain.name} ${mountain.material?.name ?? ''}`.toUpperCase()
-    if (!identity.includes('FAR') && !identity.includes('RIDGE')) {
-      addForestCanopyPoints(mountain, groups, forestCanopyTexture)
-    }
   })
 
   const riverGlow = new THREE.Mesh(buildRiverAuroraGeometry(), createRiverGlowMaterial())
@@ -2292,6 +2369,7 @@ function DriftingClouds({ groupRef, materialRefs }) {
   )
 }
 
+// eslint-disable-next-line no-unused-vars -- retained only as a rollback reference; no tree object is mounted.
 function HeroForestScaleCues({ groupRef, materialRefs }) {
   const coniferRef = useRef(null)
   const broadleafRef = useRef(null)
@@ -2459,6 +2537,7 @@ function HeroForestScaleCues({ groupRef, materialRefs }) {
   )
 }
 
+// eslint-disable-next-line no-unused-vars -- retained only as a rollback reference; no canopy object is mounted.
 function HeroCanopyMasses({ groupRef, materialRef }) {
   const meshRef = useRef(null)
   const geometry = useMemo(() => new THREE.DodecahedronGeometry(1, 0), [])
@@ -2959,10 +3038,6 @@ export default function JourneyScene({
   const valleyFogMaterialRefs = useRef([])
   const openValleyAtmosphereRef = useRef(null)
   const openValleyAtmosphereMaterialRefs = useRef([])
-  const heroForestRef = useRef(null)
-  const heroForestMaterialRefs = useRef([])
-  const heroCanopyRef = useRef(null)
-  const heroCanopyMaterialRef = useRef(null)
   const heroRiverbankRef = useRef(null)
   const heroRiverbankMaterialRef = useRef(null)
   const heroRiverbankStonesRef = useRef(null)
@@ -3115,10 +3190,23 @@ export default function JourneyScene({
       if (sampledQuaternion) camera.quaternion.fromArray(sampledQuaternion).normalize()
 
       const walkStrength = 1 - smoothstep(11.3, 13.5, progress)
+      const vistaTransitionLock = 1 - smoothstep(28.2, 30.2, cameraProgress)
+      const nightLookUpLock =
+        smoothstep(66.8, 68.4, cameraProgress) *
+        (1 - smoothstep(70.2, 72.2, cameraProgress))
+      const endingTransitionLock = smoothstep(77.5, 79.2, cameraProgress)
+      const motionTransitionLock = smoothstep(0.45, 2.4, progressVelocity)
+      const cursorLookWeight = 1 - Math.max(
+        vistaTransitionLock,
+        nightLookUpLock,
+        endingTransitionLock,
+        motionTransitionLock,
+      )
       const pointerStrength =
         smoothstep(19, 24, progress) *
         (1 - smoothstep(79, 86, cameraProgress)) *
-        (presentationMode ? 0.42 : 1)
+        (presentationMode ? 0.42 : 1) *
+        cursorLookWeight
       const openVista = smoothstep(18, 25, cameraProgress)
       const vistaComposition = smoothstep(
         LOOKDEV_V2_COMPOSITION.vistaStart,
@@ -3471,7 +3559,7 @@ export default function JourneyScene({
         silhouetteReveal * (1 - smoothstep(97, 100, progress)) * 0.82
     }
     if (seatedFigureRef.current) {
-      seatedFigureRef.current.scale.setScalar(1)
+      seatedFigureRef.current.scale.setScalar(0.74)
       seatedFigureRef.current.position.y = 0.24
       const groundShadow = seatedFigureRef.current.getObjectByName('JOURNEY_FIGURE_GROUND_SHADOW')
       if (groundShadow?.material) {
@@ -3481,26 +3569,6 @@ export default function JourneyScene({
     }
 
     const openValley = smoothstep(16.5, 22, progress)
-    if (heroForestRef.current) {
-      heroForestRef.current.visible = openValley > 0.02
-      heroForestMaterialRefs.current.forEach((material, index) => {
-        if (!material) return
-        material.opacity = openValley * THREE.MathUtils.lerp(index === 0 ? 0.96 : 0.94, 0.24, night)
-        material.color
-          .set(index === 0 ? '#d7e6cf' : '#d8e2c7')
-          .lerp(new THREE.Color(index === 0 ? '#d4a77b' : '#c69970'), sunset * 0.42)
-          .lerp(new THREE.Color(index === 0 ? '#436171' : '#3a5968'), night * 0.76)
-        material.depthWrite = openValley > 0.52
-      })
-    }
-    if (heroCanopyRef.current && heroCanopyMaterialRef.current) {
-      heroCanopyRef.current.visible = openValley > 0.02
-      heroCanopyMaterialRef.current.opacity = openValley * THREE.MathUtils.lerp(0.28, 0.12, night)
-      heroCanopyMaterialRef.current.color
-        .set('#467141')
-        .lerp(new THREE.Color('#725943'), sunset * 0.42)
-        .lerp(new THREE.Color('#263f4f'), night * 0.76)
-    }
     if (heroRiverbankRef.current && heroRiverbankMaterialRef.current) {
       heroRiverbankRef.current.visible = openValley > 0.02
       heroRiverbankMaterialRef.current.opacity = openValley * THREE.MathUtils.lerp(0.5, 0.26, night)
@@ -3538,22 +3606,7 @@ export default function JourneyScene({
       }
     })
     phase2Groups.forest.forEach((mesh) => {
-      const isCanopyShell = mesh.name.toUpperCase().includes('MID_CANOPY')
-      mesh.visible = openValley > 0.02
-      const material = mesh.material
-      material.opacity = openValley * THREE.MathUtils.lerp(isCanopyShell ? 0.46 : 0.68, isCanopyShell ? 0.2 : 0.34, night)
-      material.color
-        .set(isCanopyShell ? '#4a7542' : '#315f35')
-        .lerp(new THREE.Color('#5b4931'), sunset * 0.42)
-        .lerp(new THREE.Color(isCanopyShell ? '#173545' : '#102a36'), night * 0.82)
-      const uniforms = material.userData.journeyAlpineUniforms
-      if (uniforms) {
-        uniforms.uJourneySunset.value = sunset
-        uniforms.uJourneyNight.value = night
-        uniforms.uJourneyRiverLight.value = night * skyConnectionProgress * 0.08
-        uniforms.uJourneyDiscovery.value = 0
-        uniforms.uJourneyTime.value = state.clock.elapsedTime
-      }
+      mesh.visible = false
     })
     phase2Groups.shore.forEach((mesh) => {
       const kind = mesh.userData.journeyPhase2Kind
@@ -3653,7 +3706,8 @@ export default function JourneyScene({
       })
     })
     groups.canopy.forEach((canopy) => {
-      canopy.material.opacity = openValley * THREE.MathUtils.lerp(0.72, 0.16, night)
+      canopy.visible = false
+      canopy.material.opacity = 0
     })
     groups.water.forEach((mesh, index) => {
       const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
@@ -3732,7 +3786,7 @@ export default function JourneyScene({
       })
     })
     groups.foliage.forEach((object) => {
-      object.visible = openValley > 0.08
+      object.visible = false
     })
     groups.transition.forEach((object) => {
       object.visible = false
@@ -3753,14 +3807,6 @@ export default function JourneyScene({
     <>
       <primitive object={root} />
       <primitive object={phase2Root} />
-      <HeroForestScaleCues
-        groupRef={heroForestRef}
-        materialRefs={heroForestMaterialRefs}
-      />
-      <HeroCanopyMasses
-        groupRef={heroCanopyRef}
-        materialRef={heroCanopyMaterialRef}
-      />
       <HeroRiverbankPatches
         groupRef={heroRiverbankRef}
         materialRef={heroRiverbankMaterialRef}
