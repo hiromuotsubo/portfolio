@@ -4,7 +4,7 @@ import './App.css'
 const JourneyCanvas = lazy(() => import('./JourneyCanvas.jsx'))
 
 // Local-only visual checkpoints for animation and scene QA.
-const DEV_PREVIEW = import.meta.env.DEV
+const DEV_PREVIEW = (import.meta.env.DEV || ['localhost', '127.0.0.1'].includes(window.location.hostname))
   ? new URLSearchParams(window.location.search).get('preview')
   : null
 const PREVIEW_PROGRESS = {

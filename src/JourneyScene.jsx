@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
-import { useGLTF } from '@react-three/drei'
+import { useGLTF, useTexture } from '@react-three/drei'
 import * as THREE from 'three'
 import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader.js'
 
@@ -35,10 +35,10 @@ const LOOKDEV_V2_COMPOSITION = {
   vistaFull: 28,
   vistaFadeStart: 56,
   vistaFadeEnd: 68,
-  pullBack: 4.55,
-  cameraLift: 0.34,
-  targetLift: 0,
-  fov: 10.2,
+  pullBack: 5.8,
+  cameraLift: 0.46,
+  targetLift: 0.06,
+  fov: 13.6,
 }
 
 const CAVE_LOOK = {
@@ -1120,7 +1120,7 @@ float journeyDistanceHaze = smoothstep(62.0, 330.0, journeyViewDistance);
 journeyPaint = mix(
   journeyPaint,
   journeyAtmosphere,
-  journeyDistanceHaze * ${isFarRidge ? 'mix(0.62, 0.72, uJourneyNight)' : 'mix(0.22, 0.34, uJourneyNight)'}
+  journeyDistanceHaze * ${isFarRidge ? 'mix(0.62, 0.72, uJourneyNight)' : 'mix(0.16, 0.31, uJourneyNight)'}
 );
 float journeyFootMist = smoothstep(76.0, 265.0, journeyViewDistance) *
   (1.0 - smoothstep(9.0, 31.0, vJourneyWorldPosition.y)) *
@@ -1128,7 +1128,7 @@ float journeyFootMist = smoothstep(76.0, 265.0, journeyViewDistance) *
 journeyPaint = mix(
   journeyPaint,
   journeyAtmosphere * 1.035,
-  journeyFootMist * ${isFarRidge ? '0.34' : '0.12'}
+  journeyFootMist * ${isFarRidge ? '0.34' : '0.085'}
 );
 vec2 journeyWatercolorUv = vec2(
   vJourneyWorldPosition.x * 0.0038 + vJourneyWorldPosition.z * 0.0009,
@@ -1476,12 +1476,12 @@ float journeyGroundRiver = 1.0 - smoothstep(1.35, 3.8, vJourneyWaterPosition.y);
 float journeyRiverMask = journeyRiverHead * smoothstep(0.01, 0.075, uJourneyRiverGlow) * journeyGroundRiver;
 float journeyRiverCurrent = 0.58 + journeyWaterRipple * 0.24 + journeyWaterCrossRipple * 0.18;
 vec3 journeyDayShallowWater = mix(
-  vec3(0.025, 0.56, 0.46),
+  vec3(0.018, 0.49, 0.43),
   vec3(0.13, 0.29, 0.25),
   uJourneySunset * 0.62
 );
 vec3 journeyDayDeepWater = mix(
-  vec3(0.003, 0.19, 0.29),
+  vec3(0.002, 0.135, 0.255),
   vec3(0.055, 0.12, 0.17),
   uJourneySunset * 0.58
 );
@@ -1501,7 +1501,7 @@ float journeyShoreBedReveal = journeyBedVisibility * (0.52 + journeyBankShallow 
 journeyClearBody = mix(journeyClearBody, journeyWetRiverbed, journeyShoreBedReveal * mix(0.48, 0.2, uJourneyNight));
 journeyClearBody *= 0.96 + journeyWaterRipple * 0.16;
 vec3 journeyDaySkyReflection = mix(
-  vec3(0.16, 0.43, 0.56),
+  vec3(0.12, 0.35, 0.48),
   vec3(0.44, 0.27, 0.27),
   uJourneySunset * 0.52
 );
@@ -1522,7 +1522,7 @@ vec3 journeyLandscapeReflection = mix(
 diffuseColor.rgb = mix(
   journeyClearBody,
   journeyLandscapeReflection,
-  0.045 + journeyWaterFresnel * 0.18 + journeyReflectionBand * 0.055
+  0.026 + journeyWaterFresnel * 0.13 + journeyReflectionBand * 0.038
 );
 float journeyBankContourNoise = journeyWaterNoise(
   vJourneyWaterPosition.xz * vec2(0.09, 0.055) + vec2(43.0, -21.0)
@@ -1601,7 +1601,7 @@ totalEmissiveRadiance += vec3(0.32, 0.82, 1.0) * journeyConnectionPulse * uJourn
         `#include <opaque_fragment>
 // Keep the physical highlights, but prevent the low-angle daylight reflection
 // from washing the emerald body into a flat white strip.
-float journeyPigmentStrength = mix(0.9, 0.32, uJourneyNight);
+float journeyPigmentStrength = mix(0.975, 0.32, uJourneyNight);
 gl_FragColor.rgb = mix(gl_FragColor.rgb, diffuseColor.rgb, journeyPigmentStrength);
 gl_FragColor.rgb += vec3(0.16, 0.72, 0.68) * journeyFineCurrent * (1.0 - uJourneyNight) * 0.045;`,
       )
@@ -2226,33 +2226,17 @@ function SkyBridge({ meshRef }) {
 }
 
 function DriftingClouds({ groupRef, materialRefs }) {
-  const textures = useMemo(
-    () => [
-      createCloudTexture(9100),
-      createCloudTexture(12200),
-      createCloudTexture(15100),
-      createCloudTexture(17300),
-    ],
-    [],
-  )
-
-  useEffect(
-    () => () => {
-      textures.forEach((texture) => texture.dispose())
-    },
-    [textures],
-  )
+  const cloudTexture = useTexture('/journey/textures/phase3/alpine-cloud-additive.webp')
+  cloudTexture.colorSpace = THREE.SRGBColorSpace
 
   const clouds = [
-    { position: [-112, 168, -226], scale: [178, 46, 1], opacity: 0.3, speed: 1.55, tone: 0.05, depthTest: true },
-    { position: [82, 188, -346], scale: [204, 58, 1], opacity: 0.26, speed: 1.08, tone: 0.02, depthTest: true },
-    { position: [8, 142, -188], scale: [132, 39, 1], opacity: 0.3, speed: 1.7, tone: 0.12, depthTest: true },
-    { position: [-46, 202, -438], scale: [248, 64, 1], opacity: 0.2, speed: 0.82, tone: 0.04, depthTest: true },
-    { position: [124, 154, -218], scale: [148, 43, 1], opacity: 0.28, speed: 1.48, tone: 0.15, depthTest: true },
-    { position: [-126, 82, -184], scale: [108, 34, 1], opacity: 0.39, speed: 1.72, tone: 0.18, depthTest: false },
-    { position: [10, 196, -176], scale: [108, 44, 1], opacity: 0.16, speed: 1.28, tone: 0.08, depthTest: false },
-    { position: [122, 71, -198], scale: [102, 35, 1], opacity: 0.34, speed: 1.58, tone: 0.2, depthTest: false },
-    { position: [62, 172, -262], scale: [176, 52, 1], opacity: 0.18, speed: 0.94, tone: 0.03, depthTest: false },
+    // High clouds create negative space and explain the upper-right light source.
+    { position: [-104, 204, -248], scale: [142, 42, 1], opacity: 0.3, speed: 1.22, tone: 0.02, depthTest: false },
+    { position: [100, 218, -338], scale: [164, 48, 1], opacity: 0.27, speed: 0.86, tone: 0, depthTest: false },
+    { position: [12, 188, -454], scale: [176, 48, 1], opacity: 0.16, speed: 0.64, tone: 0.06, depthTest: false },
+    // Smaller mountain-attached wisps live at different depths instead of one horizontal band.
+    { position: [-74, 66, -238], scale: [72, 21, 1], opacity: 0.17, speed: 1.36, tone: 0.14, depthTest: true },
+    { position: [78, 75, -304], scale: [86, 24, 1], opacity: 0.14, speed: 1.02, tone: 0.12, depthTest: true },
   ]
 
   return (
@@ -2276,17 +2260,222 @@ function DriftingClouds({ groupRef, materialRefs }) {
             ref={(material) => {
               materialRefs.current[index] = material
             }}
-            map={textures[index % textures.length]}
+            map={cloudTexture}
             color="#f4f5ef"
             transparent
             opacity={0}
-            alphaTest={0.018}
+            alphaTest={0}
             depthWrite={false}
             depthTest={cloud.depthTest}
+            blending={THREE.AdditiveBlending}
             toneMapped={false}
           />
         </sprite>
       ))}
+    </group>
+  )
+}
+
+function HeroForestScaleCues({ surfaceMeshes, groupRef, materialRefs }) {
+  const coniferRef = useRef(null)
+  const broadleafRef = useRef(null)
+  const treeGeometry = useMemo(() => new THREE.PlaneGeometry(1, 1), [])
+  const [coniferTexture, broadleafTexture] = useTexture([
+    '/journey/textures/phase3/alpine-conifer.webp',
+    '/journey/textures/phase3/riverside-broadleaf.webp',
+  ])
+  coniferTexture.colorSpace = THREE.SRGBColorSpace
+  broadleafTexture.colorSpace = THREE.SRGBColorSpace
+  const placements = useMemo(() => {
+    const raycaster = new THREE.Raycaster()
+    const down = new THREE.Vector3(0, -1, 0)
+    const result = []
+    const seedValue = (index, salt = 0) => {
+      const value = Math.sin(index * 91.731 + salt * 47.117) * 43758.5453
+      return value - Math.floor(value)
+    }
+    surfaceMeshes.forEach((mesh) => mesh.updateWorldMatrix(true, false))
+    for (let index = 0; index < 268; index += 1) {
+      const depth = seedValue(index, 1)
+      const z = THREE.MathUtils.lerp(-24, -202, depth)
+      const side = seedValue(index, 2) < 0.5 ? -1 : 1
+      const centre = Math.sin(-z * 0.052) * 6.5 + Math.sin(-z * 0.017) * 2.1
+      const riverWidth = Math.max(3.4, 25 - (-z) * 0.105)
+      const bankDepth = THREE.MathUtils.lerp(1.8, 17, Math.pow(seedValue(index, 3), 0.72))
+      const x = centre + side * (riverWidth + bankDepth)
+      raycaster.set(new THREE.Vector3(x, 150, z), down)
+      const hit = raycaster.intersectObjects(surfaceMeshes, false)[0]
+      if (!hit || hit.point.y > 21) continue
+      const perspectiveScale = THREE.MathUtils.lerp(1, 0.58, depth)
+      const height = THREE.MathUtils.lerp(3.35, 7.6, seedValue(index, 4)) * perspectiveScale
+      result.push({
+        position: hit.point.clone().addScaledVector(hit.face?.normal ?? down, 0.04),
+        height,
+        width: THREE.MathUtils.lerp(0.66, 1.02, seedValue(index, 5)),
+        tone: seedValue(index, 7),
+      })
+    }
+    return result
+  }, [surfaceMeshes])
+
+  useEffect(() => {
+    const conifers = coniferRef.current
+    const broadleaves = broadleafRef.current
+    if (!conifers || !broadleaves) return undefined
+    const matrix = new THREE.Matrix4()
+    const quaternion = new THREE.Quaternion()
+    const position = new THREE.Vector3()
+    const scale = new THREE.Vector3()
+    let coniferIndex = 0
+    let broadleafIndex = 0
+    placements.forEach((placement) => {
+      quaternion.identity()
+      position.copy(placement.position)
+      const broadleaf = placement.tone < 0.44
+      const height = placement.height * (broadleaf ? 0.76 : 1)
+      position.y += height * 0.5
+      scale.set(
+        height * placement.width * (broadleaf ? 0.82 : 0.48),
+        height,
+        1,
+      )
+      matrix.compose(position, quaternion, scale)
+      if (broadleaf) {
+        broadleaves.setMatrixAt(broadleafIndex, matrix)
+        broadleafIndex += 1
+      } else {
+        conifers.setMatrixAt(coniferIndex, matrix)
+        coniferIndex += 1
+      }
+    })
+    conifers.count = coniferIndex
+    broadleaves.count = broadleafIndex
+    conifers.instanceMatrix.needsUpdate = true
+    broadleaves.instanceMatrix.needsUpdate = true
+    return undefined
+  }, [placements])
+
+  useEffect(() => () => {
+    treeGeometry.dispose()
+  }, [treeGeometry])
+
+  return (
+    <group ref={groupRef}>
+      <instancedMesh ref={coniferRef} args={[treeGeometry, null, Math.max(placements.length, 1)]}>
+        <meshBasicMaterial
+          ref={(material) => { materialRefs.current[0] = material }}
+          color="#ffffff"
+          map={coniferTexture}
+          alphaTest={0.055}
+          transparent
+          opacity={0}
+          fog
+          depthWrite
+          side={THREE.DoubleSide}
+        />
+      </instancedMesh>
+      <instancedMesh ref={broadleafRef} args={[treeGeometry, null, Math.max(placements.length, 1)]}>
+        <meshBasicMaterial
+          ref={(material) => { materialRefs.current[1] = material }}
+          color="#ffffff"
+          map={broadleafTexture}
+          alphaTest={0.045}
+          transparent
+          opacity={0}
+          fog
+          depthWrite
+          side={THREE.DoubleSide}
+        />
+      </instancedMesh>
+    </group>
+  )
+}
+
+function createHeroGravelTexture() {
+  const canvas = document.createElement('canvas')
+  canvas.width = 256
+  canvas.height = 256
+  const context = canvas.getContext('2d')
+  context.fillStyle = '#c4c5bd'
+  context.fillRect(0, 0, 256, 256)
+  for (let index = 0; index < 680; index += 1) {
+    const seed = seededRandom(index + 7800)
+    const x = seededRandom(index + 8200) * 256
+    const y = seededRandom(index + 9100) * 256
+    const radius = 0.7 + seed * 3.1
+    const light = 104 + Math.round(seededRandom(index + 9500) * 104)
+    context.fillStyle = `rgb(${light + 10}, ${light + 9}, ${light + 5})`
+    context.beginPath()
+    context.ellipse(x, y, radius * 1.28, radius * 0.72, seed * Math.PI, 0, Math.PI * 2)
+    context.fill()
+  }
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.colorSpace = THREE.SRGBColorSpace
+  texture.wrapS = THREE.RepeatWrapping
+  texture.wrapT = THREE.RepeatWrapping
+  texture.repeat.set(4, 4)
+  texture.needsUpdate = true
+  return texture
+}
+
+function HeroRiverbankPatches({ groupRef, materialRef }) {
+  const meshRef = useRef(null)
+  const texture = useMemo(() => createHeroGravelTexture(), [])
+  const geometry = useMemo(() => {
+    const result = new THREE.CircleGeometry(1, 38)
+    const position = result.attributes.position
+    for (let index = 1; index < position.count; index += 1) {
+      const angle = Math.atan2(position.getY(index), position.getX(index))
+      const irregular = 0.8 + Math.sin(angle * 5.0 + 1.2) * 0.09 + Math.sin(angle * 11.0 - 0.8) * 0.06
+      position.setX(index, position.getX(index) * irregular)
+      position.setY(index, position.getY(index) * irregular)
+    }
+    position.needsUpdate = true
+    result.computeVertexNormals()
+    return result
+  }, [])
+  const patches = useMemo(() => [
+    { position: [18.5, 0.35, -27], scale: [7.2, 18, 1], rotation: -0.16 },
+    { position: [-9.5, 0.34, -55], scale: [7.5, 20, 1], rotation: 0.21 },
+    { position: [8.5, 0.33, -92], scale: [6, 17, 1], rotation: -0.12 },
+    { position: [-4.2, 0.32, -132], scale: [4.2, 12, 1], rotation: 0.18 },
+  ], [])
+  useEffect(() => {
+    if (!meshRef.current) return undefined
+    const matrix = new THREE.Matrix4()
+    const quaternion = new THREE.Quaternion()
+    const position = new THREE.Vector3()
+    const scale = new THREE.Vector3()
+    patches.forEach((patch, index) => {
+      position.set(...patch.position)
+      quaternion.setFromEuler(new THREE.Euler(-Math.PI / 2, 0, patch.rotation))
+      scale.set(...patch.scale)
+      matrix.compose(position, quaternion, scale)
+      meshRef.current.setMatrixAt(index, matrix)
+    })
+    meshRef.current.instanceMatrix.needsUpdate = true
+    return undefined
+  }, [patches])
+  useEffect(() => () => {
+    geometry.dispose()
+    texture.dispose()
+  }, [geometry, texture])
+  return (
+    <group ref={groupRef}>
+      <instancedMesh ref={meshRef} args={[geometry, null, patches.length]} receiveShadow>
+        <meshStandardMaterial
+          ref={materialRef}
+          map={texture}
+          color="#ffffff"
+          roughness={0.98}
+          metalness={0}
+          transparent
+          opacity={0}
+          depthWrite
+          polygonOffset
+          polygonOffsetFactor={-1}
+        />
+      </instancedMesh>
     </group>
   )
 }
@@ -2564,6 +2753,10 @@ export default function JourneyScene({
   const valleyFogMaterialRefs = useRef([])
   const openValleyAtmosphereRef = useRef(null)
   const openValleyAtmosphereMaterialRefs = useRef([])
+  const heroForestRef = useRef(null)
+  const heroForestMaterialRefs = useRef([])
+  const heroRiverbankRef = useRef(null)
+  const heroRiverbankMaterialRef = useRef(null)
   const skyRigRef = useRef(null)
   const motesRef = useRef(null)
   const motesMaterialRef = useRef(null)
@@ -2873,7 +3066,7 @@ export default function JourneyScene({
         const material = cloudMaterialRefs.current[index]
         if (material) {
           material.opacity =
-            openSky * cloudNightFade * (cloud.userData.opacity ?? 0.5) * 0.55
+            openSky * cloudNightFade * (cloud.userData.opacity ?? 0.5) * 0.78
           material.color.copy(cloudColor).lerp(
             new THREE.Color('#879da3'),
             cloud.userData.tone ?? 0,
@@ -2944,7 +3137,7 @@ export default function JourneyScene({
 
     const daylightExposure = THREE.MathUtils.lerp(
       CAVE_LOOK.exposure,
-      1.0,
+      1.08,
       caveRelease,
     )
     state.gl.toneMappingExposure = THREE.MathUtils.lerp(
@@ -2953,7 +3146,7 @@ export default function JourneyScene({
       night,
     ) + outroFramingRef.current * 0.3
 
-    const openAirFogDensity = THREE.MathUtils.lerp(0.00062, 0.00072, night)
+    const openAirFogDensity = THREE.MathUtils.lerp(0.0005, 0.00072, night)
     const preHoldFog = progress < 9.3
       ? 0.018
       : THREE.MathUtils.lerp(0.018, 0.012, smoothstep(9.3, 13.5, progress))
@@ -2975,7 +3168,7 @@ export default function JourneyScene({
     if (sunRef.current) {
       const dayIntensity = THREE.MathUtils.lerp(
         CAVE_LOOK.sunIntensity,
-        2.92,
+        3.72,
         caveRelease,
       )
       sunRef.current.intensity = THREE.MathUtils.lerp(dayIntensity, 0.52, night)
@@ -2989,7 +3182,7 @@ export default function JourneyScene({
     if (skyLightRef.current) {
       const dayIntensity = THREE.MathUtils.lerp(
         CAVE_LOOK.skyIntensity,
-        0.78,
+        0.62,
         caveRelease,
       )
       skyLightRef.current.intensity = THREE.MathUtils.lerp(dayIntensity, 1.08, night)
@@ -3006,7 +3199,7 @@ export default function JourneyScene({
     if (ambientRef.current) {
       const dayIntensity = THREE.MathUtils.lerp(
         CAVE_LOOK.ambientIntensity,
-        0.075,
+        0.05,
         caveRelease,
       )
       ambientRef.current.intensity = THREE.MathUtils.lerp(dayIntensity, 0.23, night)
@@ -3078,6 +3271,18 @@ export default function JourneyScene({
     }
 
     const openValley = smoothstep(16.5, 22, progress)
+    if (heroForestRef.current) {
+      heroForestRef.current.visible = openValley > 0.02
+      heroForestMaterialRefs.current.forEach((material, index) => {
+        if (!material) return
+        material.opacity = openValley * THREE.MathUtils.lerp(index === 0 ? 0.96 : 0.94, 0.24, night)
+        material.depthWrite = openValley > 0.52
+      })
+    }
+    if (heroRiverbankRef.current && heroRiverbankMaterialRef.current) {
+      heroRiverbankRef.current.visible = openValley > 0.02
+      heroRiverbankMaterialRef.current.opacity = openValley * THREE.MathUtils.lerp(0.5, 0.26, night)
+    }
     phase2Groups.ridges.forEach((mesh, index) => {
       mesh.visible = openValley > 0.01
       const material = mesh.material
@@ -3314,6 +3519,15 @@ export default function JourneyScene({
     <>
       <primitive object={root} />
       <primitive object={phase2Root} />
+      <HeroForestScaleCues
+        surfaceMeshes={groups.mountains}
+        groupRef={heroForestRef}
+        materialRefs={heroForestMaterialRefs}
+      />
+      <HeroRiverbankPatches
+        groupRef={heroRiverbankRef}
+        materialRef={heroRiverbankMaterialRef}
+      />
       <SkyAtmosphere
         meshRef={skyAtmosphereRef}
         materialRef={skyAtmosphereMaterialRef}
