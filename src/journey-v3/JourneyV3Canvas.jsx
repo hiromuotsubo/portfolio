@@ -72,16 +72,21 @@ export default function JourneyV3Canvas({
   outroMode,
   mobileLook,
   neutralPointer = false,
+  captureMode = false,
+  capturePreview = null,
+  captureGitCommit = null,
   onAssetsProgress,
   onListenerPose,
 }) {
-  const [qualityTier, setQualityTier] = useState(getInitialQuality)
+  const [qualityTier, setQualityTier] = useState(
+    captureMode ? 'high' : getInitialQuality,
+  )
   const quality = QUALITY_PRESETS[qualityTier]
 
   return (
     <Canvas
       className="journey-canvas"
-      dpr={quality.dpr}
+      dpr={captureMode ? 1 : quality.dpr}
       frameloop="always"
       camera={{ position: [0, 2.35, 23], fov: 40, near: 0.05, far: 1200 }}
       gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
@@ -93,7 +98,9 @@ export default function JourneyV3Canvas({
         gl.shadowMap.type = THREE.PCFShadowMap
       }}
     >
-      <AdaptiveQualityController tier={qualityTier} onTierChange={setQualityTier} />
+      {!captureMode ? (
+        <AdaptiveQualityController tier={qualityTier} onTierChange={setQualityTier} />
+      ) : null}
       <Suspense fallback={null}>
         <JourneyV3Scene
           progress={presentationMode ? 28 : progress}
@@ -105,6 +112,9 @@ export default function JourneyV3Canvas({
           outroMode={outroMode}
           mobileLook={mobileLook}
           neutralPointer={neutralPointer}
+          captureMode={captureMode}
+          capturePreview={capturePreview}
+          captureGitCommit={captureGitCommit}
           onAssetsReady={onAssetsProgress}
           onListenerPose={onListenerPose}
           quality={quality}

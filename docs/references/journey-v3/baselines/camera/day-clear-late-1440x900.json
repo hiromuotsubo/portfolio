@@ -1,0 +1,403 @@
+{
+  "schemaVersion": 1,
+  "matrixElementOrder": "Three.js Matrix4.elements order (column-major storage)",
+  "metadata": {
+    "route": "/journey-v3",
+    "preview": "day-clear-late",
+    "progress": 37.9,
+    "fogHoldProgress": 1,
+    "riverHoldProgress": 0,
+    "timeOfDayProgress": 37.9,
+    "visualTimeOfDay": {
+      "sunsetProgress": 0.2537212094907407,
+      "nightProgress": 0
+    },
+    "captureTimestamp": "2026-08-10T13:37:06.206Z",
+    "currentGitCommit": "0454d143d1d2d27d8e24b62363c753391432107e",
+    "viewportCssWidth": 1440,
+    "viewportCssHeight": 900,
+    "drawingBufferWidth": 1440,
+    "drawingBufferHeight": 900,
+    "devicePixelRatio": 1,
+    "rendererPixelRatio": 1,
+    "deterministicRuntimeTimeSeconds": 0,
+    "captureKey": "day-clear-late",
+    "progressSelectionReason": "Progress 37.9 is the final sampled point inside EXPERIENCE_PACE clear-valley chapter 20-38. VISUAL_TIMING begins the intentionally gradual sunset blend at 30, so the exact non-zero sunset blend is recorded rather than mislabelled as a pure pre-sunset frame."
+  },
+  "camera": {
+    "name": "CAM_V13_MASTER_ANIMATED",
+    "position": [
+      0.19253011894546054,
+      3.8884935451816816,
+      1.4677618305562001
+    ],
+    "quaternion": [
+      0.13446184369941855,
+      0.016825422636074772,
+      -0.0022834460530664147,
+      0.9907732856795207
+    ],
+    "rotationOrder": "XYZ",
+    "up": [
+      0,
+      1,
+      0
+    ],
+    "fov": 57.86070657389487,
+    "near": 0.05000000074505806,
+    "far": 2400,
+    "aspect": 1.6,
+    "zoom": 1,
+    "matrix": [
+      0.9994233820544804,
+      0,
+      -0.033954431268747705,
+      0,
+      0.00904950939467418,
+      0.9638295969261518,
+      0.26636556547137913,
+      0,
+      0.03272628580361383,
+      -0.2665192452510172,
+      0.9632738354841412,
+      0,
+      0.19253011894546054,
+      3.8884935451816816,
+      1.4677618305562001,
+      1
+    ],
+    "matrixWorld": [
+      0.9994233820544804,
+      0,
+      -0.033954431268747705,
+      0,
+      0.00904950939467418,
+      0.9638295969261518,
+      0.26636556547137913,
+      0,
+      0.03272628580361383,
+      -0.2665192452510172,
+      0.9632738354841412,
+      0,
+      0.19253011894546054,
+      3.8884935451816816,
+      1.4677618305562001,
+      1
+    ],
+    "matrixWorldInverse": [
+      0.9994233820544806,
+      0.009049509394674178,
+      0.03272628580361382,
+      0,
+      -1.734723475976807e-18,
+      0.9638295969261519,
+      -0.2665192452510172,
+      0,
+      -0.03395443126874771,
+      0.2663655654713792,
+      0.9632738354841412,
+      0,
+      -0.14258208442931175,
+      -4.140548679395967,
+      -0.38379899897023395,
+      1
+    ],
+    "projectionMatrix": [
+      1.1307692814612247,
+      0,
+      0,
+      0,
+      0,
+      1.8092308503379595,
+      0,
+      0,
+      0,
+      0,
+      -1.0000416675353612,
+      -1,
+      0,
+      0,
+      -0.10000208486691523,
+      0
+    ],
+    "projectionMatrixInverse": [
+      0.8843537018513279,
+      0,
+      0,
+      0,
+      0,
+      0.5527210636570798,
+      0,
+      0,
+      0,
+      0,
+      0,
+      -9.999791517655057,
+      0,
+      0,
+      -1,
+      10.000208184321725
+    ]
+  },
+  "animation": {
+    "clipName": "CAM_V13_MASTER_ANIMATEDアクション.014",
+    "clipDuration": 11,
+    "evaluatedClipTime": 5.992074000000001,
+    "normalizedClipProgress": 0.544734,
+    "storyProgress": 37.9,
+    "storyProgressToClipProgressOutput": 0.544734
+  },
+  "sceneRoots": {
+    "journeySceneRoot": {
+      "label": "Journey scene root",
+      "name": null,
+      "type": "Scene",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "quaternion": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "matrixWorld": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+      ]
+    },
+    "mainGlbRoot": {
+      "label": "Main Journey GLB root",
+      "name": "Scene",
+      "type": "Group",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "quaternion": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "matrixWorld": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+      ]
+    },
+    "phase2EnvironmentRoot": {
+      "label": "Journey Phase 2 environment GLB root",
+      "name": "Scene",
+      "type": "Group",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "quaternion": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "matrixWorld": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+      ]
+    },
+    "cameraParent": {
+      "label": "Camera parent object",
+      "name": "Scene",
+      "type": "Group",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "quaternion": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "matrixWorld": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+      ]
+    },
+    "journeyV3UpperGroup": {
+      "label": "Journey V3 runtime upper group",
+      "name": "JOURNEY_V3_SKY_RIG",
+      "type": "Group",
+      "position": [
+        0.19253011894546054,
+        3.8884935451816816,
+        1.4677618305562001
+      ],
+      "quaternion": [
+        0.13446184369941852,
+        0.01682542263607477,
+        -0.0022834460530664143,
+        0.9907732856795209
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "matrixWorld": [
+        0.9994233820544804,
+        -1.734723475976807e-18,
+        -0.03395443126874771,
+        0,
+        0.009049509394674178,
+        0.9638295969261518,
+        0.26636556547137913,
+        0,
+        0.032726285803613836,
+        -0.2665192452510172,
+        0.9632738354841412,
+        0,
+        0.19253011894546054,
+        3.8884935451816816,
+        1.4677618305562001,
+        1
+      ]
+    }
+  },
+  "relativeCameraMatrices": {
+    "cameraRelativeToJourneySceneRoot": [
+      0.9994233820544804,
+      0,
+      -0.033954431268747705,
+      0,
+      0.00904950939467418,
+      0.9638295969261518,
+      0.26636556547137913,
+      0,
+      0.03272628580361383,
+      -0.2665192452510172,
+      0.9632738354841412,
+      0,
+      0.19253011894546054,
+      3.8884935451816816,
+      1.4677618305562001,
+      1
+    ],
+    "cameraRelativeToMainGlbRoot": [
+      0.9994233820544804,
+      0,
+      -0.033954431268747705,
+      0,
+      0.00904950939467418,
+      0.9638295969261518,
+      0.26636556547137913,
+      0,
+      0.03272628580361383,
+      -0.2665192452510172,
+      0.9632738354841412,
+      0,
+      0.19253011894546054,
+      3.8884935451816816,
+      1.4677618305562001,
+      1
+    ],
+    "cameraRelativeToPhase2EnvironmentRoot": [
+      0.9994233820544804,
+      0,
+      -0.033954431268747705,
+      0,
+      0.00904950939467418,
+      0.9638295969261518,
+      0.26636556547137913,
+      0,
+      0.03272628580361383,
+      -0.2665192452510172,
+      0.9632738354841412,
+      0,
+      0.19253011894546054,
+      3.8884935451816816,
+      1.4677618305562001,
+      1
+    ]
+  }
+}

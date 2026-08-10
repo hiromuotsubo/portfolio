@@ -6020,3 +6020,11 @@ textarea,
     right: calc(100% + 14px);
   }
 }
+/* Capture-only: keep UI overlays as deterministic as the frozen WebGL frame. */
+.journey-3d.is-capture-mode *,
+.journey-3d.is-capture-mode *::before,
+.journey-3d.is-capture-mode *::after {
+  animation-play-state: paused !important;
+  transition-duration: 0s !important;
+  transition-delay: 0s !important;
+}

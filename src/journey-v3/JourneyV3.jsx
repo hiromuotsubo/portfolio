@@ -13,6 +13,11 @@ const PREVIEW_STATES = {
   'cave-exit': { progress: 11.5 },
   'fog-hold': { progress: 13.5, gate: 'fog', holdProgress: 0.62 },
   'day-clear': { progress: 30, fogCompleted: true },
+  // EXPERIENCE_PACE keeps the clear-valley chapter through progress 38.
+  // VISUAL_TIMING begins its deliberately gradual sunset blend at 30, so this
+  // late checkpoint is still daytime-led but is not a mathematically pure
+  // pre-sunset frame. The capture metadata records the exact blend value.
+  'day-clear-late': { progress: 37.9, fogCompleted: true },
   sunset: { progress: 46, fogCompleted: true },
   night: { progress: 68, fogCompleted: true },
   'river-hold': {
@@ -59,6 +64,10 @@ const PREVIEW_FOG_COMPLETED = DEV_PREVIEW
 const PREVIEW_ENTERED = DEV_PREVIEW ? PREVIEW_STATE.entered ?? true : false
 const PREVIEW_SHOW_OUTRO = Boolean(DEV_PREVIEW && PREVIEW_STATE.showOutro)
 const NEUTRAL_POINTER = PREVIEW_QUERY.get('neutralPointer') === '1'
+const CAPTURE_CAMERA = DEV_PREVIEW && PREVIEW_QUERY.get('captureCamera') === '1'
+const FREEZE_RUNTIME = CAPTURE_CAMERA && PREVIEW_QUERY.get('freezeRuntime') === '1'
+const CAPTURE_MODE = Boolean(CAPTURE_CAMERA && FREEZE_RUNTIME)
+const CAPTURE_GIT_COMMIT = PREVIEW_QUERY.get('gitCommit')
 const PORTFOLIO_PAGES = ['home', 'about', 'project', 'contact']
 const PORTFOLIO_PATHS = {
   home: '/',
@@ -1070,6 +1079,7 @@ function JourneyV3Experience() {
 
   const advance = useCallback(
     (rawDelta) => {
+      if (CAPTURE_MODE) return
       if (
         !enteredRef.current ||
         portfolioRef.current ||
@@ -1262,6 +1272,7 @@ function JourneyV3Experience() {
   }, [advance])
 
   const startSkyConnection = useCallback(() => {
+    if (CAPTURE_MODE) return
     if (skyConnectionRef.current.frame) return
     setIsSkyConnecting(true)
     setSkyConnectionProgress(0)
@@ -1320,6 +1331,7 @@ function JourneyV3Experience() {
 
   const startHold = useCallback(
     (event) => {
+      if (CAPTURE_MODE) return
       const type = gateRef.current
       if (!type || holdRef.current.frame) return
       if (Number.isFinite(event?.button) && event.button !== 0) return
@@ -1534,7 +1546,7 @@ function JourneyV3Experience() {
 
   return (
     <main
-      className={`journey-3d ${entered ? 'is-entered' : ''} ${activeGate ? `has-gate is-gate-${activeGate}` : ''} ${activeGate && holdProgress > 0 ? 'is-holding' : ''} ${isNight ? 'is-night' : ''} ${showOutro ? 'is-outro' : ''} ${showPortfolio ? 'is-portfolio' : ''} ${portfolioScrolled ? 'is-portfolio-scrolled' : ''}`}
+      className={`journey-3d ${entered ? 'is-entered' : ''} ${activeGate ? `has-gate is-gate-${activeGate}` : ''} ${activeGate && holdProgress > 0 ? 'is-holding' : ''} ${isNight ? 'is-night' : ''} ${showOutro ? 'is-outro' : ''} ${showPortfolio ? 'is-portfolio' : ''} ${portfolioScrolled ? 'is-portfolio-scrolled' : ''} ${CAPTURE_MODE ? 'is-capture-mode' : ''}`}
       style={{
         '--cave-depth': caveDepth,
         '--open-air': openAir,
@@ -1556,7 +1568,10 @@ function JourneyV3Experience() {
               presentationMode={showPortfolio}
               outroMode={showOutro && !showPortfolio}
               mobileLook={mobileLook}
-              neutralPointer={NEUTRAL_POINTER}
+              neutralPointer={NEUTRAL_POINTER || CAPTURE_MODE}
+              captureMode={CAPTURE_MODE}
+              capturePreview={DEV_PREVIEW}
+              captureGitCommit={CAPTURE_GIT_COMMIT}
               onAssetsProgress={handleJourneyAssets}
               onListenerPose={updateListenerPose}
             />

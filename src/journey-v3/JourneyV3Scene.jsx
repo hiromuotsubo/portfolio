@@ -3,6 +3,10 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { useGLTF, useTexture } from '@react-three/drei'
 import * as THREE from 'three'
 import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader.js'
+import {
+  createJourneyV3CameraCapture,
+  publishJourneyV3CameraCapture,
+} from './journeyV3Capture.js'
 
 // Versioned query prevents a previously cached GLB from reviving removed assets.
 const MODEL_URL = '/journey/models/journey-v16-pbr-ktx2.glb?v=1-memory-pbr'
@@ -2949,6 +2953,9 @@ export default function JourneyV3Scene({
   outroMode = false,
   mobileLook = { x: 0, y: 0 },
   neutralPointer = false,
+  captureMode = false,
+  capturePreview = null,
+  captureGitCommit = null,
   onAssetsReady,
   onListenerPose,
   quality = { name: 'high', particles: 1, shadows: true, fogLayers: 7 },
@@ -3060,6 +3067,7 @@ export default function JourneyV3Scene({
   const riverRippleMaterialRefs = useRef([])
   const riverReactionRef = useRef({ age: 0, fading: false })
   const interactionRef = useRef({ capturedGate: null })
+  const capturePublishedRef = useRef(false)
   const { set, size, scene } = useThree()
 
   useEffect(() => {
@@ -3095,15 +3103,27 @@ export default function JourneyV3Scene({
     }
   }, [scene])
 
+  useEffect(() => {
+    if (!captureMode) return undefined
+    capturePublishedRef.current = false
+    window.__JOURNEY_V3_CAPTURE__ = { status: 'loading', snapshot: null }
+    return () => {
+      capturePublishedRef.current = false
+      delete window.__JOURNEY_V3_CAPTURE__
+    }
+  }, [captureMode])
+
   useFrame((state, delta) => {
-    const progressVelocity = Math.abs(progress - previousProgressRef.current) /
+    const runtimeDelta = captureMode ? 0 : delta
+    const runtimeTime = captureMode ? 0 : state.clock.elapsedTime
+    const progressVelocity = captureMode ? 0 : Math.abs(progress - previousProgressRef.current) /
       Math.max(delta, 0.001)
     const travelWindTarget = THREE.MathUtils.clamp(progressVelocity * 0.085, 0, 1)
     travelWindRef.current = THREE.MathUtils.damp(
       travelWindRef.current,
       travelWindTarget,
       travelWindTarget > travelWindRef.current ? 8.5 : 2.15,
-      delta,
+      runtimeDelta,
     )
     previousProgressRef.current = progress
 
@@ -3111,7 +3131,7 @@ export default function JourneyV3Scene({
       gateCueRef.current.type = activeGate
       gateCueRef.current.elapsed = 0
     } else if (activeGate) {
-      gateCueRef.current.elapsed += delta
+      gateCueRef.current.elapsed += runtimeDelta
     }
     const gateCueElapsed = gateCueRef.current.elapsed
     const gateArrivalPulse = activeGate ? Math.exp(-gateCueElapsed * 1.55) : 0
@@ -3154,7 +3174,7 @@ export default function JourneyV3Scene({
       const isRiverHolding = activeGate === 'river' && holdProgress > 0
       if (!isRiverHolding) {
         riverReactionRef.current.fading = true
-        riverReactionRef.current.age += delta
+        riverReactionRef.current.age += runtimeDelta
       }
       const fade = riverReactionRef.current.fading
         ? 1 - smoothstep(0, 1.8, riverReactionRef.current.age)
@@ -3174,7 +3194,9 @@ export default function JourneyV3Scene({
       if (fade <= 0.002) riverRippleRef.current.visible = false
     }
 
-    outroFramingRef.current = presentationMode
+    outroFramingRef.current = captureMode
+      ? (presentationMode ? 0 : outroMode ? 1 : 0)
+      : presentationMode
       ? 0
       : THREE.MathUtils.damp(
           outroFramingRef.current,
@@ -3187,8 +3209,9 @@ export default function JourneyV3Scene({
       94,
       outroFramingRef.current,
     )
+    const mappedClipProgress = storyProgressToClipProgress(cameraProgress)
     const clipTime = clip
-      ? clip.duration * storyProgressToClipProgress(cameraProgress)
+      ? clip.duration * mappedClipProgress
       : 0
     if (clip) {
       mixer.setTime(clipTime)
@@ -3242,21 +3265,29 @@ export default function JourneyV3Scene({
         ENDING_CAMERA.wideEnd,
         cameraProgress,
       )
-      pointerLookRef.current.x = THREE.MathUtils.damp(
-        pointerLookRef.current.x,
-        (neutralPointer ? 0 : mobilePointer ? mobileLook.x : state.pointer.x) * pointerStrength,
-        5.2,
-        delta,
-      )
-      pointerLookRef.current.y = THREE.MathUtils.damp(
-        pointerLookRef.current.y,
-        (neutralPointer ? 0 : mobilePointer ? mobileLook.y : state.pointer.y) * pointerStrength,
-        5.2,
-        delta,
-      )
+      if (captureMode) {
+        pointerLookRef.current.set(0, 0)
+      } else {
+        pointerLookRef.current.x = THREE.MathUtils.damp(
+          pointerLookRef.current.x,
+          (neutralPointer ? 0 : mobilePointer ? mobileLook.x : state.pointer.x) * pointerStrength,
+          5.2,
+          delta,
+        )
+        pointerLookRef.current.y = THREE.MathUtils.damp(
+          pointerLookRef.current.y,
+          (neutralPointer ? 0 : mobilePointer ? mobileLook.y : state.pointer.y) * pointerStrength,
+          5.2,
+          delta,
+        )
+      }
       const stride = progress * Math.PI * 1.16
-      const horizontalBob = Math.sin(stride * 0.5) * 0.012 * walkStrength
-      const verticalBob = Math.abs(Math.sin(stride)) * 0.011 * walkStrength
+      const horizontalBob = captureMode
+        ? 0
+        : Math.sin(stride * 0.5) * 0.012 * walkStrength
+      const verticalBob = captureMode
+        ? 0
+        : Math.abs(Math.sin(stride)) * 0.011 * walkStrength
       cameraScratch.forward
         .set(0, 0, -1)
         .applyQuaternion(camera.quaternion)
@@ -3307,7 +3338,7 @@ export default function JourneyV3Scene({
         camera.fov = desiredFov
         camera.updateProjectionMatrix()
       }
-      camera.updateMatrixWorld()
+      camera.updateMatrixWorld(true)
       onListenerPose?.(camera)
     }
 
@@ -3383,12 +3414,12 @@ export default function JourneyV3Scene({
         }
         cloud.position.x =
           cloud.userData.baseX +
-          Math.sin(state.clock.elapsedTime * 0.055 + index * 1.9) *
+          Math.sin(runtimeTime * 0.055 + index * 1.9) *
             cloud.userData.speed *
             (4.2 + travelWindRef.current * 12)
         cloud.position.y =
           cloud.userData.baseY +
-          Math.sin(state.clock.elapsedTime * 0.12 + index) *
+          Math.sin(runtimeTime * 0.12 + index) *
             travelWindRef.current *
             0.34
       })
@@ -3408,7 +3439,7 @@ export default function JourneyV3Scene({
         .lerp(new THREE.Color('#7189ad'), night * 0.72)
       valleyFogGroupRef.current.children.forEach((bank, index) => {
         const material = valleyFogMaterialRefs.current[index]
-        const breathing = 0.86 + Math.sin(state.clock.elapsedTime * 0.13 + index * 1.31) * 0.14
+        const breathing = 0.86 + Math.sin(runtimeTime * 0.13 + index * 1.31) * 0.14
         if (material) {
           material.opacity =
             valleyMist * 1.78 *
@@ -3419,11 +3450,11 @@ export default function JourneyV3Scene({
         }
         bank.position.x =
           bank.userData.baseX +
-          Math.sin(state.clock.elapsedTime * bank.userData.speed * 0.14 + index * 0.8) *
+          Math.sin(runtimeTime * bank.userData.speed * 0.14 + index * 0.8) *
             (5.5 + index * 1.7)
         bank.position.y =
           bank.userData.baseY +
-          Math.sin(state.clock.elapsedTime * 0.075 + index * 1.4) * (0.7 + index * 0.17)
+          Math.sin(runtimeTime * 0.075 + index * 1.4) * (0.7 + index * 0.17)
       })
     }
     if (openValleyAtmosphereRef.current) {
@@ -3440,7 +3471,7 @@ export default function JourneyV3Scene({
           material.color.copy(atmosphereColor)
         }
         layer.position.x = layer.userData.baseX +
-          Math.sin(state.clock.elapsedTime * (0.025 + index * 0.006) + index) * (3.2 + index)
+          Math.sin(runtimeTime * (0.025 + index * 0.006) + index) * (3.2 + index)
       })
     }
 
@@ -3532,7 +3563,7 @@ export default function JourneyV3Scene({
     )
     if (starMaterialRef.current) {
       starMaterialRef.current.uniforms.uJourneyOpacity.value = starOpacity
-      starMaterialRef.current.uniforms.uJourneyTime.value = state.clock.elapsedTime
+      starMaterialRef.current.uniforms.uJourneyTime.value = runtimeTime
     }
     const bridgeReveal = smoothstep(0, 0.72, skyConnectionProgress)
     const milkyWayReveal = smoothstep(0.28, 1, skyConnectionProgress)
@@ -3542,11 +3573,11 @@ export default function JourneyV3Scene({
       uniforms.uJourneyReveal.value = bridgeReveal
       uniforms.uJourneyOpacity.value =
         smoothstep(0, 0.08, skyConnectionProgress) * bridgeFade
-      uniforms.uJourneyTime.value = state.clock.elapsedTime
+      uniforms.uJourneyTime.value = runtimeTime
     }
     if (milkyMaterialRef.current) {
       milkyMaterialRef.current.uniforms.uJourneyOpacity.value = milkyWayReveal * 0.94
-      milkyMaterialRef.current.uniforms.uJourneyTime.value = state.clock.elapsedTime
+      milkyMaterialRef.current.uniforms.uJourneyTime.value = runtimeTime
     }
     if (milkyPointsRef.current) {
       milkyPointsRef.current.geometry.setDrawRange(
@@ -3562,7 +3593,7 @@ export default function JourneyV3Scene({
       seatedFigureMaterialRef.current.uniforms.uJourneyMorph.value = figurePresence
       seatedFigureMaterialRef.current.uniforms.uJourneyOpacity.value =
         smoothstep(80, 82.8, progress) * (1 - smoothstep(97, 100, progress)) * 0.96
-      seatedFigureMaterialRef.current.uniforms.uJourneyTime.value = state.clock.elapsedTime
+      seatedFigureMaterialRef.current.uniforms.uJourneyTime.value = runtimeTime
     }
     if (seatedFigureSilhouetteMaterialRef.current) {
       const silhouetteReveal = smoothstep(81.15, 82.65, progress)
@@ -3613,7 +3644,7 @@ export default function JourneyV3Scene({
         uniforms.uJourneyNight.value = night
         uniforms.uJourneyRiverLight.value = night * skyConnectionProgress * 0.16
         uniforms.uJourneyDiscovery.value = 0
-        uniforms.uJourneyTime.value = state.clock.elapsedTime
+        uniforms.uJourneyTime.value = runtimeTime
       }
     })
     phase2Groups.forest.forEach((mesh) => {
@@ -3635,8 +3666,8 @@ export default function JourneyV3Scene({
         .lerp(new THREE.Color('#efb7a0'), sunset * 0.58)
         .lerp(new THREE.Color('#8195a8'), night * 0.82)
       const base = cloud.userData.journeyBasePosition
-      cloud.position.x = base.x + Math.sin(state.clock.elapsedTime * (0.018 + index * 0.004) + index) * (1.2 + index * 0.35)
-      cloud.position.y = base.y + Math.sin(state.clock.elapsedTime * 0.011 + index * 1.7) * 0.5
+      cloud.position.x = base.x + Math.sin(runtimeTime * (0.018 + index * 0.004) + index) * (1.2 + index * 0.35)
+      cloud.position.y = base.y + Math.sin(runtimeTime * 0.011 + index * 1.7) * 0.5
     })
     const discoverySignal = Math.max(
       pointerLookRef.current.x,
@@ -3654,7 +3685,7 @@ export default function JourneyV3Scene({
     }
     if (cloudbreakRef.current) {
       cloudbreakRef.current.position.x =
-        56 + Math.sin(state.clock.elapsedTime * 0.035) * 4.5
+        56 + Math.sin(runtimeTime * 0.035) * 4.5
     }
     if (motesMaterialRef.current) {
       motesMaterialRef.current.opacity =
@@ -3666,11 +3697,11 @@ export default function JourneyV3Scene({
     }
     if (motesRef.current) {
       motesRef.current.rotation.y =
-        Math.sin(state.clock.elapsedTime * 0.065) * 0.035 +
+        Math.sin(runtimeTime * 0.065) * 0.035 +
         travelWindRef.current * 0.12
       motesRef.current.position.x = travelWindRef.current * 1.8
       motesRef.current.position.y =
-        Math.sin(state.clock.elapsedTime * 0.19) * 0.7 +
+        Math.sin(runtimeTime * 0.19) * 0.7 +
         travelWindRef.current * 0.44
     }
     if (mysticLightRef.current) {
@@ -3685,9 +3716,9 @@ export default function JourneyV3Scene({
       distantBirdsMaterialRef.current.opacity =
         openValley * (1 - night) * discovery * 0.38
       distantBirdsRef.current.position.x =
-        24 + Math.sin(state.clock.elapsedTime * 0.17) * 4.2
+        24 + Math.sin(runtimeTime * 0.17) * 4.2
       distantBirdsRef.current.position.y =
-        42 + Math.sin(state.clock.elapsedTime * 0.23) * 1.1
+        42 + Math.sin(runtimeTime * 0.23) * 1.1
     }
 
     const riverPromptGlow = activeGate === 'river'
@@ -3712,7 +3743,7 @@ export default function JourneyV3Scene({
             night * Math.max(riverGlow * 0.92, skyConnectionProgress * 0.72)
           uniforms.uJourneyDiscovery.value =
             openValley * (1 - night) * (0.045 + cloudbreakDiscovery * 0.955)
-          uniforms.uJourneyTime.value = state.clock.elapsedTime
+          uniforms.uJourneyTime.value = runtimeTime
         }
       })
     })
@@ -3762,13 +3793,13 @@ export default function JourneyV3Scene({
           uniforms.uJourneyNight.value = night
           uniforms.uJourneyRiverGlow.value = riverGlow
           uniforms.uJourneySkyConnect.value = skyConnectionProgress
-          uniforms.uJourneyTime.value = state.clock.elapsedTime
+          uniforms.uJourneyTime.value = runtimeTime
           uniforms.uJourneyTravelWind.value = travelWindRef.current
         }
         if (material.map) {
           material.map.wrapS = THREE.RepeatWrapping
           material.map.wrapT = THREE.RepeatWrapping
-          material.map.offset.y = (material.map.offset.y - delta * (0.018 + index * 0.002)) % 1
+          material.map.offset.y = (material.map.offset.y - runtimeDelta * (0.018 + index * 0.002)) % 1
         }
       })
     })
@@ -3777,13 +3808,13 @@ export default function JourneyV3Scene({
       if (!uniforms) return
       uniforms.uJourneyGlow.value = riverGlow
       uniforms.uJourneySkyConnect.value = skyConnectionProgress
-      uniforms.uJourneyTime.value = state.clock.elapsedTime
+      uniforms.uJourneyTime.value = runtimeTime
       mesh.visible = night > 0.06 && riverGlow > 0.01
     })
     groups.foliage.forEach((mesh, index) => {
       const baseRotation = mesh.userData.journeyBaseRotationZ ?? 0
       mesh.rotation.z =
-        baseRotation + Math.sin(state.clock.elapsedTime * 0.45 + index * 1.7) * 0.0022
+        baseRotation + Math.sin(runtimeTime * 0.45 + index * 1.7) * 0.0022
     })
 
     const cavePresence = 1 - smoothstep(13.5, 20.2, progress)
@@ -3812,6 +3843,38 @@ export default function JourneyV3Scene({
     groups.characters.forEach((object) => {
       object.visible = false
     })
+
+    if (
+      captureMode &&
+      !capturePublishedRef.current &&
+      camera?.isCamera &&
+      clip
+    ) {
+      capturePublishedRef.current = true
+      const snapshot = createJourneyV3CameraCapture({
+        renderer,
+        scene,
+        camera,
+        mainRoot: root,
+        phase2Root,
+        upperGroup: skyRigRef.current,
+        clip,
+        clipTime,
+        normalizedClipProgress: clip.duration > 0 ? clipTime / clip.duration : 0,
+        storyProgress: progress,
+        mappedClipProgress,
+        activeGate,
+        holdProgress,
+        fogCompleted,
+        skyConnectionProgress,
+        preview: capturePreview,
+        gitCommit: captureGitCommit,
+        viewport: size,
+        sunsetProgress: sunset,
+        nightProgress: night,
+      })
+      publishJourneyV3CameraCapture(snapshot)
+    }
   })
 
   return (
@@ -3902,7 +3965,7 @@ export default function JourneyV3Scene({
         groupRef={cloudGroupRef}
         materialRefs={cloudMaterialRefs}
       />
-      <group ref={skyRigRef}>
+      <group ref={skyRigRef} name="JOURNEY_V3_SKY_RIG">
         <CloudbreakLight
           spriteRef={cloudbreakRef}
           materialRef={cloudbreakMaterialRef}
