@@ -1,0 +1,1868 @@
+{
+  "schemaVersion": 2,
+  "phase": "Journey V3 Phase 1C.1",
+  "visualVersion": "v002",
+  "sourceBlend": "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/work/blender/journey-v3/phase1b/journey-v3-spatial-reference-v001.blend",
+  "sourceBlendSha256": "bde155848309f8141b4535b7590788db6ce86068bd9b1a73384d6971ca19f58e",
+  "protectedV001Blend": "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/work/blender/journey-v3/phase1c/journey-v3-macro-massing-v001.blend",
+  "protectedV001Sha256": "6af3e6a666293a924e915ee3d374a241467c8eb2647753346af3347d612aa920",
+  "outputBlend": "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/work/blender/journey-v3/phase1c/journey-v3-macro-massing-v002.blend",
+  "reviewOnly": false,
+  "selectedCandidate": "V002",
+  "candidateIntent": {
+    "A2": "Montfort-dominant asymmetric diagonal valley",
+    "B2": "Hero Valley open mountain range",
+    "V002": "Selected Hybrid v002: receded Montfort shoulder with open Hero Valley range"
+  },
+  "lockedReferenceSignatureBefore": "7e2c2d841e24d27055f92d6323ef2dd0c1bb0c8e0b79138f281a9218a7d140e2",
+  "lockedReferenceSignatureAfter": "7e2c2d841e24d27055f92d6323ef2dd0c1bb0c8e0b79138f281a9218a7d140e2",
+  "lockedReferenceUnchanged": true,
+  "candidateObjects": {
+    "A2": [
+      {
+        "name": "CANDIDATE_A2_PRIMARY_MASSIF",
+        "type": "MESH",
+        "candidate": "A2",
+        "role": "dominant-massif",
+        "cycle": 3,
+        "exportEnabled": false,
+        "transform": [
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "vertexCount": 4256,
+        "polygonCount": 4125,
+        "geometrySha256": "0a7c58296f9830ce3e9b3439eb90fafe17b7afd2776ab93720f90292b40c1e32",
+        "bounds": {
+          "min": [
+            -270.0,
+            62.0,
+            2.7160000801086426
+          ],
+          "max": [
+            -45.17989730834961,
+            354.0,
+            152.8824920654297
+          ]
+        },
+        "attributes": [
+          ".corner_edge",
+          ".corner_vert",
+          ".edge_verts",
+          ".select_edge",
+          ".select_poly",
+          ".select_vert",
+          "FLOWER_POTENTIAL",
+          "FOREST",
+          "GRASS",
+          "RIVER_EXCLUSION",
+          "ROCK",
+          "SNOW",
+          "WET",
+          "WIND_REACTIVE_VEGETATION",
+          "ZONE_REVIEW_COLOR",
+          "material_index",
+          "position",
+          "sharp_face"
+        ]
+      },
+      {
+        "name": "CANDIDATE_A2_OPPOSING_RIDGES",
+        "type": "MESH",
+        "candidate": "A2",
+        "role": "receding-side-ridges",
+        "cycle": 3,
+        "exportEnabled": false,
+        "transform": [
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "vertexCount": 4256,
+        "polygonCount": 4125,
+        "geometrySha256": "9be8c699df516b49d4d0135cfae1345497f30bd93e6ea2bfe99534b447bf5a7e",
+        "bounds": {
+          "min": [
+            13.392694473266602,
+            138.0,
+            4.084000110626221
+          ],
+          "max": [
+            248.0,
+            410.0,
+            91.3896484375
+          ]
+        },
+        "attributes": [
+          ".corner_edge",
+          ".corner_vert",
+          ".edge_verts",
+          ".select_edge",
+          ".select_poly",
+          ".select_vert",
+          "FLOWER_POTENTIAL",
+          "FOREST",
+          "GRASS",
+          "RIVER_EXCLUSION",
+          "ROCK",
+          "SNOW",
+          "WET",
+          "WIND_REACTIVE_VEGETATION",
+          "ZONE_REVIEW_COLOR",
+          "material_index",
+          "position",
+          "sharp_face"
+        ]
+      },
+      {
+        "name": "CANDIDATE_A2_MIDGROUND_RANGE",
+        "type": "MESH",
+        "candidate": "A2",
+        "role": "midground-range",
+        "cycle": 3,
+        "exportEnabled": false,
+        "transform": [
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "vertexCount": 1872,
+        "polygonCount": 1751,
+        "geometrySha256": "f9e54d627b62d818227c259a3fe14ce1d2f92197b9b6340c241f7e48d2cd5f0c",
+        "bounds": {
+          "min": [
+            -310.0,
+            300.0,
+            7.300000190734863
+          ],
+          "max": [
+            310.0,
+            408.0,
+            82.8140869140625
+          ]
+        },
+        "attributes": [
+          ".corner_edge",
+          ".corner_vert",
+          ".edge_verts",
+          ".select_edge",
+          ".select_poly",
+          ".select_vert",
+          "FLOWER_POTENTIAL",
+          "FOREST",
+          "GRASS",
+          "RIVER_EXCLUSION",
+          "ROCK",
+          "SNOW",
+          "WET",
+          "WIND_REACTIVE_VEGETATION",
+          "ZONE_REVIEW_COLOR",
+          "material_index",
+          "position",
+          "sharp_face"
+        ]
+      },
+      {
+        "name": "CANDIDATE_A2_DISTANT_RANGE",
+        "type": "MESH",
+        "candidate": "A2",
+        "role": "distant-range",
+        "cycle": 3,
+        "exportEnabled": false,
+        "transform": [
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "vertexCount": 1872,
+        "polygonCount": 1751,
+        "geometrySha256": "7550a46d2150af94f3263c0917e33503a5433178f1b90ea0876bef17c8904be3",
+        "bounds": {
+          "min": [
+            -348.0,
+            414.0,
+            9.23799991607666
+          ],
+          "max": [
+            348.0,
+            536.0,
+            76.4674301147461
+          ]
+        },
+        "attributes": [
+          ".corner_edge",
+          ".corner_vert",
+          ".edge_verts",
+          ".select_edge",
+          ".select_poly",
+          ".select_vert",
+          "FLOWER_POTENTIAL",
+          "FOREST",
+          "GRASS",
+          "RIVER_EXCLUSION",
+          "ROCK",
+          "SNOW",
+          "WET",
+          "WIND_REACTIVE_VEGETATION",
+          "ZONE_REVIEW_COLOR",
+          "material_index",
+          "position",
+          "sharp_face"
+        ]
+      },
+      {
+        "name": "CANDIDATE_A2_VALLEY_FLOOR",
+        "type": "MESH",
+        "candidate": "A2",
+        "role": "continuous-valley-floor",
+        "cycle": 3,
+        "exportEnabled": false,
+        "transform": [
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "vertexCount": 1504,
+        "polygonCount": 1426,
+        "geometrySha256": "5dae92aa66185eb3aa6e3987d47a1cc0472352eb9f1f8ec524ba521f2c4c8867",
+        "bounds": {
+          "min": [
+            -198.9764404296875,
+            150.0,
+            1.5964211225509644
+          ],
+          "max": [
+            178.82620239257812,
+            388.0,
+            12.556884765625
+          ]
+        },
+        "attributes": [
+          ".corner_edge",
+          ".corner_vert",
+          ".edge_verts",
+          ".select_edge",
+          ".select_poly",
+          ".select_vert",
+          "FLOWER_POTENTIAL",
+          "FOREST",
+          "GRASS",
+          "RIVER_EXCLUSION",
+          "ROCK",
+          "SNOW",
+          "WET",
+          "WIND_REACTIVE_VEGETATION",
+          "ZONE_REVIEW_COLOR",
+          "material_index",
+          "position",
+          "sharp_face"
+        ]
+      },
+      {
+        "name": "CANDIDATE_A2_MEADOW_BASE",
+        "type": "MESH",
+        "candidate": "A2",
+        "role": "continuous-meadow-terrain",
+        "cycle": 3,
+        "exportEnabled": false,
+        "transform": [
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "vertexCount": 1786,
+        "polygonCount": 1702,
+        "geometrySha256": "31acce1ea011bedd3c2a477aa04003c0d58a82dbd9400996af0cefbe86978ff7",
+        "bounds": {
+          "min": [
+            -156.98048400878906,
+            -42.0,
+            -2.9039454460144043
+          ],
+          "max": [
+            144.19973754882812,
+            182.0,
+            6.439621925354004
+          ]
+        },
+        "attributes": [
+          ".corner_edge",
+          ".corner_vert",
+          ".edge_verts",
+          ".select_edge",
+          ".select_poly",
+          ".select_vert",
+          "FLOWER_POTENTIAL",
+          "FOREST",
+          "GRASS",
+          "RIVER_EXCLUSION",
+          "ROCK",
+          "SNOW",
+          "WET",
+          "WIND_REACTIVE_VEGETATION",
+          "ZONE_REVIEW_COLOR",
+          "material_index",
+          "position",
+          "sharp_face"
+        ]
+      },
+      {
+        "name": "CANDIDATE_A2_RIVERBED_PROXY",
+        "type": "MESH",
+        "candidate": "A2",
+        "role": "single-riverbed",
+        "cycle": 3,
+        "exportEnabled": false,
+        "transform": [
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "vertexCount": 650,
+        "polygonCount": 588,
+        "geometrySha256": "3480b0990e7edfe96f814c590721ff1608ccdebde5cf786c32e8bfb7e69767fd",
+        "bounds": {
+          "min": [
+            -41.143211364746094,
+            -42.0,
+            -2.4000000953674316
+          ],
+          "max": [
+            38.57938003540039,
+            360.0,
+            7.420000076293945
+          ]
+        },
+        "attributes": [
+          ".corner_edge",
+          ".corner_vert",
+          ".edge_verts",
+          ".select_edge",
+          ".select_poly",
+          ".select_vert",
+          "FLOWER_POTENTIAL",
+          "FOREST",
+          "GRASS",
+          "RIVER_EXCLUSION",
+          "ROCK",
+          "SNOW",
+          "WET",
+          "WIND_REACTIVE_VEGETATION",
+          "ZONE_REVIEW_COLOR",
+          "material_index",
+          "position",
+          "sharp_face"
+        ]
+      },
+      {
+        "name": "CANDIDATE_A2_LEFT_RIVERBANK_PROXY",
+        "type": "MESH",
+        "candidate": "A2",
+        "role": "irregular-riverbank",
+        "cycle": 3,
+        "exportEnabled": false,
+        "transform": [
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "vertexCount": 250,
+        "polygonCount": 196,
+        "geometrySha256": "a83603d4ea52d1759b853fca2922727f6bbc2dfcbf778c84a877925164a7ab92",
+        "bounds": {
+          "min": [
+            -47.1387939453125,
+            -42.0,
+            -1.9196842908859253
+          ],
+          "max": [
+            0.6499739289283752,
+            360.0,
+            9.331313133239746
+          ]
+        },
+        "attributes": [
+          ".corner_edge",
+          ".corner_vert",
+          ".edge_verts",
+          ".select_edge",
+          ".select_poly",
+          ".select_vert",
+          "FLOWER_POTENTIAL",
+          "FOREST",
+          "GRASS",
+          "RIVER_EXCLUSION",
+          "ROCK",
+          "SNOW",
+          "WET",
+          "WIND_REACTIVE_VEGETATION",
+          "ZONE_REVIEW_COLOR",
+          "material_index",
+          "position",
+          "sharp_face"
+        ]
+      },
+      {
+        "name": "CANDIDATE_A2_RIGHT_RIVERBANK_PROXY",
+        "type": "MESH",
+        "candidate": "A2",
+        "role": "irregular-riverbank",
+        "cycle": 3,
+        "exportEnabled": false,
+        "transform": [
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "vertexCount": 250,
+        "polygonCount": 196,
+        "geometrySha256": "6fc965f42557556189fa715d21b7a24e90d482e2b09c01f8ade1763abf500c58",
+        "bounds": {
+          "min": [
+            -13.911380767822266,
+            -42.0,
+            -1.8631311655044556
+          ],
+          "max": [
+            45.468650817871094,
+            360.0,
+            9.132917404174805
+          ]
+        },
+        "attributes": [
+          ".corner_edge",
+          ".corner_vert",
+          ".edge_verts",
+          ".select_edge",
+          ".select_poly",
+          ".select_vert",
+          "FLOWER_POTENTIAL",
+          "FOREST",
+          "GRASS",
+          "RIVER_EXCLUSION",
+          "ROCK",
+          "SNOW",
+          "WET",
+          "WIND_REACTIVE_VEGETATION",
+          "ZONE_REVIEW_COLOR",
+          "material_index",
+          "position",
+          "sharp_face"
+        ]
+      }
+    ],
+    "B2": [
+      {
+        "name": "CANDIDATE_B2_PRIMARY_MASSIF",
+        "type": "MESH",
+        "candidate": "B2",
+        "role": "dominant-massif",
+        "cycle": 3,
+        "exportEnabled": false,
+        "transform": [
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "vertexCount": 4256,
+        "polygonCount": 4125,
+        "geometrySha256": "b1946cac3860a94b8e13d64bc1fabd45de285bdd2a9f26b52ddf92802707a660",
+        "bounds": {
+          "min": [
+            39.58683776855469,
+            146.0,
+            4.228000164031982
+          ],
+          "max": [
+            268.0,
+            418.0,
+            81.96192932128906
+          ]
+        },
+        "attributes": [
+          ".corner_edge",
+          ".corner_vert",
+          ".edge_verts",
+          ".select_edge",
+          ".select_poly",
+          ".select_vert",
+          "FLOWER_POTENTIAL",
+          "FOREST",
+          "GRASS",
+          "RIVER_EXCLUSION",
+          "ROCK",
+          "SNOW",
+          "WET",
+          "WIND_REACTIVE_VEGETATION",
+          "ZONE_REVIEW_COLOR",
+          "material_index",
+          "position",
+          "sharp_face"
+        ]
+      },
+      {
+        "name": "CANDIDATE_B2_OPPOSING_RIDGES",
+        "type": "MESH",
+        "candidate": "B2",
+        "role": "receding-side-ridges",
+        "cycle": 3,
+        "exportEnabled": false,
+        "transform": [
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "vertexCount": 4256,
+        "polygonCount": 4125,
+        "geometrySha256": "48a99e6d5872f2c7bbc8780468b12b52ce35379f05e7399dd7c5e37bf6f4ea91",
+        "bounds": {
+          "min": [
+            -272.0,
+            126.0,
+            3.868000030517578
+          ],
+          "max": [
+            -38.47520446777344,
+            405.0,
+            86.78495788574219
+          ]
+        },
+        "attributes": [
+          ".corner_edge",
+          ".corner_vert",
+          ".edge_verts",
+          ".select_edge",
+          ".select_poly",
+          ".select_vert",
+          "FLOWER_POTENTIAL",
+          "FOREST",
+          "GRASS",
+          "RIVER_EXCLUSION",
+          "ROCK",
+          "SNOW",
+          "WET",
+          "WIND_REACTIVE_VEGETATION",
+          "ZONE_REVIEW_COLOR",
+          "material_index",
+          "position",
+          "sharp_face"
+        ]
+      },
+      {
+        "name": "CANDIDATE_B2_MIDGROUND_RANGE",
+        "type": "MESH",
+        "candidate": "B2",
+        "role": "midground-range",
+        "cycle": 3,
+        "exportEnabled": false,
+        "transform": [
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "vertexCount": 1872,
+        "polygonCount": 1751,
+        "geometrySha256": "4b0435b1ea2b6df5791056fe5f2e8cb4ddf964b56a1a80e6ce9e72545f886d2c",
+        "bounds": {
+          "min": [
+            -310.0,
+            310.0,
+            7.46999979019165
+          ],
+          "max": [
+            310.0,
+            418.0,
+            91.55781555175781
+          ]
+        },
+        "attributes": [
+          ".corner_edge",
+          ".corner_vert",
+          ".edge_verts",
+          ".select_edge",
+          ".select_poly",
+          ".select_vert",
+          "FLOWER_POTENTIAL",
+          "FOREST",
+          "GRASS",
+          "RIVER_EXCLUSION",
+          "ROCK",
+          "SNOW",
+          "WET",
+          "WIND_REACTIVE_VEGETATION",
+          "ZONE_REVIEW_COLOR",
+          "material_index",
+          "position",
+          "sharp_face"
+        ]
+      },
+      {
+        "name": "CANDIDATE_B2_DISTANT_RANGE",
+        "type": "MESH",
+        "candidate": "B2",
+        "role": "distant-range",
+        "cycle": 3,
+        "exportEnabled": false,
+        "transform": [
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "vertexCount": 1872,
+        "polygonCount": 1751,
+        "geometrySha256": "8f525135452bb0f46c12b6df4bdadae9052f3203ffc001835511960ac232d647",
+        "bounds": {
+          "min": [
+            -348.0,
+            424.0,
+            9.407999992370605
+          ],
+          "max": [
+            348.0,
+            546.0,
+            87.12366485595703
+          ]
+        },
+        "attributes": [
+          ".corner_edge",
+          ".corner_vert",
+          ".edge_verts",
+          ".select_edge",
+          ".select_poly",
+          ".select_vert",
+          "FLOWER_POTENTIAL",
+          "FOREST",
+          "GRASS",
+          "RIVER_EXCLUSION",
+          "ROCK",
+          "SNOW",
+          "WET",
+          "WIND_REACTIVE_VEGETATION",
+          "ZONE_REVIEW_COLOR",
+          "material_index",
+          "position",
+          "sharp_face"
+        ]
+      },
+      {
+        "name": "CANDIDATE_B2_VALLEY_FLOOR",
+        "type": "MESH",
+        "candidate": "B2",
+        "role": "continuous-valley-floor",
+        "cycle": 3,
+        "exportEnabled": false,
+        "transform": [
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "vertexCount": 1504,
+        "polygonCount": 1426,
+        "geometrySha256": "d5e7b0046bfbe822f96236b1d900701f66cb11e10099b84d7d40c9482361d571",
+        "bounds": {
+          "min": [
+            -210.9764404296875,
+            150.0,
+            0.6643534302711487
+          ],
+          "max": [
+            178.82620239257812,
+            388.0,
+            12.793678283691406
+          ]
+        },
+        "attributes": [
+          ".corner_edge",
+          ".corner_vert",
+          ".edge_verts",
+          ".select_edge",
+          ".select_poly",
+          ".select_vert",
+          "FLOWER_POTENTIAL",
+          "FOREST",
+          "GRASS",
+          "RIVER_EXCLUSION",
+          "ROCK",
+          "SNOW",
+          "WET",
+          "WIND_REACTIVE_VEGETATION",
+          "ZONE_REVIEW_COLOR",
+          "material_index",
+          "position",
+          "sharp_face"
+        ]
+      },
+      {
+        "name": "CANDIDATE_B2_MEADOW_BASE",
+        "type": "MESH",
+        "candidate": "B2",
+        "role": "continuous-meadow-terrain",
+        "cycle": 3,
+        "exportEnabled": false,
+        "transform": [
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "vertexCount": 1786,
+        "polygonCount": 1702,
+        "geometrySha256": "0b16fe3c096b738b6917522009aeb93d90c51b388c117c67f0174a5a07e1e143",
+        "bounds": {
+          "min": [
+            -194.98048400878906,
+            -42.0,
+            -4.013609886169434
+          ],
+          "max": [
+            167.59974670410156,
+            182.0,
+            6.471096515655518
+          ]
+        },
+        "attributes": [
+          ".corner_edge",
+          ".corner_vert",
+          ".edge_verts",
+          ".select_edge",
+          ".select_poly",
+          ".select_vert",
+          "FLOWER_POTENTIAL",
+          "FOREST",
+          "GRASS",
+          "RIVER_EXCLUSION",
+          "ROCK",
+          "SNOW",
+          "WET",
+          "WIND_REACTIVE_VEGETATION",
+          "ZONE_REVIEW_COLOR",
+          "material_index",
+          "position",
+          "sharp_face"
+        ]
+      },
+      {
+        "name": "CANDIDATE_B2_RIVERBED_PROXY",
+        "type": "MESH",
+        "candidate": "B2",
+        "role": "single-riverbed",
+        "cycle": 3,
+        "exportEnabled": false,
+        "transform": [
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "vertexCount": 650,
+        "polygonCount": 588,
+        "geometrySha256": "6637d931ec919c7b02d96c413d8f357c720b743c3520b958b097821f363ad5f4",
+        "bounds": {
+          "min": [
+            -41.04890441894531,
+            -42.0,
+            -2.4000000953674316
+          ],
+          "max": [
+            39.395538330078125,
+            360.0,
+            7.420000076293945
+          ]
+        },
+        "attributes": [
+          ".corner_edge",
+          ".corner_vert",
+          ".edge_verts",
+          ".select_edge",
+          ".select_poly",
+          ".select_vert",
+          "FLOWER_POTENTIAL",
+          "FOREST",
+          "GRASS",
+          "RIVER_EXCLUSION",
+          "ROCK",
+          "SNOW",
+          "WET",
+          "WIND_REACTIVE_VEGETATION",
+          "ZONE_REVIEW_COLOR",
+          "material_index",
+          "position",
+          "sharp_face"
+        ]
+      },
+      {
+        "name": "CANDIDATE_B2_LEFT_RIVERBANK_PROXY",
+        "type": "MESH",
+        "candidate": "B2",
+        "role": "irregular-riverbank",
+        "cycle": 3,
+        "exportEnabled": false,
+        "transform": [
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "vertexCount": 250,
+        "polygonCount": 196,
+        "geometrySha256": "82751c66a03446f7852662ea26ea604d8b08f053a36dd239fc48e962e5180e77",
+        "bounds": {
+          "min": [
+            -44.123104095458984,
+            -42.0,
+            -1.9196842908859253
+          ],
+          "max": [
+            4.654040813446045,
+            360.0,
+            9.331313133239746
+          ]
+        },
+        "attributes": [
+          ".corner_edge",
+          ".corner_vert",
+          ".edge_verts",
+          ".select_edge",
+          ".select_poly",
+          ".select_vert",
+          "FLOWER_POTENTIAL",
+          "FOREST",
+          "GRASS",
+          "RIVER_EXCLUSION",
+          "ROCK",
+          "SNOW",
+          "WET",
+          "WIND_REACTIVE_VEGETATION",
+          "ZONE_REVIEW_COLOR",
+          "material_index",
+          "position",
+          "sharp_face"
+        ]
+      },
+      {
+        "name": "CANDIDATE_B2_RIGHT_RIVERBANK_PROXY",
+        "type": "MESH",
+        "candidate": "B2",
+        "role": "irregular-riverbank",
+        "cycle": 3,
+        "exportEnabled": false,
+        "transform": [
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "vertexCount": 250,
+        "polygonCount": 196,
+        "geometrySha256": "fcc97b9c9d0c8f817473097c5b433036baf93ebbddb16b03be0f48ebb96cb6c1",
+        "bounds": {
+          "min": [
+            -6.177430629730225,
+            -42.0,
+            -1.8631311655044556
+          ],
+          "max": [
+            42.905494689941406,
+            360.0,
+            9.132917404174805
+          ]
+        },
+        "attributes": [
+          ".corner_edge",
+          ".corner_vert",
+          ".edge_verts",
+          ".select_edge",
+          ".select_poly",
+          ".select_vert",
+          "FLOWER_POTENTIAL",
+          "FOREST",
+          "GRASS",
+          "RIVER_EXCLUSION",
+          "ROCK",
+          "SNOW",
+          "WET",
+          "WIND_REACTIVE_VEGETATION",
+          "ZONE_REVIEW_COLOR",
+          "material_index",
+          "position",
+          "sharp_face"
+        ]
+      }
+    ]
+  },
+  "selectedObjects": [
+    {
+      "name": "V3_V002_PRIMARY_MASSIF",
+      "type": "MESH",
+      "candidate": "V002",
+      "role": "dominant-massif",
+      "cycle": 4,
+      "exportEnabled": true,
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "vertexCount": 4256,
+      "polygonCount": 4125,
+      "geometrySha256": "235a0fdfc5288b8ee325b4ad9c446558383164c6e961bf4a91fbfdb8897946d4",
+      "bounds": {
+        "min": [
+          -282.0,
+          96.0,
+          3.328000068664551
+        ],
+        "max": [
+          -44.361968994140625,
+          384.0,
+          105.32618713378906
+        ]
+      },
+      "attributes": [
+        ".corner_edge",
+        ".corner_vert",
+        ".edge_verts",
+        ".select_edge",
+        ".select_poly",
+        ".select_vert",
+        "FLOWER_POTENTIAL",
+        "FOREST",
+        "GRASS",
+        "RIVER_EXCLUSION",
+        "ROCK",
+        "SNOW",
+        "WET",
+        "WIND_REACTIVE_VEGETATION",
+        "ZONE_REVIEW_COLOR",
+        "material_index",
+        "position",
+        "sharp_face"
+      ]
+    },
+    {
+      "name": "V3_V002_OPPOSING_RIDGES",
+      "type": "MESH",
+      "candidate": "V002",
+      "role": "receding-side-ridges",
+      "cycle": 4,
+      "exportEnabled": true,
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "vertexCount": 4256,
+      "polygonCount": 4125,
+      "geometrySha256": "e49be6a004408e8923fe332967ee0779008bb810720b7c787c98736d21d34fc3",
+      "bounds": {
+        "min": [
+          26.766613006591797,
+          154.0,
+          4.372000217437744
+        ],
+        "max": [
+          270.0,
+          432.0,
+          76.04653930664062
+        ]
+      },
+      "attributes": [
+        ".corner_edge",
+        ".corner_vert",
+        ".edge_verts",
+        ".select_edge",
+        ".select_poly",
+        ".select_vert",
+        "FLOWER_POTENTIAL",
+        "FOREST",
+        "GRASS",
+        "RIVER_EXCLUSION",
+        "ROCK",
+        "SNOW",
+        "WET",
+        "WIND_REACTIVE_VEGETATION",
+        "ZONE_REVIEW_COLOR",
+        "material_index",
+        "position",
+        "sharp_face"
+      ]
+    },
+    {
+      "name": "V3_V002_MIDGROUND_RANGE",
+      "type": "MESH",
+      "candidate": "V002",
+      "role": "midground-range",
+      "cycle": 4,
+      "exportEnabled": true,
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "vertexCount": 1872,
+      "polygonCount": 1751,
+      "geometrySha256": "dbd75060a6f7ec54b8503269a6876361d94c15d8b2e9ba980938feb1e7f95b16",
+      "bounds": {
+        "min": [
+          -310.0,
+          300.0,
+          7.300000190734863
+        ],
+        "max": [
+          310.0,
+          408.0,
+          149.8914337158203
+        ]
+      },
+      "attributes": [
+        ".corner_edge",
+        ".corner_vert",
+        ".edge_verts",
+        ".select_edge",
+        ".select_poly",
+        ".select_vert",
+        "FLOWER_POTENTIAL",
+        "FOREST",
+        "GRASS",
+        "RIVER_EXCLUSION",
+        "ROCK",
+        "SNOW",
+        "WET",
+        "WIND_REACTIVE_VEGETATION",
+        "ZONE_REVIEW_COLOR",
+        "material_index",
+        "position",
+        "sharp_face"
+      ]
+    },
+    {
+      "name": "V3_V002_DISTANT_RANGE",
+      "type": "MESH",
+      "candidate": "V002",
+      "role": "distant-range",
+      "cycle": 4,
+      "exportEnabled": true,
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "vertexCount": 1872,
+      "polygonCount": 1751,
+      "geometrySha256": "cd458c9494d5acd06e7d3b534f2506f6d449dd0fe6941ddeb72fe17b38278811",
+      "bounds": {
+        "min": [
+          -348.0,
+          414.0,
+          9.23799991607666
+        ],
+        "max": [
+          348.0,
+          536.0,
+          138.52606201171875
+        ]
+      },
+      "attributes": [
+        ".corner_edge",
+        ".corner_vert",
+        ".edge_verts",
+        ".select_edge",
+        ".select_poly",
+        ".select_vert",
+        "FLOWER_POTENTIAL",
+        "FOREST",
+        "GRASS",
+        "RIVER_EXCLUSION",
+        "ROCK",
+        "SNOW",
+        "WET",
+        "WIND_REACTIVE_VEGETATION",
+        "ZONE_REVIEW_COLOR",
+        "material_index",
+        "position",
+        "sharp_face"
+      ]
+    },
+    {
+      "name": "V3_V002_VALLEY_FLOOR",
+      "type": "MESH",
+      "candidate": "V002",
+      "role": "continuous-valley-floor",
+      "cycle": 4,
+      "exportEnabled": true,
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "vertexCount": 1504,
+      "polygonCount": 1426,
+      "geometrySha256": "1aa5bc6dbfad5c0fb3d2c82dcb6d4d598bd45af8d97b79baf4c619ac2442f9eb",
+      "bounds": {
+        "min": [
+          -198.9764404296875,
+          150.0,
+          0.18779626488685608
+        ],
+        "max": [
+          178.82620239257812,
+          388.0,
+          12.633631706237793
+        ]
+      },
+      "attributes": [
+        ".corner_edge",
+        ".corner_vert",
+        ".edge_verts",
+        ".select_edge",
+        ".select_poly",
+        ".select_vert",
+        "FLOWER_POTENTIAL",
+        "FOREST",
+        "GRASS",
+        "RIVER_EXCLUSION",
+        "ROCK",
+        "SNOW",
+        "WET",
+        "WIND_REACTIVE_VEGETATION",
+        "ZONE_REVIEW_COLOR",
+        "material_index",
+        "position",
+        "sharp_face"
+      ]
+    },
+    {
+      "name": "V3_V002_MEADOW_BASE",
+      "type": "MESH",
+      "candidate": "V002",
+      "role": "continuous-meadow-terrain",
+      "cycle": 4,
+      "exportEnabled": true,
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "vertexCount": 1786,
+      "polygonCount": 1702,
+      "geometrySha256": "991a798ea99ceae5d882e7a459022783b339a1e43b30444a935bfbdf805d8757",
+      "bounds": {
+        "min": [
+          -176.98048400878906,
+          -42.0,
+          -3.2246177196502686
+        ],
+        "max": [
+          162.19973754882812,
+          182.0,
+          6.783734321594238
+        ]
+      },
+      "attributes": [
+        ".corner_edge",
+        ".corner_vert",
+        ".edge_verts",
+        ".select_edge",
+        ".select_poly",
+        ".select_vert",
+        "FLOWER_POTENTIAL",
+        "FOREST",
+        "GRASS",
+        "RIVER_EXCLUSION",
+        "ROCK",
+        "SNOW",
+        "WET",
+        "WIND_REACTIVE_VEGETATION",
+        "ZONE_REVIEW_COLOR",
+        "material_index",
+        "position",
+        "sharp_face"
+      ]
+    },
+    {
+      "name": "V3_V002_RIVERBED_PROXY",
+      "type": "MESH",
+      "candidate": "V002",
+      "role": "single-riverbed",
+      "cycle": 4,
+      "exportEnabled": true,
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "vertexCount": 650,
+      "polygonCount": 588,
+      "geometrySha256": "fbf017aa28b6a209714dbe361168af69dac25129caade39f34e94551a9fbe55c",
+      "bounds": {
+        "min": [
+          -36.91301727294922,
+          -42.0,
+          -2.4000000953674316
+        ],
+        "max": [
+          38.4290771484375,
+          360.0,
+          7.420000076293945
+        ]
+      },
+      "attributes": [
+        ".corner_edge",
+        ".corner_vert",
+        ".edge_verts",
+        ".select_edge",
+        ".select_poly",
+        ".select_vert",
+        "FLOWER_POTENTIAL",
+        "FOREST",
+        "GRASS",
+        "RIVER_EXCLUSION",
+        "ROCK",
+        "SNOW",
+        "WET",
+        "WIND_REACTIVE_VEGETATION",
+        "ZONE_REVIEW_COLOR",
+        "material_index",
+        "position",
+        "sharp_face"
+      ]
+    },
+    {
+      "name": "V3_V002_LEFT_RIVERBANK_PROXY",
+      "type": "MESH",
+      "candidate": "V002",
+      "role": "irregular-riverbank",
+      "cycle": 4,
+      "exportEnabled": true,
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "vertexCount": 250,
+      "polygonCount": 196,
+      "geometrySha256": "140d94847ebf6a0afe1348462f4c9608a7432f29ea227bef872598613c272135",
+      "bounds": {
+        "min": [
+          -44.100887298583984,
+          -42.0,
+          -1.9196842908859253
+        ],
+        "max": [
+          14.783486366271973,
+          360.0,
+          9.331313133239746
+        ]
+      },
+      "attributes": [
+        ".corner_edge",
+        ".corner_vert",
+        ".edge_verts",
+        ".select_edge",
+        ".select_poly",
+        ".select_vert",
+        "FLOWER_POTENTIAL",
+        "FOREST",
+        "GRASS",
+        "RIVER_EXCLUSION",
+        "ROCK",
+        "SNOW",
+        "WET",
+        "WIND_REACTIVE_VEGETATION",
+        "ZONE_REVIEW_COLOR",
+        "material_index",
+        "position",
+        "sharp_face"
+      ]
+    },
+    {
+      "name": "V3_V002_RIGHT_RIVERBANK_PROXY",
+      "type": "MESH",
+      "candidate": "V002",
+      "role": "irregular-riverbank",
+      "cycle": 4,
+      "exportEnabled": true,
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "vertexCount": 250,
+      "polygonCount": 196,
+      "geometrySha256": "f699cf2200f94f995caec116f359d81436646c163cbbda84d350ee96cdaa11c3",
+      "bounds": {
+        "min": [
+          -5.6995697021484375,
+          -42.0,
+          -1.8631311655044556
+        ],
+        "max": [
+          44.25792694091797,
+          360.0,
+          9.132917404174805
+        ]
+      },
+      "attributes": [
+        ".corner_edge",
+        ".corner_vert",
+        ".edge_verts",
+        ".select_edge",
+        ".select_poly",
+        ".select_vert",
+        "FLOWER_POTENTIAL",
+        "FOREST",
+        "GRASS",
+        "RIVER_EXCLUSION",
+        "ROCK",
+        "SNOW",
+        "WET",
+        "WIND_REACTIVE_VEGETATION",
+        "ZONE_REVIEW_COLOR",
+        "material_index",
+        "position",
+        "sharp_face"
+      ]
+    }
+  ],
+  "guides": [
+    "GUIDE_V002_LEFT_BANK",
+    "GUIDE_V002_RIGHT_BANK",
+    "GUIDE_V002_RIVER_CENTERLINE"
+  ],
+  "zones": [
+    "FLOWER_POTENTIAL",
+    "FOREST",
+    "GRASS",
+    "RIVER_EXCLUSION",
+    "ROCK",
+    "SNOW",
+    "WET",
+    "WIND_REACTIVE_VEGETATION"
+  ],
+  "cameraReview": [
+    {
+      "camera": "CAM_V3_CAVE_EXIT_1440x900",
+      "progress": 11.5,
+      "minimumMountainVertexDistance": 122.88270885315944,
+      "mountainVisibleSampleCount": 4645,
+      "riverVisibleSampleCount": 512,
+      "meadowVisibleYRange": [
+        -1.817679524421692,
+        0.22577013075351715
+      ]
+    },
+    {
+      "camera": "CAM_V3_DAY_CLEAR_LATE_1440x900",
+      "progress": 37.9,
+      "minimumMountainVertexDistance": 124.45449796243788,
+      "mountainVisibleSampleCount": 6838,
+      "riverVisibleSampleCount": 543,
+      "meadowVisibleYRange": [
+        -0.795518696308136,
+        0.2650231719017029
+      ]
+    },
+    {
+      "camera": "CAM_V3_DAY_CLEAR_START_1440x900",
+      "progress": 30,
+      "minimumMountainVertexDistance": 124.45449796243788,
+      "mountainVisibleSampleCount": 6838,
+      "riverVisibleSampleCount": 543,
+      "meadowVisibleYRange": [
+        -0.795518696308136,
+        0.2650231719017029
+      ]
+    },
+    {
+      "camera": "CAM_V3_SWEEP_P011_50",
+      "progress": 11.5,
+      "minimumMountainVertexDistance": 122.88270885315944,
+      "mountainVisibleSampleCount": 4645,
+      "riverVisibleSampleCount": 512,
+      "meadowVisibleYRange": [
+        -1.817679524421692,
+        0.22577013075351715
+      ]
+    },
+    {
+      "camera": "CAM_V3_SWEEP_P012_00",
+      "progress": 12,
+      "minimumMountainVertexDistance": 122.17215283846849,
+      "mountainVisibleSampleCount": 4623,
+      "riverVisibleSampleCount": 504,
+      "meadowVisibleYRange": [
+        -2.4115655422210693,
+        0.2244134545326233
+      ]
+    },
+    {
+      "camera": "CAM_V3_SWEEP_P013_50",
+      "progress": 13.5,
+      "minimumMountainVertexDistance": 121.31667648237675,
+      "mountainVisibleSampleCount": 4603,
+      "riverVisibleSampleCount": 502,
+      "meadowVisibleYRange": [
+        -3.7389001846313477,
+        0.2226743847131729
+      ]
+    },
+    {
+      "camera": "CAM_V3_SWEEP_P016_00",
+      "progress": 16,
+      "minimumMountainVertexDistance": 120.50144256721558,
+      "mountainVisibleSampleCount": 4592,
+      "riverVisibleSampleCount": 502,
+      "meadowVisibleYRange": [
+        -7.069662570953369,
+        0.2208978235721588
+      ]
+    },
+    {
+      "camera": "CAM_V3_SWEEP_P020_00",
+      "progress": 20,
+      "minimumMountainVertexDistance": 120.10278849669866,
+      "mountainVisibleSampleCount": 4774,
+      "riverVisibleSampleCount": 502,
+      "meadowVisibleYRange": [
+        -11.77480697631836,
+        0.22709622979164124
+      ]
+    },
+    {
+      "camera": "CAM_V3_SWEEP_P022_00",
+      "progress": 22,
+      "minimumMountainVertexDistance": 121.10799049616644,
+      "mountainVisibleSampleCount": 5506,
+      "riverVisibleSampleCount": 515,
+      "meadowVisibleYRange": [
+        -4.046023368835449,
+        0.24383589625358582
+      ]
+    },
+    {
+      "camera": "CAM_V3_SWEEP_P023_50",
+      "progress": 23.5,
+      "minimumMountainVertexDistance": 122.18954083453,
+      "mountainVisibleSampleCount": 6129,
+      "riverVisibleSampleCount": 528,
+      "meadowVisibleYRange": [
+        -2.0702922344207764,
+        0.2549647390842438
+      ]
+    },
+    {
+      "camera": "CAM_V3_SWEEP_P025_00",
+      "progress": 25,
+      "minimumMountainVertexDistance": 123.27698860780906,
+      "mountainVisibleSampleCount": 6537,
+      "riverVisibleSampleCount": 530,
+      "meadowVisibleYRange": [
+        -1.2530485391616821,
+        0.2613004148006439
+      ]
+    },
+    {
+      "camera": "CAM_V3_SWEEP_P028_25",
+      "progress": 28.25,
+      "minimumMountainVertexDistance": 124.45449796243788,
+      "mountainVisibleSampleCount": 6838,
+      "riverVisibleSampleCount": 543,
+      "meadowVisibleYRange": [
+        -0.795518696308136,
+        0.2650231719017029
+      ]
+    },
+    {
+      "camera": "CAM_V3_SWEEP_P030_00",
+      "progress": 30,
+      "minimumMountainVertexDistance": 124.45449796243788,
+      "mountainVisibleSampleCount": 6838,
+      "riverVisibleSampleCount": 543,
+      "meadowVisibleYRange": [
+        -0.795518696308136,
+        0.2650231719017029
+      ]
+    }
+  ],
+  "minimumMountainCameraDistance": 120.10278849669866,
+  "renderedFiles": [
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/massing/candidate-a2-day-clear-clay.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/massing/candidate-a2-cave-composite.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/massing/candidate-a2-silhouette.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/massing/candidate-a2-top-view.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/massing/candidate-b2-day-clear-clay.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/massing/candidate-b2-cave-composite.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/massing/candidate-b2-silhouette.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/massing/candidate-b2-top-view.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/massing/selected-v002-day-clear-clay.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/massing/selected-v002-day-clear-zones.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/massing/selected-v002-day-clear-river-guides.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/massing/selected-v002-silhouette.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/massing/selected-v002-top-view.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/massing/selected-v002-side-view.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/massing/selected-v002-sweep-p11_50.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/massing/selected-v002-sweep-p12_00.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/massing/selected-v002-sweep-p13_50.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/massing/selected-v002-sweep-p16_00.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/massing/selected-v002-sweep-p20_00.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/massing/selected-v002-sweep-p22_00.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/massing/selected-v002-sweep-p23_50.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/massing/selected-v002-sweep-p25_00.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/massing/selected-v002-sweep-p28_25.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/massing/selected-v002-sweep-p30_00.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/massing/selected-v002-cave-p11_50.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/massing/selected-v002-cave-p13_50.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/massing/selected-v002-cave-p16_00.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/massing/selected-v002-cave-p20_00.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/massing/selected-v002-cave-p30_00.png"
+  ],
+  "deterministicSignature": "05e5e5bc087af9b6b7831f8bfb7bf5265c1d6c0652839f1a854d2f40cb76329e"
+}

@@ -1,0 +1,367 @@
+{
+  "schemaVersion": 1,
+  "phase": "Journey V3 Phase 1C.1 True 3D Cave Audit",
+  "sourceBlend": "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/work/blender/journey-v3/phase1c/journey-v3-macro-massing-v002.blend",
+  "sourceBlendSha256Before": "9bc96a17b6aee6c09a59fdc77bc05083197fd9be9d2aab10c8585f4642e13237",
+  "sourceBlendSha256After": "9bc96a17b6aee6c09a59fdc77bc05083197fd9be9d2aab10c8585f4642e13237",
+  "sourceBlendUnchanged": true,
+  "reviewScene": "V3_TRUE_3D_CAVE_REVIEW",
+  "worldCoordinatesUnchanged": true,
+  "cameraManualAdjustment": false,
+  "shownJourneyV1Geometry": [
+    "CAVE_HQ_INTERIOR_SHELL",
+    "CAVE_HQ_GROUND",
+    "CAVE_HQ_FLOOR_WATER",
+    "WEB_CAVE_HQ_DEBRIS_00",
+    "WEB_CAVE_HQ_DEBRIS_01",
+    "WEB_CAVE_HQ_HANGING_PLANTS_00",
+    "WEB_CAVE_HQ_MOSS_00"
+  ],
+  "hiddenOldEnvironmentGeometry": [
+    "TER_V13_FICTIONAL_NAGANO_MASSIF",
+    "MTN_V13_FAR_CENTRAL_RIDGE",
+    "BAR_V13_LEFT_MID",
+    "BAR_V13_RIGHT_FOREGROUND",
+    "RIV_V13_EMERALD_S_WATER.001",
+    "RIV_V13_VISIBLE_PEBBLE_BED.001",
+    "FX_V13_WATER_RIPPLES",
+    "WEB_RIVERBANK_ROCKS_PLACED_00",
+    "WEB_RIVERBANK_ROCKS_PLACED_01",
+    "P2_RIDGE_MID",
+    "P2_RIDGE_FAR",
+    "P2_FOREST_MID_CANOPY",
+    "P2_SHORE_WET_LEFT",
+    "P2_SHORE_WET_RIGHT",
+    "P2_CLOUD_FAR"
+  ],
+  "hiddenNamesMissingFromBlend": [],
+  "shownV002Geometry": [
+    "V3_V002_PRIMARY_MASSIF",
+    "V3_V002_OPPOSING_RIDGES",
+    "V3_V002_MIDGROUND_RANGE",
+    "V3_V002_DISTANT_RANGE",
+    "V3_V002_VALLEY_FLOOR",
+    "V3_V002_MEADOW_BASE",
+    "V3_V002_RIVERBED_PROXY",
+    "V3_V002_LEFT_RIVERBANK_PROXY",
+    "V3_V002_RIGHT_RIVERBANK_PROXY"
+  ],
+  "cameraReports": [
+    {
+      "progress": 11.5,
+      "camera": "TRUE3D_CAM_V3_SWEEP_P011_50",
+      "sourceCamera": "CAM_V3_SWEEP_P011_50",
+      "matrixWorld": [
+        0.9994233846664429,
+        0.007141810841858387,
+        0.03319484740495682,
+        0.0,
+        0.0339544303715229,
+        -0.2102140337228775,
+        -0.9770656824111938,
+        0.391295850276947,
+        1.9655383987071673e-09,
+        0.9776294231414795,
+        -0.21033531427383423,
+        3.830900192260742,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "fovDegrees": 39.76070657389487,
+      "caveProjection": {
+        "sampleCount": 5219,
+        "inFrontCount": 84,
+        "inFrameVertexCount": 0
+      },
+      "v002Projection": {
+        "sampleCount": 12440,
+        "inFrontCount": 11947,
+        "inFrameVertexCount": 7194
+      }
+    },
+    {
+      "progress": 13.5,
+      "camera": "TRUE3D_CAM_V3_SWEEP_P013_50",
+      "sourceCamera": "CAM_V3_SWEEP_P013_50",
+      "matrixWorld": [
+        0.9994233846664429,
+        0.007141810841858387,
+        0.03319484740495682,
+        0.0,
+        0.0339544303715229,
+        -0.2102140337228775,
+        -0.9770656824111938,
+        2.415738582611084,
+        1.9655383987071673e-09,
+        0.9776294231414795,
+        -0.21033531427383423,
+        4.244246959686279,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "fovDegrees": 39.76070657389487,
+      "caveProjection": {
+        "sampleCount": 5219,
+        "inFrontCount": 0,
+        "inFrameVertexCount": 0
+      },
+      "v002Projection": {
+        "sampleCount": 12440,
+        "inFrontCount": 11932,
+        "inFrameVertexCount": 7121
+      }
+    },
+    {
+      "progress": 16.0,
+      "camera": "TRUE3D_CAM_V3_SWEEP_P016_00",
+      "sourceCamera": "CAM_V3_SWEEP_P016_00",
+      "matrixWorld": [
+        0.9994233846664429,
+        0.007141810841858387,
+        0.03319484740495682,
+        0.0,
+        0.0339544303715229,
+        -0.2102140337228775,
+        -0.9770656824111938,
+        3.477661371231079,
+        1.9655383987071673e-09,
+        0.9776294231414795,
+        -0.21033531427383423,
+        4.482138633728027,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "fovDegrees": 39.76070657389487,
+      "caveProjection": {
+        "sampleCount": 5219,
+        "inFrontCount": 0,
+        "inFrameVertexCount": 0
+      },
+      "v002Projection": {
+        "sampleCount": 12440,
+        "inFrontCount": 11923,
+        "inFrameVertexCount": 7099
+      }
+    },
+    {
+      "progress": 20.0,
+      "camera": "TRUE3D_CAM_V3_SWEEP_P020_00",
+      "sourceCamera": "CAM_V3_SWEEP_P020_00",
+      "matrixWorld": [
+        0.9994233846664429,
+        0.007208544760942459,
+        0.03318042680621147,
+        0.006602542009204626,
+        0.0339544378221035,
+        -0.2121783047914505,
+        -0.9766411185264587,
+        4.004878044128418,
+        -6.749647507575673e-10,
+        0.9772046208381653,
+        -0.21230073273181915,
+        4.622376441955566,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "fovDegrees": 41.119227784715825,
+      "caveProjection": {
+        "sampleCount": 5219,
+        "inFrontCount": 0,
+        "inFrameVertexCount": 0
+      },
+      "v002Projection": {
+        "sampleCount": 12440,
+        "inFrontCount": 11919,
+        "inFrameVertexCount": 7324
+      }
+    },
+    {
+      "progress": 23.5,
+      "camera": "TRUE3D_CAM_V3_SWEEP_P023_50",
+      "sourceCamera": "CAM_V3_SWEEP_P023_50",
+      "matrixWorld": [
+        0.9994233846664429,
+        0.00810583122074604,
+        0.03297269716858864,
+        0.09626506268978119,
+        0.0339544303715229,
+        -0.23858918249607086,
+        -0.9705268740653992,
+        1.365728497505188,
+        8.808318519015756e-10,
+        0.9710868000984192,
+        -0.23872683942317963,
+        4.268465518951416,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "fovDegrees": 50.529367234444564,
+      "caveProjection": {
+        "sampleCount": 5219,
+        "inFrontCount": 21,
+        "inFrameVertexCount": 0
+      },
+      "v002Projection": {
+        "sampleCount": 12440,
+        "inFrontCount": 11940,
+        "inFrameVertexCount": 8993
+      }
+    },
+    {
+      "progress": 25.0,
+      "camera": "TRUE3D_CAM_V3_SWEEP_P025_00",
+      "sourceCamera": "CAM_V3_SWEEP_P025_00",
+      "matrixWorld": [
+        0.9994233846664429,
+        0.008562847040593624,
+        0.03285698592662811,
+        0.14261490106582642,
+        0.0339544378221035,
+        -0.252041220664978,
+        -0.9671209454536438,
+        0.0014553569490090013,
+        -9.593895677895148e-10,
+        0.9676789045333862,
+        -0.2521866261959076,
+        4.085515975952148,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "fovDegrees": 54.33477639466591,
+      "caveProjection": {
+        "sampleCount": 5219,
+        "inFrontCount": 107,
+        "inFrameVertexCount": 0
+      },
+      "v002Projection": {
+        "sampleCount": 12440,
+        "inFrontCount": 11947,
+        "inFrameVertexCount": 9506
+      }
+    },
+    {
+      "progress": 28.25,
+      "camera": "TRUE3D_CAM_V3_SWEEP_P028_25",
+      "sourceCamera": "CAM_V3_SWEEP_P028_25",
+      "matrixWorld": [
+        0.9994233846664429,
+        0.009049514308571815,
+        0.03272629156708717,
+        0.19253012537956238,
+        0.0339544378221035,
+        -0.2663659453392029,
+        -0.9632740616798401,
+        -1.4677618741989136,
+        -5.739884123556749e-10,
+        0.9638298153877258,
+        -0.2665196359157562,
+        3.888493537902832,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "fovDegrees": 57.86070445933408,
+      "caveProjection": {
+        "sampleCount": 5219,
+        "inFrontCount": 460,
+        "inFrameVertexCount": 6
+      },
+      "v002Projection": {
+        "sampleCount": 12440,
+        "inFrontCount": 11956,
+        "inFrameVertexCount": 9916
+      }
+    },
+    {
+      "progress": 30.0,
+      "camera": "TRUE3D_CAM_V3_SWEEP_P030_00",
+      "sourceCamera": "CAM_V3_SWEEP_P030_00",
+      "matrixWorld": [
+        0.9994233846664429,
+        0.009049514308571815,
+        0.03272629156708717,
+        0.19253012537956238,
+        0.0339544378221035,
+        -0.2663659453392029,
+        -0.9632740616798401,
+        -1.4677618741989136,
+        -5.739884123556749e-10,
+        0.9638298153877258,
+        -0.2665196359157562,
+        3.888493537902832,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "fovDegrees": 57.86070445933408,
+      "caveProjection": {
+        "sampleCount": 5219,
+        "inFrontCount": 460,
+        "inFrameVertexCount": 6
+      },
+      "v002Projection": {
+        "sampleCount": 12440,
+        "inFrontCount": 11956,
+        "inFrameVertexCount": 9916
+      }
+    }
+  ],
+  "geometryIntersections": [],
+  "intersectionPairCount": 0,
+  "caveExitSeam": {
+    "exitVertexCount": 18,
+    "exitWorldYRange": [
+      0.5629138946533203,
+      1.0
+    ],
+    "nearestSurfaceDistance": {
+      "minimum": 1.841962456703186,
+      "median": 2.006352186203003,
+      "p95": 2.2039541959762574,
+      "maximum": 2.217586040496826
+    },
+    "nearestTargetCounts": {
+      "V3_V002_RIVERBED_PROXY": 18
+    }
+  },
+  "renderedFiles": [
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/massing/true-3d-cave/true-3d-cave-progress-11-5.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/massing/true-3d-cave/true-3d-cave-progress-11-5-silhouette.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/massing/true-3d-cave/true-3d-cave-progress-11-5-top-down.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/massing/true-3d-cave/true-3d-cave-progress-13-5.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/massing/true-3d-cave/true-3d-cave-progress-13-5-silhouette.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/massing/true-3d-cave/true-3d-cave-progress-13-5-top-down.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/massing/true-3d-cave/true-3d-cave-progress-16.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/massing/true-3d-cave/true-3d-cave-progress-16-silhouette.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/massing/true-3d-cave/true-3d-cave-progress-16-top-down.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/massing/true-3d-cave/true-3d-cave-progress-20.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/massing/true-3d-cave/true-3d-cave-progress-20-silhouette.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/massing/true-3d-cave/true-3d-cave-progress-20-top-down.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/massing/true-3d-cave/true-3d-cave-progress-23-5.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/massing/true-3d-cave/true-3d-cave-progress-23-5-silhouette.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/massing/true-3d-cave/true-3d-cave-progress-23-5-top-down.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/massing/true-3d-cave/true-3d-cave-progress-25.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/massing/true-3d-cave/true-3d-cave-progress-25-silhouette.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/massing/true-3d-cave/true-3d-cave-progress-25-top-down.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/massing/true-3d-cave/true-3d-cave-progress-28-25.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/massing/true-3d-cave/true-3d-cave-progress-28-25-silhouette.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/massing/true-3d-cave/true-3d-cave-progress-28-25-top-down.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/massing/true-3d-cave/true-3d-cave-progress-30.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/massing/true-3d-cave/true-3d-cave-progress-30-silhouette.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/massing/true-3d-cave/true-3d-cave-progress-30-top-down.png"
+  ]
+}
