@@ -1,0 +1,338 @@
+{
+  "schemaVersion": 1,
+  "commonAuthoringGrid": "6 world-unit uniform height-field grid",
+  "v003": {
+    "grid": {
+      "xCount": 210,
+      "yCount": 236,
+      "xRange": [
+        -620,
+        620
+      ],
+      "yRange": [
+        -300,
+        1100
+      ],
+      "bottomZ": -48
+    },
+    "objects": [
+      {
+        "name": "V3_VALLEY_TERRAIN",
+        "role": "continuous-volumetric-height-field",
+        "vertexCount": 38220,
+        "faceCount": 37829,
+        "boundaryEdgeCount": 780,
+        "nonManifoldEdgeCount": 780,
+        "closed": false,
+        "volume": null,
+        "bounds": {
+          "min": [
+            -620,
+            18,
+            -0.6120738983154297
+          ],
+          "max": [
+            620,
+            1100,
+            489.305908203125
+          ],
+          "size": [
+            1240,
+            1082,
+            489.91798210144043
+          ]
+        }
+      },
+      {
+        "name": "V3_CAVE_EXIT_TRANSITION_TERRAIN",
+        "role": "cave-exit-side-transition",
+        "vertexCount": 11175,
+        "faceCount": 10860,
+        "boundaryEdgeCount": 626,
+        "nonManifoldEdgeCount": 626,
+        "closed": false,
+        "volume": null,
+        "bounds": {
+          "min": [
+            -620,
+            -300,
+            -4.528476715087891
+          ],
+          "max": [
+            620,
+            18,
+            39.36144256591797
+          ],
+          "size": [
+            1240,
+            318,
+            43.88991928100586
+          ]
+        }
+      },
+      {
+        "name": "V3_TERRAIN_SKIRT_AND_BOTTOM",
+        "role": "terrain-guard-skirt",
+        "vertexCount": 1776,
+        "faceCount": 889,
+        "boundaryEdgeCount": 888,
+        "nonManifoldEdgeCount": 888,
+        "closed": false,
+        "volume": null,
+        "bounds": {
+          "min": [
+            -620,
+            -300,
+            -48
+          ],
+          "max": [
+            620,
+            1100,
+            400.9441223144531
+          ],
+          "size": [
+            1240,
+            1400,
+            448.9441223144531
+          ]
+        }
+      },
+      {
+        "name": "V3_CAVE_EXIT_FLOOR_CONNECTOR",
+        "role": "cave-floor-connector",
+        "vertexCount": 18,
+        "faceCount": 8,
+        "boundaryEdgeCount": 18,
+        "nonManifoldEdgeCount": 18,
+        "closed": false,
+        "volume": null,
+        "bounds": {
+          "min": [
+            -14,
+            1,
+            -0.416265070438385
+          ],
+          "max": [
+            12,
+            6,
+            -0.011309248395264149
+          ],
+          "size": [
+            26,
+            5,
+            0.40495582204312086
+          ]
+        }
+      },
+      {
+        "name": "V3_CAVE_TO_MEADOW_TRANSITION",
+        "role": "cave-to-meadow-transition",
+        "vertexCount": 18,
+        "faceCount": 8,
+        "boundaryEdgeCount": 18,
+        "nonManifoldEdgeCount": 18,
+        "closed": false,
+        "volume": null,
+        "bounds": {
+          "min": [
+            -14,
+            6,
+            -0.30911892652511597
+          ],
+          "max": [
+            12,
+            18,
+            0.6832977533340454
+          ],
+          "size": [
+            26,
+            12,
+            0.9924166798591614
+          ]
+        }
+      },
+      {
+        "name": "V3_CAVE_FADE_REPLACEMENT_FLOOR",
+        "role": "runtime-exclusive-cave-floor-replacement",
+        "vertexCount": 1836,
+        "faceCount": 1712,
+        "boundaryEdgeCount": 246,
+        "nonManifoldEdgeCount": 246,
+        "closed": false,
+        "volume": null,
+        "bounds": {
+          "min": [
+            -22,
+            -300,
+            -4.307281970977783
+          ],
+          "max": [
+            20,
+            18,
+            0.7280069589614868
+          ],
+          "size": [
+            42,
+            318,
+            5.03528892993927
+          ]
+        }
+      }
+    ],
+    "deterministicSignature": "483c571d0f90ef76620ea586e2ed06d4085952b00a0ace738a26200ec60c8ab5"
+  },
+  "candidateM": {
+    "gridResolution": {
+      "x": 210,
+      "y": 236,
+      "step": 6
+    },
+    "objects": [
+      {
+        "name": "V3_VALLEY_TERRAIN",
+        "vertices": 38220,
+        "triangles": 75658,
+        "boundaryEdges": 780,
+        "requires32BitIndices": false,
+        "estimatedGeometryBytes": 2900028
+      },
+      {
+        "name": "V3_CAVE_EXIT_TRANSITION_TERRAIN",
+        "vertices": 11175,
+        "triangles": 21720,
+        "boundaryEdges": 626,
+        "requires32BitIndices": false,
+        "estimatedGeometryBytes": 845520
+      },
+      {
+        "name": "V3_TERRAIN_SKIRT_AND_BOTTOM",
+        "vertices": 1776,
+        "triangles": 2662,
+        "boundaryEdges": 888,
+        "requires32BitIndices": false,
+        "estimatedGeometryBytes": 129636
+      },
+      {
+        "name": "V3_CAVE_EXIT_FLOOR_CONNECTOR",
+        "vertices": 18,
+        "triangles": 16,
+        "boundaryEdges": 18,
+        "requires32BitIndices": false,
+        "estimatedGeometryBytes": 1248
+      },
+      {
+        "name": "V3_CAVE_TO_MEADOW_TRANSITION",
+        "vertices": 18,
+        "triangles": 16,
+        "boundaryEdges": 18,
+        "requires32BitIndices": false,
+        "estimatedGeometryBytes": 1248
+      },
+      {
+        "name": "V3_CAVE_FADE_REPLACEMENT_FLOOR",
+        "vertices": 1836,
+        "triangles": 3424,
+        "boundaryEdges": 246,
+        "requires32BitIndices": false,
+        "estimatedGeometryBytes": 138048
+      }
+    ],
+    "totals": {
+      "meshObjectCount": 6,
+      "vertices": 53043,
+      "triangles": 103496,
+      "boundaryEdges": 2576,
+      "estimatedGeometryBytes": 4015728,
+      "estimatedGeometryMiB": 3.8296966552734375,
+      "blenderMaxRssRaw": 469598208
+    },
+    "density": {
+      "verticesPerSquareWorldUnit": 0.027777777777777776,
+      "nearRows": 88,
+      "midRows": 72,
+      "farRows": 76,
+      "riverAndMeadow": "same 6-unit grid density as mountain and far terrain",
+      "farWaste": "far field retains authoring density and should be reduced for runtime LOD"
+    }
+  },
+  "candidateH": {
+    "gridResolution": {
+      "x": 210,
+      "y": 236,
+      "step": 6
+    },
+    "objects": [
+      {
+        "name": "V3_VALLEY_TERRAIN",
+        "vertices": 38220,
+        "triangles": 75658,
+        "boundaryEdges": 780,
+        "requires32BitIndices": false,
+        "estimatedGeometryBytes": 2900028
+      },
+      {
+        "name": "V3_CAVE_EXIT_TRANSITION_TERRAIN",
+        "vertices": 11175,
+        "triangles": 21720,
+        "boundaryEdges": 626,
+        "requires32BitIndices": false,
+        "estimatedGeometryBytes": 845520
+      },
+      {
+        "name": "V3_TERRAIN_SKIRT_AND_BOTTOM",
+        "vertices": 1776,
+        "triangles": 2662,
+        "boundaryEdges": 888,
+        "requires32BitIndices": false,
+        "estimatedGeometryBytes": 129636
+      },
+      {
+        "name": "V3_CAVE_EXIT_FLOOR_CONNECTOR",
+        "vertices": 18,
+        "triangles": 16,
+        "boundaryEdges": 18,
+        "requires32BitIndices": false,
+        "estimatedGeometryBytes": 1248
+      },
+      {
+        "name": "V3_CAVE_TO_MEADOW_TRANSITION",
+        "vertices": 18,
+        "triangles": 16,
+        "boundaryEdges": 18,
+        "requires32BitIndices": false,
+        "estimatedGeometryBytes": 1248
+      },
+      {
+        "name": "V3_CAVE_FADE_REPLACEMENT_FLOOR",
+        "vertices": 1836,
+        "triangles": 3424,
+        "boundaryEdges": 246,
+        "requires32BitIndices": false,
+        "estimatedGeometryBytes": 138048
+      }
+    ],
+    "totals": {
+      "meshObjectCount": 6,
+      "vertices": 53043,
+      "triangles": 103496,
+      "boundaryEdges": 2576,
+      "estimatedGeometryBytes": 4015728,
+      "estimatedGeometryMiB": 3.8296966552734375,
+      "blenderMaxRssRaw": 464060416
+    },
+    "density": {
+      "verticesPerSquareWorldUnit": 0.027777777777777776,
+      "nearRows": 88,
+      "midRows": 72,
+      "farRows": 76,
+      "riverAndMeadow": "same 6-unit grid density as mountain and far terrain",
+      "farWaste": "far field retains authoring density and should be reduced for runtime LOD"
+    }
+  },
+  "notes": {
+    "indexPolicy": "Each mesh remains below 65,536 vertices; 16-bit indices are sufficient per primitive.",
+    "currentDensity": "Near, mid and far use the same authoring density; this is intentionally not a runtime LOD.",
+    "memoryUnits": "blenderMaxRssRaw is the platform ru_maxrss value reported by Blender on macOS (bytes).",
+    "estimatedGeometrySize": "Position, normal, UV, eight scalar masks and triangle indices; excludes materials, containers and compression."
+  }
+}

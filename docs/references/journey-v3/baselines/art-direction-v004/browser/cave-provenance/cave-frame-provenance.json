@@ -1,0 +1,542 @@
+{
+  "schemaVersion": 1,
+  "route": "/journey-v3",
+  "progress": 11.5,
+  "viewport": {
+    "width": 1440,
+    "height": 900,
+    "deviceScaleFactor": 1
+  },
+  "installation": {
+    "moduleUrl": "http://127.0.0.1:4176/node_modules/.vite/deps/@react-three_fiber.js?v=406f5995",
+    "rootCount": 1,
+    "camera": "CAM_V13_MASTER_ANIMATED",
+    "inventory": [
+      {
+        "name": "BAR_V13_LEFT_MID",
+        "type": "Mesh",
+        "identity": "BAR_V13_LEFT_MID MAT_V12_SUBMERGED_PEBBLES",
+        "visible": false,
+        "materialSides": [
+          2
+        ],
+        "materialOpacities": [
+          1
+        ]
+      },
+      {
+        "name": "BAR_V13_RIGHT_FOREGROUND",
+        "type": "Mesh",
+        "identity": "BAR_V13_RIGHT_FOREGROUND MAT_V12_SUBMERGED_PEBBLES",
+        "visible": false,
+        "materialSides": [
+          2
+        ],
+        "materialOpacities": [
+          1
+        ]
+      },
+      {
+        "name": "CAVE_HQ_FLOOR_WATER",
+        "type": "Mesh",
+        "identity": "CAVE_HQ_FLOOR_WATER MAT_CAVEHQ_FLOOR_WATER",
+        "visible": true,
+        "materialSides": [
+          2
+        ],
+        "materialOpacities": [
+          1
+        ]
+      },
+      {
+        "name": "CAVE_HQ_GROUND",
+        "type": "Mesh",
+        "identity": "CAVE_HQ_GROUND MAT_V13_CAVE_GRANITE_PBR",
+        "visible": true,
+        "materialSides": [
+          2
+        ],
+        "materialOpacities": [
+          1
+        ]
+      },
+      {
+        "name": "CAVE_HQ_INTERIOR_SHELL",
+        "type": "Mesh",
+        "identity": "CAVE_HQ_INTERIOR_SHELL MAT_V13_CAVE_GRANITE_PBR",
+        "visible": true,
+        "materialSides": [
+          2
+        ],
+        "materialOpacities": [
+          1
+        ]
+      },
+      {
+        "name": "FX_V13_WATER_RIPPLES",
+        "type": "Mesh",
+        "identity": "FX_V13_WATER_RIPPLES MAT_V13_WATER_RIPPLES",
+        "visible": false,
+        "materialSides": [
+          2
+        ],
+        "materialOpacities": [
+          0.3400000035762787
+        ]
+      },
+      {
+        "name": "MTN_V13_FAR_CENTRAL_RIDGE",
+        "type": "Mesh",
+        "identity": "MTN_V13_FAR_CENTRAL_RIDGE MAT_V13_ATMOSPHERIC_FAR_RIDGE",
+        "visible": true,
+        "materialSides": [
+          2
+        ],
+        "materialOpacities": [
+          1
+        ]
+      },
+      {
+        "name": "TER_V13_FICTIONAL_NAGANO_MASSIF",
+        "type": "Mesh",
+        "identity": "TER_V13_FICTIONAL_NAGANO_MASSIF MAT_V13_TEXTURED_ALPINE_PBR",
+        "visible": true,
+        "materialSides": [
+          2
+        ],
+        "materialOpacities": [
+          1
+        ]
+      },
+      {
+        "name": "WEB_CAVE_HQ_DEBRIS_00",
+        "type": "Mesh",
+        "identity": "WEB_CAVE_HQ_DEBRIS_00 MAT_CAVEHQ_ROCK_MID",
+        "visible": true,
+        "materialSides": [
+          2
+        ],
+        "materialOpacities": [
+          1
+        ]
+      },
+      {
+        "name": "WEB_CAVE_HQ_DEBRIS_01",
+        "type": "Mesh",
+        "identity": "WEB_CAVE_HQ_DEBRIS_01 MAT_CAVEHQ_ROCK_DARK",
+        "visible": true,
+        "materialSides": [
+          2
+        ],
+        "materialOpacities": [
+          1
+        ]
+      },
+      {
+        "name": "WEB_CAVE_HQ_HANGING_PLANTS_00",
+        "type": "Mesh",
+        "identity": "WEB_CAVE_HQ_HANGING_PLANTS_00 MAT_CAVEHQ_HANGING_LEAF",
+        "visible": true,
+        "materialSides": [
+          2
+        ],
+        "materialOpacities": [
+          1
+        ]
+      },
+      {
+        "name": "WEB_CAVE_HQ_MOSS_00",
+        "type": "Mesh",
+        "identity": "WEB_CAVE_HQ_MOSS_00 MAT_CAVEHQ_MOSS",
+        "visible": true,
+        "materialSides": [
+          2
+        ],
+        "materialOpacities": [
+          1
+        ]
+      },
+      {
+        "name": "WEB_RIVERBANK_ROCKS_PLACED_00",
+        "type": "Mesh",
+        "identity": "WEB_RIVERBANK_ROCKS_PLACED_00 MAT_RIVERBANK_GRANITE",
+        "visible": false,
+        "materialSides": [
+          2
+        ],
+        "materialOpacities": [
+          1
+        ]
+      },
+      {
+        "name": "WEB_RIVERBANK_ROCKS_PLACED_01",
+        "type": "Mesh",
+        "identity": "WEB_RIVERBANK_ROCKS_PLACED_01 MAT_RIVERBANK_PALE",
+        "visible": false,
+        "materialSides": [
+          2
+        ],
+        "materialOpacities": [
+          1
+        ]
+      },
+      {
+        "name": "P2_CLOUD_FAR",
+        "type": "Mesh",
+        "identity": "P2_CLOUD_FAR ",
+        "visible": false,
+        "materialSides": [
+          2
+        ],
+        "materialOpacities": [
+          0
+        ]
+      },
+      {
+        "name": "P2_FOREST_MID_CANOPY",
+        "type": "Mesh",
+        "identity": "P2_FOREST_MID_CANOPY P2_MAT_FOREST_CANOPY",
+        "visible": false,
+        "materialSides": [
+          2
+        ],
+        "materialOpacities": [
+          0
+        ]
+      },
+      {
+        "name": "P2_RIDGE_FAR",
+        "type": "Mesh",
+        "identity": "P2_RIDGE_FAR P2_MAT_RIDGE_FAR",
+        "visible": false,
+        "materialSides": [
+          2
+        ],
+        "materialOpacities": [
+          0
+        ]
+      },
+      {
+        "name": "P2_RIDGE_MID",
+        "type": "Mesh",
+        "identity": "P2_RIDGE_MID P2_MAT_RIDGE_MID",
+        "visible": false,
+        "materialSides": [
+          2
+        ],
+        "materialOpacities": [
+          0
+        ]
+      },
+      {
+        "name": "P2_SHORE_WET_LEFT",
+        "type": "Mesh",
+        "identity": "P2_SHORE_WET_LEFT P2_MAT_SHORE_WET",
+        "visible": false,
+        "materialSides": [
+          2
+        ],
+        "materialOpacities": [
+          0
+        ]
+      },
+      {
+        "name": "P2_SHORE_WET_RIGHT",
+        "type": "Mesh",
+        "identity": "P2_SHORE_WET_RIGHT P2_MAT_SHORE_WET",
+        "visible": false,
+        "materialSides": [
+          2
+        ],
+        "materialOpacities": [
+          0
+        ]
+      }
+    ]
+  },
+  "states": {
+    "baseline": {
+      "variant": "baseline",
+      "visibleCave": [
+        "CAVE_HQ_FLOOR_WATER",
+        "CAVE_HQ_GROUND",
+        "CAVE_HQ_INTERIOR_SHELL",
+        "WEB_CAVE_HQ_DEBRIS_00",
+        "WEB_CAVE_HQ_DEBRIS_01",
+        "WEB_CAVE_HQ_HANGING_PLANTS_00",
+        "WEB_CAVE_HQ_MOSS_00"
+      ],
+      "visibleOldTerrain": [
+        "MTN_V13_FAR_CENTRAL_RIDGE",
+        "TER_V13_FICTIONAL_NAGANO_MASSIF"
+      ],
+      "fog": {
+        "density": 0.014785876255264011
+      }
+    },
+    "no-cave-shell": {
+      "variant": "no-cave-shell",
+      "visibleCave": [
+        "CAVE_HQ_FLOOR_WATER",
+        "CAVE_HQ_GROUND",
+        "WEB_CAVE_HQ_DEBRIS_00",
+        "WEB_CAVE_HQ_DEBRIS_01",
+        "WEB_CAVE_HQ_HANGING_PLANTS_00",
+        "WEB_CAVE_HQ_MOSS_00"
+      ],
+      "visibleOldTerrain": [
+        "MTN_V13_FAR_CENTRAL_RIDGE",
+        "TER_V13_FICTIONAL_NAGANO_MASSIF"
+      ],
+      "fog": {
+        "density": 0.014785876255264011
+      }
+    },
+    "no-cave-ground": {
+      "variant": "no-cave-ground",
+      "visibleCave": [
+        "CAVE_HQ_INTERIOR_SHELL",
+        "WEB_CAVE_HQ_DEBRIS_00",
+        "WEB_CAVE_HQ_DEBRIS_01",
+        "WEB_CAVE_HQ_HANGING_PLANTS_00",
+        "WEB_CAVE_HQ_MOSS_00"
+      ],
+      "visibleOldTerrain": [
+        "MTN_V13_FAR_CENTRAL_RIDGE",
+        "TER_V13_FICTIONAL_NAGANO_MASSIF"
+      ],
+      "fog": {
+        "density": 0.014785876255264011
+      }
+    },
+    "no-cave-debris": {
+      "variant": "no-cave-debris",
+      "visibleCave": [
+        "CAVE_HQ_FLOOR_WATER",
+        "CAVE_HQ_GROUND",
+        "CAVE_HQ_INTERIOR_SHELL",
+        "WEB_CAVE_HQ_HANGING_PLANTS_00",
+        "WEB_CAVE_HQ_MOSS_00"
+      ],
+      "visibleOldTerrain": [
+        "MTN_V13_FAR_CENTRAL_RIDGE",
+        "TER_V13_FICTIONAL_NAGANO_MASSIF"
+      ],
+      "fog": {
+        "density": 0.014785876255264011
+      }
+    },
+    "no-all-cave": {
+      "variant": "no-all-cave",
+      "visibleCave": [],
+      "visibleOldTerrain": [
+        "MTN_V13_FAR_CENTRAL_RIDGE",
+        "TER_V13_FICTIONAL_NAGANO_MASSIF"
+      ],
+      "fog": {
+        "density": 0.014785876255264011
+      }
+    },
+    "no-old-terrain": {
+      "variant": "no-old-terrain",
+      "visibleCave": [
+        "CAVE_HQ_FLOOR_WATER",
+        "CAVE_HQ_GROUND",
+        "CAVE_HQ_INTERIOR_SHELL",
+        "WEB_CAVE_HQ_DEBRIS_00",
+        "WEB_CAVE_HQ_DEBRIS_01",
+        "WEB_CAVE_HQ_HANGING_PLANTS_00",
+        "WEB_CAVE_HQ_MOSS_00"
+      ],
+      "visibleOldTerrain": [],
+      "fog": {
+        "density": 0.014785876255264011
+      }
+    },
+    "front-side-only": {
+      "variant": "front-side-only",
+      "visibleCave": [
+        "CAVE_HQ_FLOOR_WATER",
+        "CAVE_HQ_GROUND",
+        "CAVE_HQ_INTERIOR_SHELL",
+        "WEB_CAVE_HQ_DEBRIS_00",
+        "WEB_CAVE_HQ_DEBRIS_01",
+        "WEB_CAVE_HQ_HANGING_PLANTS_00",
+        "WEB_CAVE_HQ_MOSS_00"
+      ],
+      "visibleOldTerrain": [
+        "MTN_V13_FAR_CENTRAL_RIDGE",
+        "TER_V13_FICTIONAL_NAGANO_MASSIF"
+      ],
+      "fog": {
+        "density": 0.014785876255264011
+      }
+    },
+    "no-fog": {
+      "variant": "no-fog",
+      "visibleCave": [
+        "CAVE_HQ_FLOOR_WATER",
+        "CAVE_HQ_GROUND",
+        "CAVE_HQ_INTERIOR_SHELL",
+        "WEB_CAVE_HQ_DEBRIS_00",
+        "WEB_CAVE_HQ_DEBRIS_01",
+        "WEB_CAVE_HQ_HANGING_PLANTS_00",
+        "WEB_CAVE_HQ_MOSS_00"
+      ],
+      "visibleOldTerrain": [
+        "MTN_V13_FAR_CENTRAL_RIDGE",
+        "TER_V13_FICTIONAL_NAGANO_MASSIF"
+      ],
+      "fog": null
+    },
+    "no-screen-mist": {
+      "variant": "no-screen-mist",
+      "visibleCave": [
+        "CAVE_HQ_FLOOR_WATER",
+        "CAVE_HQ_GROUND",
+        "CAVE_HQ_INTERIOR_SHELL",
+        "WEB_CAVE_HQ_DEBRIS_00",
+        "WEB_CAVE_HQ_DEBRIS_01",
+        "WEB_CAVE_HQ_HANGING_PLANTS_00",
+        "WEB_CAVE_HQ_MOSS_00"
+      ],
+      "visibleOldTerrain": [
+        "MTN_V13_FAR_CENTRAL_RIDGE",
+        "TER_V13_FICTIONAL_NAGANO_MASSIF"
+      ],
+      "fog": {
+        "density": 0.014785876255264011
+      }
+    },
+    "no-css-cave-grade": {
+      "variant": "no-css-cave-grade",
+      "visibleCave": [
+        "CAVE_HQ_FLOOR_WATER",
+        "CAVE_HQ_GROUND",
+        "CAVE_HQ_INTERIOR_SHELL",
+        "WEB_CAVE_HQ_DEBRIS_00",
+        "WEB_CAVE_HQ_DEBRIS_01",
+        "WEB_CAVE_HQ_HANGING_PLANTS_00",
+        "WEB_CAVE_HQ_MOSS_00"
+      ],
+      "visibleOldTerrain": [
+        "MTN_V13_FAR_CENTRAL_RIDGE",
+        "TER_V13_FICTIONAL_NAGANO_MASSIF"
+      ],
+      "fog": {
+        "density": 0.014785876255264011
+      }
+    },
+    "no-dom-atmosphere": {
+      "variant": "no-dom-atmosphere",
+      "visibleCave": [
+        "CAVE_HQ_FLOOR_WATER",
+        "CAVE_HQ_GROUND",
+        "CAVE_HQ_INTERIOR_SHELL",
+        "WEB_CAVE_HQ_DEBRIS_00",
+        "WEB_CAVE_HQ_DEBRIS_01",
+        "WEB_CAVE_HQ_HANGING_PLANTS_00",
+        "WEB_CAVE_HQ_MOSS_00"
+      ],
+      "visibleOldTerrain": [
+        "MTN_V13_FAR_CENTRAL_RIDGE",
+        "TER_V13_FICTIONAL_NAGANO_MASSIF"
+      ],
+      "fog": {
+        "density": 0.014785876255264011
+      }
+    }
+  },
+  "diffs": {
+    "no-cave-shell": {
+      "changedPixels": 0,
+      "changedFraction": 0,
+      "meanAbsoluteChannelDifference": 0,
+      "maxAbsoluteChannelDifference": 0,
+      "changedBounds": null
+    },
+    "no-cave-ground": {
+      "changedPixels": 0,
+      "changedFraction": 0,
+      "meanAbsoluteChannelDifference": 0,
+      "maxAbsoluteChannelDifference": 0,
+      "changedBounds": null
+    },
+    "no-cave-debris": {
+      "changedPixels": 0,
+      "changedFraction": 0,
+      "meanAbsoluteChannelDifference": 0,
+      "maxAbsoluteChannelDifference": 0,
+      "changedBounds": null
+    },
+    "no-all-cave": {
+      "changedPixels": 0,
+      "changedFraction": 0,
+      "meanAbsoluteChannelDifference": 0,
+      "maxAbsoluteChannelDifference": 0,
+      "changedBounds": null
+    },
+    "no-old-terrain": {
+      "changedPixels": 1109272,
+      "changedFraction": 0.8559197530864198,
+      "meanAbsoluteChannelDifference": 43.53872685184973,
+      "maxAbsoluteChannelDifference": 106.33333333333333,
+      "changedBounds": {
+        "minX": 0,
+        "minY": 0,
+        "maxX": 1439,
+        "maxY": 899
+      }
+    },
+    "front-side-only": {
+      "changedPixels": 0,
+      "changedFraction": 0,
+      "meanAbsoluteChannelDifference": 0,
+      "maxAbsoluteChannelDifference": 0,
+      "changedBounds": null
+    },
+    "no-fog": {
+      "changedPixels": 1108773,
+      "changedFraction": 0.8555347222222223,
+      "meanAbsoluteChannelDifference": 29.50456404325584,
+      "maxAbsoluteChannelDifference": 120.66666666666667,
+      "changedBounds": {
+        "minX": 0,
+        "minY": 0,
+        "maxX": 1439,
+        "maxY": 899
+      }
+    },
+    "no-screen-mist": {
+      "changedPixels": 0,
+      "changedFraction": 0,
+      "meanAbsoluteChannelDifference": 0,
+      "maxAbsoluteChannelDifference": 0,
+      "changedBounds": null
+    },
+    "no-css-cave-grade": {
+      "changedPixels": 967285,
+      "changedFraction": 0.7463618827160494,
+      "meanAbsoluteChannelDifference": 7.959114454727996,
+      "maxAbsoluteChannelDifference": 26.333333333333332,
+      "changedBounds": {
+        "minX": 0,
+        "minY": 0,
+        "maxX": 1439,
+        "maxY": 899
+      }
+    },
+    "no-dom-atmosphere": {
+      "changedPixels": 800816,
+      "changedFraction": 0.6179135802469136,
+      "meanAbsoluteChannelDifference": 6.479958847740182,
+      "maxAbsoluteChannelDifference": 24,
+      "changedBounds": {
+        "minX": 0,
+        "minY": 0,
+        "maxX": 1439,
+        "maxY": 899
+      }
+    }
+  }
+}

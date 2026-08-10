@@ -1,0 +1,243 @@
+{
+  "schemaVersion": 1,
+  "phase": "Journey V3 Phase 1C.3",
+  "candidate": "H",
+  "candidateLabel": "Hero Valley dominant",
+  "selected": false,
+  "sourceV003Blend": "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/work/blender/journey-v3/phase1c2/journey-v3-volumetric-terrain-v003.blend",
+  "sourceV003Sha256Before": "e4341be717e17791d4988ea919c33443e3fbc1e3dcecee0797224b74a2bfb362",
+  "sourceV003Sha256After": "e4341be717e17791d4988ea919c33443e3fbc1e3dcecee0797224b74a2bfb362",
+  "sourceV003Unchanged": true,
+  "outputBlend": "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/work/blender/journey-v3/phase1c3/journey-v3-art-direction-candidate-h.blend",
+  "lockedReferenceSignatureBefore": "7e2c2d841e24d27055f92d6323ef2dd0c1bb0c8e0b79138f281a9218a7d140e2",
+  "lockedReferenceSignatureAfter": "7e2c2d841e24d27055f92d6323ef2dd0c1bb0c8e0b79138f281a9218a7d140e2",
+  "lockedReferenceUnchanged": true,
+  "terrainBounds": {
+    "min": [
+      -620.0,
+      18.0,
+      0.5022257566452026
+    ],
+    "max": [
+      620.0,
+      1100.0,
+      474.0953369140625
+    ],
+    "center": [
+      0.0,
+      559.0,
+      237.2987823486328
+    ]
+  },
+  "geometryBudget": {
+    "gridResolution": {
+      "x": 210,
+      "y": 236,
+      "step": 6.0
+    },
+    "objects": [
+      {
+        "name": "V3_VALLEY_TERRAIN",
+        "vertices": 38220,
+        "triangles": 75658,
+        "boundaryEdges": 780,
+        "requires32BitIndices": false,
+        "estimatedGeometryBytes": 2900028
+      },
+      {
+        "name": "V3_CAVE_EXIT_TRANSITION_TERRAIN",
+        "vertices": 11175,
+        "triangles": 21720,
+        "boundaryEdges": 626,
+        "requires32BitIndices": false,
+        "estimatedGeometryBytes": 845520
+      },
+      {
+        "name": "V3_TERRAIN_SKIRT_AND_BOTTOM",
+        "vertices": 1776,
+        "triangles": 2662,
+        "boundaryEdges": 888,
+        "requires32BitIndices": false,
+        "estimatedGeometryBytes": 129636
+      },
+      {
+        "name": "V3_CAVE_EXIT_FLOOR_CONNECTOR",
+        "vertices": 18,
+        "triangles": 16,
+        "boundaryEdges": 18,
+        "requires32BitIndices": false,
+        "estimatedGeometryBytes": 1248
+      },
+      {
+        "name": "V3_CAVE_TO_MEADOW_TRANSITION",
+        "vertices": 18,
+        "triangles": 16,
+        "boundaryEdges": 18,
+        "requires32BitIndices": false,
+        "estimatedGeometryBytes": 1248
+      },
+      {
+        "name": "V3_CAVE_FADE_REPLACEMENT_FLOOR",
+        "vertices": 1836,
+        "triangles": 3424,
+        "boundaryEdges": 246,
+        "requires32BitIndices": false,
+        "estimatedGeometryBytes": 138048
+      }
+    ],
+    "totals": {
+      "meshObjectCount": 6,
+      "vertices": 53043,
+      "triangles": 103496,
+      "boundaryEdges": 2576,
+      "estimatedGeometryBytes": 4015728,
+      "estimatedGeometryMiB": 3.8296966552734375,
+      "blenderMaxRssRaw": 464060416
+    },
+    "density": {
+      "verticesPerSquareWorldUnit": 0.027777777777777776,
+      "nearRows": 88,
+      "midRows": 72,
+      "farRows": 76,
+      "riverAndMeadow": "same 6-unit grid density as mountain and far terrain",
+      "farWaste": "far field retains authoring density and should be reduced for runtime LOD"
+    }
+  },
+  "screenMetrics": {
+    "dayClear": {
+      "mountainSilhouette": {
+        "widthPixels": 1439.8372374486644,
+        "heightPixels": 396.44052386283875,
+        "boundsNdc": {
+          "min": [
+            8.668429654790089e-05,
+            0.2509923577308655
+          ],
+          "max": [
+            0.9999736547470093,
+            0.6914818286895752
+          ]
+        }
+      },
+      "riverVisibleWidthPixels": 779.6813580393791,
+      "mountainSampleCount": 20021,
+      "riverSampleCount": 741
+    },
+    "finalWide": {
+      "mountainSilhouette": {
+        "widthPixels": 1438.7412406504154,
+        "heightPixels": 343.0790886282921,
+        "boundsNdc": {
+          "min": [
+            0.0006069308146834373,
+            0.23143918812274933
+          ],
+          "max": [
+            0.9997327923774719,
+            0.6126381754875183
+          ]
+        }
+      },
+      "riverVisibleWidthPixels": 703.4450089931488,
+      "mountainSampleCount": 20886,
+      "riverSampleCount": 744
+    }
+  },
+  "caveConnector": {
+    "seamDistanceMin": 0.0,
+    "seamDistanceMax": 0.0,
+    "coreCaveIntersections": []
+  },
+  "ridgeGuides": [
+    "H_LEFT_RECEDING_RIDGE",
+    "H_LEFT_VALLEY_SPUR",
+    "H_RIGHT_RECEDING_RIDGE",
+    "H_RIGHT_VALLEY_SPUR",
+    "H_HERO_RANGE_FRONT",
+    "H_HERO_RANGE_REAR"
+  ],
+  "riverStations": [
+    [
+      -300.0,
+      10.0,
+      21.0
+    ],
+    [
+      -150.0,
+      3.0,
+      20.0
+    ],
+    [
+      0.0,
+      -8.0,
+      19.0
+    ],
+    [
+      165.0,
+      -52.0,
+      18.0
+    ],
+    [
+      340.0,
+      -84.0,
+      17.0
+    ],
+    [
+      520.0,
+      -34.0,
+      15.5
+    ],
+    [
+      700.0,
+      38.0,
+      12.5
+    ],
+    [
+      890.0,
+      58.0,
+      8.2
+    ],
+    [
+      1100.0,
+      12.0,
+      5.0
+    ]
+  ],
+  "reviewCameras": [
+    "CAM_V004_ELEVATED",
+    "CAM_V004_ORBIT_LEFT",
+    "CAM_V004_ORBIT_RIGHT",
+    "CAM_V004_SIDE",
+    "CAM_V004_TOP"
+  ],
+  "fullStoryCameras": [
+    "CAM_V3_STORY_ENDING_1440x900",
+    "CAM_V3_STORY_FINAL_WIDE_1440x900",
+    "CAM_V3_STORY_MILKY_WAY_1440x900",
+    "CAM_V3_STORY_NIGHT_1440x900",
+    "CAM_V3_STORY_RIVER_HOLD_1440x900",
+    "CAM_V3_STORY_SEATED_FIGURE_1440x900",
+    "CAM_V3_STORY_SUNSET_1440x900"
+  ],
+  "renderedFiles": [
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/art-direction-v004/candidate-h-day-clear-clay.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/art-direction-v004/candidate-h-day-clear-silhouette.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/art-direction-v004/candidate-h-cave-exit.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/art-direction-v004/candidate-h-final-wide.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/art-direction-v004/diagnostic/candidate-h-final-wide-silhouette.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/art-direction-v004/candidate-h-top-view.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/art-direction-v004/candidate-h-side-view.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/art-direction-v004/candidate-h-orbit-left.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/art-direction-v004/candidate-h-orbit-right.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/art-direction-v004/candidate-h-elevated.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/art-direction-v004/candidate-h-river-projection.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/art-direction-v004/diagnostic/candidate-h-story-sunset.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/art-direction-v004/diagnostic/candidate-h-story-night.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/art-direction-v004/diagnostic/candidate-h-story-river-hold.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/art-direction-v004/diagnostic/candidate-h-story-milky-way.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/art-direction-v004/diagnostic/candidate-h-story-seated-figure.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/art-direction-v004/diagnostic/candidate-h-story-final-wide.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/art-direction-v004/diagnostic/candidate-h-story-ending.png"
+  ],
+  "deterministicSignature": "f7c34d4b2d744eb97dfd15db253d7d5577e38b6227fe4c81308c43e6060a7f33"
+}

@@ -1,0 +1,167 @@
+{
+  "schemaVersion": 1,
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "journeyV1": {
+    "dayClear": {
+      "maskMethod": "documented RGB approximation; browser PBR/cloud/UI image has no semantic mask",
+      "skyFractionApprox": 0.2309807098765432,
+      "mountainTopYApprox": 102,
+      "mountainSilhouetteWidthApprox": 1440,
+      "riverVisibleWidthApprox": 1423,
+      "riverPixelFractionApprox": 0.13973456790123456
+    },
+    "finalWide": {
+      "maskMethod": "documented RGB approximation; browser PBR/cloud/UI image has no semantic mask",
+      "skyFractionApprox": 0.7796427469135803,
+      "mountainTopYApprox": 28,
+      "mountainSilhouetteWidthApprox": 1093,
+      "riverVisibleWidthApprox": 1440,
+      "riverPixelFractionApprox": 0.5482060185185185
+    }
+  },
+  "candidates": {
+    "M": {
+      "browserProjection": {
+        "dayClear": {
+          "mountainSilhouette": {
+            "widthPixels": 1439.1942765656859,
+            "heightPixels": 570.9508627653122,
+            "boundsNdc": {
+              "min": [
+                0.0002566193579696119,
+                0.2512570321559906
+              ],
+              "max": [
+                0.9996970891952515,
+                0.8856468796730042
+              ]
+            }
+          },
+          "riverVisibleWidthPixels": 740.4579162597656,
+          "mountainSampleCount": 21947,
+          "riverSampleCount": 684
+        },
+        "finalWide": {
+          "mountainSilhouette": {
+            "widthPixels": 1439.8271543963347,
+            "heightPixels": 486.00903153419495,
+            "boundsNdc": {
+              "min": [
+                0.0000886200214154087,
+                0.23326700925827026
+              ],
+              "max": [
+                0.9999685883522034,
+                0.7732770442962646
+              ]
+            }
+          },
+          "riverVisibleWidthPixels": 749.1411066055298,
+          "mountainSampleCount": 22973,
+          "riverSampleCount": 687
+        }
+      },
+      "dayClearImageMask": {
+        "maskMethod": "emissive white terrain over black world, luminance >= 150",
+        "visibleTerrainPixels": 840982,
+        "visibleTerrainFraction": 0.6489058641975308,
+        "skyFraction": 0.3510941358024692,
+        "mountainSilhouetteBoundsPixels": {
+          "minX": 0,
+          "minY": 102,
+          "maxX": 1439,
+          "maxY": 899,
+          "width": 1440,
+          "height": 798
+        }
+      },
+      "finalWideImageMask": {
+        "maskMethod": "emissive white terrain over black world, luminance >= 150",
+        "visibleTerrainPixels": 750260,
+        "visibleTerrainFraction": 0.5789043209876543,
+        "skyFraction": 0.4210956790123457,
+        "mountainSilhouetteBoundsPixels": {
+          "minX": 0,
+          "minY": 204,
+          "maxX": 1439,
+          "maxY": 899,
+          "width": 1440,
+          "height": 696
+        }
+      }
+    },
+    "H": {
+      "browserProjection": {
+        "dayClear": {
+          "mountainSilhouette": {
+            "widthPixels": 1439.8372374486644,
+            "heightPixels": 396.44052386283875,
+            "boundsNdc": {
+              "min": [
+                0.00008668429654790089,
+                0.2509923577308655
+              ],
+              "max": [
+                0.9999736547470093,
+                0.6914818286895752
+              ]
+            }
+          },
+          "riverVisibleWidthPixels": 779.6813580393791,
+          "mountainSampleCount": 20021,
+          "riverSampleCount": 741
+        },
+        "finalWide": {
+          "mountainSilhouette": {
+            "widthPixels": 1438.7412406504154,
+            "heightPixels": 343.0790886282921,
+            "boundsNdc": {
+              "min": [
+                0.0006069308146834373,
+                0.23143918812274933
+              ],
+              "max": [
+                0.9997327923774719,
+                0.6126381754875183
+              ]
+            }
+          },
+          "riverVisibleWidthPixels": 703.4450089931488,
+          "mountainSampleCount": 20886,
+          "riverSampleCount": 744
+        }
+      },
+      "dayClearImageMask": {
+        "maskMethod": "emissive white terrain over black world, luminance >= 150",
+        "visibleTerrainPixels": 751883,
+        "visibleTerrainFraction": 0.5801566358024691,
+        "skyFraction": 0.4198433641975309,
+        "mountainSilhouetteBoundsPixels": {
+          "minX": 0,
+          "minY": 277,
+          "maxX": 1439,
+          "maxY": 899,
+          "width": 1440,
+          "height": 623
+        }
+      },
+      "finalWideImageMask": {
+        "maskMethod": "emissive white terrain over black world, luminance >= 150",
+        "visibleTerrainPixels": 671545,
+        "visibleTerrainFraction": 0.5181674382716049,
+        "skyFraction": 0.48183256172839506,
+        "mountainSilhouetteBoundsPixels": {
+          "minX": 0,
+          "minY": 348,
+          "maxX": 1439,
+          "maxY": 899,
+          "width": 1440,
+          "height": 552
+        }
+      }
+    }
+  }
+}
