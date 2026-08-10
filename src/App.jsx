@@ -2,6 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import './App.css'
 
 const JourneyCanvas = lazy(() => import('./JourneyCanvas.jsx'))
+const JourneyV2 = lazy(() => import('./JourneyV2.jsx'))
 
 // Local-only visual checkpoints for animation and scene QA.
 const DEV_PREVIEW = (import.meta.env.DEV || ['localhost', '127.0.0.1'].includes(window.location.hostname))
@@ -48,6 +49,7 @@ const getRouteFromLocation = () => {
 
   const pathname = window.location.pathname.replace(/\/+$/, '') || '/'
   if (pathname === '/journey') return { view: 'journey', page: null }
+  if (pathname === '/journey-v2') return { view: 'journey-v2', page: null }
   if (pathname === '/projects') {
     window.history.replaceState(null, '', `/project${window.location.search}`)
     return { view: 'portfolio', page: 'project' }
@@ -901,7 +903,7 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
   )
 }
 
-function App() {
+function LegacyApp() {
   const [entered, setEntered] = useState(
     PREVIEW_ENTERED || INITIAL_VIEW === 'portfolio',
   )
@@ -1620,6 +1622,18 @@ function App() {
       <CursorFollower entered={entered} active={Boolean(activeGate)} />
     </main>
   )
+}
+
+function App() {
+  if (INITIAL_ROUTE.view === 'journey-v2') {
+    return (
+      <Suspense fallback={<div className="journey-v2-fallback" aria-label="Loading Journey V2" />}>
+        <JourneyV2 />
+      </Suspense>
+    )
+  }
+
+  return <LegacyApp />
 }
 
 export default App

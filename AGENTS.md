@@ -30,3 +30,11 @@ Journey exists to let a visitor re-experience the awe of standing before the vas
 
 - After requested changes are implemented, visually or technically verified, and committed, push the completed commits to the current upstream branch even when the user does not explicitly repeat a push request.
 - Do not push unfinished, failing, or knowingly broken work merely to satisfy this default; finish the relevant verification first.
+
+## Journey V2 isolation
+
+- Build Journey V2 as a separate `/journey-v2` route. Do not replace or refactor `/journey` while V2 is being evaluated.
+- Treat the viewer's real Kamikochi photographs as topology, scale and light truth; AI may transform materials but must not invent the base landscape.
+- Build the V2 proof of concept in this order: Loading → Cave → Fog → Clear. Do not extend the representation to Sunset/Night/Awe until the threshold and reveal pass visual and motion review.
+- Prefer layered 2D/2.5D, masks, local shaders and directed camera motion. Use Blender only when a close spatial element cannot be expressed convincingly by those means.
+- A beautiful center frame does not pass if the threshold, reveal, pointer parallax or motion exposes separate images.
