@@ -69,3 +69,49 @@ reflection, fog color, exposure, and sky—not replacing the geography. New
 source photography is preferable to generated scenery whenever additional
 coverage is needed.
 
+## Refinement pass — spatial watercolor
+
+### Cave depth
+
+- **Rejected:** a single displaced SVG aperture still read as a dark mask over
+  a photograph.
+- **Accepted:** three independently shaped rock layers now form foreground,
+  middle, and back cave walls. Each receives a different low-level reflected
+  color, motion rate, and irregular edge. A restrained bounce light and exit
+  haze connect the exterior light to the cave interior.
+- **Browser evaluation:** the opening remains intentionally small, while the
+  visible tonal steps around it establish distance before the camera crosses
+  the threshold.
+
+### Depth-specific watercolor treatment
+
+- **Rejected:** hard polygon clips exposed the construction during the reveal.
+- **Accepted:** broad feathered density masks replaced visible layer edges.
+  The base photograph is gently softened; distant mountains receive displaced
+  translucent pigment, the forest receives local canopy-like brush breakup,
+  the river receives directional brush distortion, and foreground information
+  remains comparatively photographic.
+- **Result:** no whole-frame watercolor filter is used. The treatment becomes
+  stronger with distance and remains anchored to the original Kamikochi
+  photograph.
+
+### Fog and emotional reveal
+
+- **Rejected:** stacked white washes overexposed the valley and behaved like an
+  overlay transition.
+- **Accepted:** far, middle, and near fog now have separate density curves and
+  drift directions. The foreground remains legible while distance is removed.
+  Clearing is sequenced as peak → ridge → valley → river/reflection.
+- **Browser evaluation:** continuous scrolling shows the same geography before,
+  during, and after the mist; no image or scene cut is visible.
+
+### Spatial and UI review
+
+- Clear was checked at center, left, and right pointer positions. Sky, mountain,
+  forest, river, and foreground use restrained, different movement rates.
+- The delta is deliberately below an obvious parallax effect but sufficient to
+  separate near and far forms in motion.
+- Default visual mode removes the study title, chapter number, and V1 link.
+  `?debug` restores review UI; `?progress=0…100` exposes fixed review frames.
+- A complete Loading → Cave → Fog → Clear interaction run completed without
+  runtime errors.
