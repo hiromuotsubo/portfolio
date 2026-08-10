@@ -12,11 +12,14 @@ const PREVIEW_PROGRESS = {
   loading: 0,
   cave: 24,
   fog: 52,
-  clear: 88,
+  clear: 100,
 }
 
 const getInitialProgress = () => {
-  const preview = new URLSearchParams(window.location.search).get('preview')
+  const params = new URLSearchParams(window.location.search)
+  const requestedProgress = Number(params.get('progress'))
+  if (Number.isFinite(requestedProgress) && params.has('progress')) return clamp(requestedProgress)
+  const preview = params.get('preview')
   return PREVIEW_PROGRESS[preview] ?? 0
 }
 
@@ -27,36 +30,58 @@ const getStage = (progress) => {
   return { number: '03', label: 'KAMIKOCHI' }
 }
 
+const CAVE_LAYERS = [
+  {
+    name: 'back',
+    path: 'M-12-12H112V112H-12Z M35 74C30 66 31 52 37 41C42 31 49 27 56 28C65 29 72 39 75 50C78 62 74 72 67 77C57 81 44 80 35 74Z',
+    colors: ['#5d6852', '#242d24'],
+  },
+  {
+    name: 'middle',
+    path: 'M-12-12H112V112H-12Z M38 71C34 64 35 53 40 44C44 36 50 32 55 33C63 34 68 42 70 51C73 61 70 69 64 73C56 76 45 76 38 71Z',
+    colors: ['#263128', '#0e1510'],
+  },
+  {
+    name: 'front',
+    path: 'M-12-12H112V112H-12Z M41 68C38 65 37 60 39 55C37 51 40 47 42 44C44 40 48 39 52 35C57 36 61 38 62 43C66 47 66 52 65 56C68 61 64 66 62 69C57 71 52 70 48 72C45 70 43 70 41 68Z',
+    colors: ['#07100a', '#010302'],
+  },
+]
+
 function CaveFrame() {
   return (
-    <svg className="journey-v2__cave" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-      <defs>
-        <filter id="journey-v2-rock-edge" x="-20%" y="-20%" width="140%" height="140%">
-          <feTurbulence type="fractalNoise" baseFrequency="0.018 0.05" numOctaves="3" seed="24" result="noise" />
-          <feDisplacementMap in="SourceGraphic" in2="noise" scale="3.2" xChannelSelector="R" yChannelSelector="G" />
-        </filter>
-        <radialGradient id="journey-v2-cave-grade" cx="50%" cy="53%" r="70%">
-          <stop offset="0%" stopColor="#17201b" stopOpacity="0.88" />
-          <stop offset="56%" stopColor="#080b09" stopOpacity="0.97" />
-          <stop offset="100%" stopColor="#010302" />
-        </radialGradient>
-      </defs>
-      <path
-        className="journey-v2__cave-mass"
-        fill="url(#journey-v2-cave-grade)"
-        fillRule="evenodd"
-        filter="url(#journey-v2-rock-edge)"
-        d="M-12-12H112V112H-12Z M41 68C37 62 38 52 42 45C45 39 49 36 53 36C59 36 63 42 65 49C68 57 66 64 62 69C56 72 47 72 41 68Z"
-      />
-      <path
-        className="journey-v2__cave-rim journey-v2__cave-rim--outer"
-        d="M41 68C37 62 38 52 42 45C45 39 49 36 53 36C59 36 63 42 65 49C68 57 66 64 62 69C56 72 47 72 41 68Z"
-      />
-      <path
-        className="journey-v2__cave-rim journey-v2__cave-rim--inner"
-        d="M42 67C39 61 40 53 43 47C46 42 50 39 53 39C58 39 61 43 63 50C65 56 64 62 60 66C55 69 47 69 42 67Z"
-      />
-    </svg>
+    <div className="journey-v2__cave" aria-hidden="true">
+      <div className="journey-v2__cave-bounce" />
+      <div className="journey-v2__cave-light" />
+      {CAVE_LAYERS.map((layer, index) => (
+        <svg
+          className={`journey-v2__cave-layer journey-v2__cave-layer--${layer.name}`}
+          viewBox="0 0 100 100"
+          preserveAspectRatio="none"
+          key={layer.name}
+        >
+          <defs>
+            <filter id={`journey-v2-rock-edge-${layer.name}`} x="-20%" y="-20%" width="140%" height="140%">
+              <feTurbulence type="fractalNoise" baseFrequency={`${0.014 + index * 0.004} ${0.038 + index * 0.006}`} numOctaves="3" seed={18 + index * 9} result="noise" />
+              <feDisplacementMap in="SourceGraphic" in2="noise" scale={2.2 + index * 0.9} xChannelSelector="R" yChannelSelector="G" />
+            </filter>
+            <linearGradient id={`journey-v2-cave-grade-${layer.name}`} x1={index % 2 ? '100%' : '0%'} y1="15%" x2={index % 2 ? '0%' : '100%'} y2="88%">
+              <stop offset="0%" stopColor={layer.colors[0]} stopOpacity={0.7 + index * 0.13} />
+              <stop offset="58%" stopColor={layer.colors[1]} stopOpacity={0.9 + index * 0.045} />
+              <stop offset="100%" stopColor="#010302" />
+            </linearGradient>
+          </defs>
+          <path
+            className="journey-v2__cave-mass"
+            fill={`url(#journey-v2-cave-grade-${layer.name})`}
+            fillRule="evenodd"
+            filter={`url(#journey-v2-rock-edge-${layer.name})`}
+            d={layer.path}
+          />
+        </svg>
+      ))}
+      <div className="journey-v2__cave-grain" />
+    </div>
   )
 }
 
@@ -64,11 +89,26 @@ function WatercolorLandscape() {
   const image = '/portfolio/nagano-kappabashi-selected.png'
   return (
     <div className="journey-v2__landscape" aria-hidden="true">
+      <svg className="journey-v2__filter-defs" width="0" height="0">
+        <defs>
+          <filter id="journey-v2-mountain-watercolor" x="-5%" y="-5%" width="110%" height="110%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.006 0.018" numOctaves="2" seed="31" result="wash" />
+            <feDisplacementMap in="SourceGraphic" in2="wash" scale="1.45" xChannelSelector="R" yChannelSelector="B" result="edge" />
+            <feGaussianBlur in="edge" stdDeviation="0.22" />
+          </filter>
+          <filter id="journey-v2-river-brush" x="-8%" y="-8%" width="116%" height="116%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.012 0.09" numOctaves="2" seed="7" result="flow" />
+            <feDisplacementMap in="SourceGraphic" in2="flow" scale="2.1" xChannelSelector="R" yChannelSelector="G" />
+          </filter>
+        </defs>
+      </svg>
       <div className="journey-v2__layer journey-v2__layer--base" style={{ backgroundImage: `url(${image})` }} />
-      <div className="journey-v2__layer journey-v2__layer--sky" style={{ backgroundImage: `url(${image})` }} />
       <div className="journey-v2__layer journey-v2__layer--distant" style={{ backgroundImage: `url(${image})` }} />
+      <div className="journey-v2__layer journey-v2__layer--mountain-wash" style={{ backgroundImage: `url(${image})` }} />
       <div className="journey-v2__layer journey-v2__layer--forest" style={{ backgroundImage: `url(${image})` }} />
+      <div className="journey-v2__forest-brush" />
       <div className="journey-v2__layer journey-v2__layer--river" style={{ backgroundImage: `url(${image})` }} />
+      <div className="journey-v2__layer journey-v2__layer--river-brush" style={{ backgroundImage: `url(${image})` }} />
       <div className="journey-v2__layer journey-v2__layer--foreground" style={{ backgroundImage: `url(${image})` }} />
       <div className="journey-v2__river-light" />
       <div className="journey-v2__pigment-light" />
@@ -79,9 +119,9 @@ function WatercolorLandscape() {
 function FogField() {
   return (
     <div className="journey-v2__fog" aria-hidden="true">
-      <div className="journey-v2__fog-wash journey-v2__fog-wash--back" />
-      <div className="journey-v2__fog-wash journey-v2__fog-wash--middle" />
-      <div className="journey-v2__fog-wash journey-v2__fog-wash--front" />
+      <div className="journey-v2__fog-depth journey-v2__fog-depth--far"><i /><b /></div>
+      <div className="journey-v2__fog-depth journey-v2__fog-depth--middle"><i /><b /></div>
+      <div className="journey-v2__fog-depth journey-v2__fog-depth--near"><i /><b /></div>
       <div className="journey-v2__fog-paper" />
     </div>
   )
@@ -89,6 +129,7 @@ function FogField() {
 
 function JourneyV2() {
   const initialProgress = useMemo(getInitialProgress, [])
+  const debugUi = useMemo(() => new URLSearchParams(window.location.search).has('debug'), [])
   const [progress, setProgress] = useState(initialProgress)
   const [loaded, setLoaded] = useState(initialProgress > 0)
   const [soundOn, setSoundOn] = useState(false)
@@ -207,11 +248,18 @@ function JourneyV2() {
 
   const caveTravel = smoothstep(8, 48, progress)
   const thresholdCross = smoothstep(31, 62, progress)
-  const clear = smoothstep(55, 88, progress)
+  const peakReveal = smoothstep(54, 69, progress)
+  const ridgeReveal = smoothstep(62, 79, progress)
+  const valleyReveal = smoothstep(70, 90, progress)
+  const riverReveal = smoothstep(78, 96, progress)
+  const clear = smoothstep(58, 92, progress)
   const fogArrival = smoothstep(23, 48, progress)
   // Keep the valley legible inside the mist. The fog should withhold detail,
   // rather than replace the landscape with a white transition card.
-  const fog = 0.08 + fogArrival * (1 - clear) * 0.78
+  const fog = 0.06 + fogArrival * (1 - valleyReveal) * 0.8
+  const fogFar = 0.012 + fog * (1 - peakReveal) * 0.58
+  const fogMiddle = 0.01 + fog * (1 - valleyReveal) * 0.44
+  const fogNear = 0.006 + fog * (1 - riverReveal) * 0.17
   const motionLock = 1 - smoothstep(66, 78, progress)
   const pointerWeight = loaded ? smoothstep(60, 83, progress) * (1 - motionLock * 0.88) : 0
   const stage = getStage(progress)
@@ -222,18 +270,25 @@ function JourneyV2() {
   const style = {
     '--v2-progress': progress / 100,
     '--v2-clear': clear,
+    '--v2-peak-reveal': peakReveal,
+    '--v2-ridge-reveal': ridgeReveal,
+    '--v2-valley-reveal': valleyReveal,
+    '--v2-river-reveal': riverReveal,
     '--v2-fog': fog,
+    '--v2-fog-far': fogFar,
+    '--v2-fog-middle': fogMiddle,
+    '--v2-fog-near': fogNear,
     '--v2-cave-travel': caveTravel,
     '--v2-threshold': thresholdCross,
     '--v2-landscape-scale': landscapeScale,
-    '--v2-cave-scale': 1 + caveTravel * 0.54 + thresholdCross * 3.8,
-    '--v2-cave-opacity': 1 - smoothstep(48, 70, progress),
+    '--v2-cave-scale': 1 + caveTravel * 0.48 + thresholdCross * 3.9,
+    '--v2-cave-opacity': 1 - smoothstep(42, 64, progress),
     '--v2-pointer-x': pointerX,
     '--v2-pointer-y': pointerY,
   }
 
   return (
-    <main className={`journey-v2 ${loaded ? 'is-loaded' : ''}`} style={style}>
+    <main className={`journey-v2 ${loaded ? 'is-loaded' : ''} ${debugUi ? 'has-debug-ui' : 'is-visual-mode'}`} style={style}>
       <WatercolorLandscape />
       <FogField />
       <CaveFrame />
@@ -247,12 +302,12 @@ function JourneyV2() {
         <small>A MEMORY OF KAMIKOCHI</small>
       </section>
 
-      <header className="journey-v2__header">
+      <header className="journey-v2__header" aria-hidden={!debugUi}>
         <a href="/journey-v2" aria-label="Journey V2 home">JOURNEY <span>V2</span></a>
         <small>WATERCOLOR SPATIAL STUDY</small>
       </header>
 
-      <aside className="journey-v2__chapter" aria-live="polite">
+      <aside className="journey-v2__chapter" aria-live="polite" aria-hidden={!debugUi}>
         <span>{stage.number}</span>
         <p>{stage.label}</p>
       </aside>
@@ -266,7 +321,7 @@ function JourneyV2() {
         SOUND {soundOn ? 'ON' : 'OFF'}
       </button>
 
-      <a className="journey-v2__return" href="/journey">V1 ↗</a>
+      {debugUi && <a className="journey-v2__return" href="/journey">V1 ↗</a>}
     </main>
   )
 }

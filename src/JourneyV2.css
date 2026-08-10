@@ -20,7 +20,8 @@
 .journey-v2__paper,
 .journey-v2__grade,
 .journey-v2__pigment-light,
-.journey-v2__river-light {
+.journey-v2__river-light,
+.journey-v2__forest-brush {
   position: absolute;
   inset: 0;
 }
@@ -45,47 +46,80 @@
   filter:
     saturate(calc(0.5 + var(--v2-clear) * 0.34))
     contrast(calc(0.74 + var(--v2-clear) * 0.24))
-    brightness(calc(0.7 + var(--v2-clear) * 0.2));
+    brightness(calc(0.7 + var(--v2-clear) * 0.2))
+    blur(calc(1.05px - var(--v2-clear) * 0.22px));
   transform:
     translate3d(calc(var(--v2-pointer-x) * -1.5px), calc(var(--v2-pointer-y) * -0.7px), 0)
     scale(1.015);
 }
 
 .journey-v2__layer--sky {
-  clip-path: polygon(0 0, 100% 0, 100% 39%, 91% 27%, 76% 24%, 63% 25%, 51% 24%, 38% 27%, 24% 25%, 10% 28%, 0 25%);
-  filter: saturate(calc(0.34 + var(--v2-clear) * 0.34)) brightness(calc(0.86 + var(--v2-clear) * 0.19)) blur(0.4px);
-  opacity: 0.9;
+  clip-path: none;
+  filter: saturate(calc(0.24 + var(--v2-peak-reveal) * 0.42)) brightness(calc(0.88 + var(--v2-peak-reveal) * 0.2)) blur(calc((1 - var(--v2-peak-reveal)) * 1.2px + 0.35px));
+  opacity: calc(0.56 + var(--v2-peak-reveal) * 0.38);
   transform:
     translate3d(calc(var(--v2-pointer-x) * -0.7px), calc(var(--v2-pointer-y) * -0.35px), 0)
     scale(1.012);
+  -webkit-mask-image: linear-gradient(to bottom, #000 0 9%, rgba(0, 0, 0, 0.56) 15%, transparent 24%);
+  mask-image: linear-gradient(to bottom, #000 0 9%, rgba(0, 0, 0, 0.56) 15%, transparent 24%);
 }
 
 .journey-v2__layer--distant {
-  clip-path: polygon(0 12%, 100% 12%, 100% 69%, 85% 65%, 70% 66%, 58% 63%, 43% 65%, 29% 63%, 14% 67%, 0 66%);
-  filter: saturate(calc(0.42 + var(--v2-clear) * 0.33)) contrast(calc(0.72 + var(--v2-clear) * 0.16)) brightness(calc(0.81 + var(--v2-clear) * 0.12)) blur(calc((1 - var(--v2-clear)) * 1.3px));
-  opacity: calc(0.45 + var(--v2-clear) * 0.45);
+  clip-path: none;
+  filter: saturate(calc(0.3 + var(--v2-peak-reveal) * 0.42)) contrast(calc(0.62 + var(--v2-ridge-reveal) * 0.27)) brightness(calc(0.83 + var(--v2-peak-reveal) * 0.12)) blur(calc((1 - var(--v2-ridge-reveal)) * 2.1px + 0.28px));
+  opacity: calc(0.32 + var(--v2-peak-reveal) * 0.56);
   transform:
     translate3d(calc(var(--v2-pointer-x) * -2.1px), calc(var(--v2-pointer-y) * -0.95px), 0)
     scale(1.018);
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 18%, #000 75%, transparent 96%);
-  mask-image: linear-gradient(to bottom, transparent 0%, #000 18%, #000 75%, transparent 96%);
+  -webkit-mask-image: radial-gradient(ellipse 96% 58% at 52% 38%, #000 0 28%, rgba(0, 0, 0, 0.82) 48%, transparent 78%);
+  mask-image: radial-gradient(ellipse 96% 58% at 52% 38%, #000 0 28%, rgba(0, 0, 0, 0.82) 48%, transparent 78%);
+}
+
+.journey-v2__layer--mountain-wash {
+  clip-path: none;
+  opacity: calc(var(--v2-ridge-reveal) * 0.56);
+  filter: url('#journey-v2-mountain-watercolor') saturate(0.68) contrast(0.96) brightness(1.04);
+  mix-blend-mode: normal;
+  transform:
+    translate3d(calc(var(--v2-pointer-x) * -2.7px), calc(var(--v2-pointer-y) * -1.15px), 0)
+    scale(1.02);
+  -webkit-mask-image:
+    radial-gradient(ellipse 46% 40% at 68% 28%, #000 0 16%, rgba(0, 0, 0, 0.72) 38%, transparent 72%),
+    radial-gradient(ellipse 72% 55% at 36% 51%, rgba(0, 0, 0, 0.9) 0 22%, rgba(0, 0, 0, 0.46) 53%, transparent 82%);
+  mask-image:
+    radial-gradient(ellipse 46% 40% at 68% 28%, #000 0 16%, rgba(0, 0, 0, 0.72) 38%, transparent 72%),
+    radial-gradient(ellipse 72% 55% at 36% 51%, rgba(0, 0, 0, 0.9) 0 22%, rgba(0, 0, 0, 0.46) 53%, transparent 82%);
 }
 
 .journey-v2__layer--forest {
-  clip-path: polygon(0 28%, 21% 32%, 37% 39%, 52% 38%, 66% 35%, 79% 34%, 100% 26%, 100% 86%, 76% 79%, 57% 76%, 40% 78%, 20% 82%, 0 89%);
-  filter: saturate(calc(0.46 + var(--v2-clear) * 0.5)) contrast(calc(0.8 + var(--v2-clear) * 0.28)) brightness(calc(0.66 + var(--v2-clear) * 0.23));
-  opacity: calc(0.5 + var(--v2-clear) * 0.46);
+  clip-path: none;
+  filter: saturate(calc(0.38 + var(--v2-valley-reveal) * 0.58)) contrast(calc(0.72 + var(--v2-valley-reveal) * 0.36)) brightness(calc(0.67 + var(--v2-valley-reveal) * 0.22)) blur(calc((1 - var(--v2-valley-reveal)) * 1.25px));
+  opacity: calc(0.34 + var(--v2-valley-reveal) * 0.62);
   transform:
     translate3d(calc(var(--v2-pointer-x) * -3.6px), calc(var(--v2-pointer-y) * -1.5px), 0)
     scale(1.022);
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 18%, #000 86%, transparent 100%);
-  mask-image: linear-gradient(to bottom, transparent 0%, #000 18%, #000 86%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse 112% 55% at 50% 60%, transparent 0 3%, rgba(0, 0, 0, 0.62) 28%, #000 51%, rgba(0, 0, 0, 0.45) 75%, transparent 94%);
+  mask-image: radial-gradient(ellipse 112% 55% at 50% 60%, transparent 0 3%, rgba(0, 0, 0, 0.62) 28%, #000 51%, rgba(0, 0, 0, 0.45) 75%, transparent 94%);
+}
+
+.journey-v2__forest-brush {
+  inset: 30% -5% 8%;
+  opacity: calc(var(--v2-valley-reveal) * 0.24);
+  background:
+    repeating-radial-gradient(ellipse at 27% 54%, rgba(15, 47, 31, 0.32) 0 1px, transparent 1.6px 7px),
+    radial-gradient(ellipse at 64% 35%, rgba(160, 178, 105, 0.16), transparent 52%);
+  background-size: 19px 13px, 100% 100%;
+  filter: blur(0.45px);
+  mix-blend-mode: multiply;
+  transform: translate3d(calc(var(--v2-pointer-x) * -4.15px), calc(var(--v2-pointer-y) * -1.7px), 0);
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 24%, #000 72%, transparent);
+  mask-image: linear-gradient(to bottom, transparent, #000 24%, #000 72%, transparent);
 }
 
 .journey-v2__layer--river {
   clip-path: polygon(40% 65%, 68% 66%, 62% 72%, 84% 75%, 100% 89%, 100% 100%, 24% 100%, 36% 87%, 43% 78%, 52% 72%);
-  filter: saturate(calc(0.58 + var(--v2-clear) * 0.52)) contrast(calc(0.78 + var(--v2-clear) * 0.2)) brightness(calc(0.78 + var(--v2-clear) * 0.18));
-  opacity: calc(0.5 + var(--v2-clear) * 0.5);
+  filter: saturate(calc(0.5 + var(--v2-river-reveal) * 0.58)) contrast(calc(0.72 + var(--v2-river-reveal) * 0.26)) brightness(calc(0.76 + var(--v2-river-reveal) * 0.2)) blur(calc((1 - var(--v2-river-reveal)) * 0.8px));
+  opacity: calc(0.26 + var(--v2-river-reveal) * 0.74);
   transform:
     translate3d(calc(var(--v2-pointer-x) * -5.3px), calc(var(--v2-pointer-y) * -2.1px), 0)
     scale(1.027);
@@ -93,20 +127,36 @@
   mask-image: linear-gradient(to bottom, transparent 0%, #000 22%, #000 100%);
 }
 
+.journey-v2__layer--river-brush {
+  clip-path: polygon(40% 65%, 68% 66%, 62% 72%, 84% 75%, 100% 89%, 100% 100%, 24% 100%, 36% 87%, 43% 78%, 52% 72%);
+  opacity: calc(var(--v2-river-reveal) * 0.34);
+  filter: url('#journey-v2-river-brush') saturate(0.78) contrast(1.08) brightness(1.05);
+  mix-blend-mode: screen;
+  transform:
+    translate3d(calc(var(--v2-pointer-x) * -5.7px), calc(var(--v2-pointer-y) * -2.25px), 0)
+    scale(1.028);
+  -webkit-mask-image: repeating-linear-gradient(174deg, transparent 0 4px, rgba(0, 0, 0, 0.72) 5px 7px, transparent 8px 16px);
+  mask-image: repeating-linear-gradient(174deg, transparent 0 4px, rgba(0, 0, 0, 0.72) 5px 7px, transparent 8px 16px);
+}
+
 .journey-v2__layer--foreground {
-  clip-path: polygon(0 47%, 18% 52%, 30% 67%, 36% 84%, 28% 100%, 0 100%, 0 47%, 100% 43%, 100% 100%, 82% 100%, 79% 78%, 84% 58%);
-  filter: saturate(calc(0.42 + var(--v2-clear) * 0.44)) contrast(calc(0.78 + var(--v2-clear) * 0.28)) brightness(calc(0.56 + var(--v2-clear) * 0.23));
-  opacity: calc(0.58 + var(--v2-clear) * 0.4);
+  clip-path: none;
+  filter: saturate(calc(0.38 + var(--v2-valley-reveal) * 0.5)) contrast(calc(0.76 + var(--v2-valley-reveal) * 0.31)) brightness(calc(0.55 + var(--v2-valley-reveal) * 0.25));
+  opacity: calc(0.58 + var(--v2-valley-reveal) * 0.4);
   transform:
     translate3d(calc(var(--v2-pointer-x) * -8px), calc(var(--v2-pointer-y) * -3px), 0)
     scale(1.034);
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 22%, #000 100%);
-  mask-image: linear-gradient(to bottom, transparent 0%, #000 22%, #000 100%);
+  -webkit-mask-image:
+    radial-gradient(ellipse 48% 78% at 5% 78%, #000 0 30%, rgba(0, 0, 0, 0.72) 54%, transparent 83%),
+    radial-gradient(ellipse 43% 78% at 96% 76%, #000 0 25%, rgba(0, 0, 0, 0.68) 51%, transparent 82%);
+  mask-image:
+    radial-gradient(ellipse 48% 78% at 5% 78%, #000 0 30%, rgba(0, 0, 0, 0.72) 54%, transparent 83%),
+    radial-gradient(ellipse 43% 78% at 96% 76%, #000 0 25%, rgba(0, 0, 0, 0.68) 51%, transparent 82%);
 }
 
 .journey-v2__river-light {
   inset: 61% 15% -10% 24%;
-  opacity: calc(var(--v2-clear) * 0.52);
+  opacity: calc(var(--v2-river-reveal) * 0.52);
   background:
     radial-gradient(ellipse at 62% 28%, rgba(217, 250, 240, 0.64), transparent 13%),
     linear-gradient(118deg, transparent 15%, rgba(185, 235, 226, 0.08) 36%, rgba(228, 250, 241, 0.36) 49%, transparent 64%);
@@ -120,56 +170,86 @@
   background:
     radial-gradient(circle at 66% 14%, rgba(245, 244, 213, 0.28), transparent 29%),
     linear-gradient(112deg, rgba(40, 75, 63, 0.18), transparent 46%, rgba(235, 227, 164, 0.12));
-  opacity: calc(0.2 + var(--v2-clear) * 0.52);
+  opacity: calc(0.08 + var(--v2-peak-reveal) * 0.24 + var(--v2-valley-reveal) * 0.28);
   mix-blend-mode: soft-light;
 }
 
 .journey-v2__fog {
-  opacity: calc(0.035 + var(--v2-fog) * 0.72);
+  opacity: 1;
   transition: opacity 80ms linear;
   pointer-events: none;
 }
 
-.journey-v2__fog-wash,
+.journey-v2__fog-depth,
 .journey-v2__fog-paper {
   position: absolute;
-  inset: -20%;
 }
 
-.journey-v2__fog-wash {
-  background-repeat: no-repeat;
+.journey-v2__fog-depth {
+  inset: -16%;
+  pointer-events: none;
   mix-blend-mode: screen;
-  will-change: transform;
+  will-change: transform, opacity;
 }
 
-.journey-v2__fog-wash--back {
-  background:
-    radial-gradient(ellipse at 22% 38%, rgba(226, 230, 213, 0.74) 0 13%, transparent 46%),
-    radial-gradient(ellipse at 75% 44%, rgba(226, 224, 199, 0.68) 0 15%, transparent 48%),
-    radial-gradient(ellipse at 52% 62%, rgba(235, 234, 216, 0.76) 0 22%, transparent 56%);
-  filter: blur(26px);
-  animation: journey-v2-fog-back 24s ease-in-out infinite alternate;
+.journey-v2__fog-depth i,
+.journey-v2__fog-depth b {
+  position: absolute;
+  inset: 0;
+  display: block;
+  background-repeat: no-repeat;
+  border-radius: 50%;
 }
 
-.journey-v2__fog-wash--middle {
-  background:
-    radial-gradient(ellipse at 40% 45%, rgba(245, 240, 216, 0.78) 0 18%, transparent 52%),
-    radial-gradient(ellipse at 84% 68%, rgba(226, 229, 216, 0.7) 0 18%, transparent 50%),
-    radial-gradient(ellipse at 10% 76%, rgba(230, 228, 209, 0.66) 0 17%, transparent 48%);
-  filter: blur(17px);
-  animation: journey-v2-fog-middle 18s ease-in-out infinite alternate;
+.journey-v2__fog-depth--far {
+  opacity: var(--v2-fog-far);
+  filter: blur(30px);
+  animation: journey-v2-fog-far 27s ease-in-out infinite alternate;
 }
 
-.journey-v2__fog-wash--front {
+.journey-v2__fog-depth--far i {
   background:
-    radial-gradient(ellipse at 62% 30%, rgba(250, 246, 224, 0.72) 0 12%, transparent 42%),
-    radial-gradient(ellipse at 28% 72%, rgba(239, 237, 219, 0.68) 0 16%, transparent 45%);
+    radial-gradient(ellipse at 46% 30%, rgba(239, 238, 219, 0.98) 0 18%, transparent 52%),
+    radial-gradient(ellipse at 78% 38%, rgba(225, 229, 217, 0.91) 0 17%, transparent 50%);
+}
+
+.journey-v2__fog-depth--far b {
+  background:
+    radial-gradient(ellipse at 17% 36%, rgba(226, 231, 219, 0.9) 0 14%, transparent 47%),
+    radial-gradient(ellipse at 62% 52%, rgba(243, 239, 216, 0.87) 0 22%, transparent 58%);
+}
+
+.journey-v2__fog-depth--middle {
+  opacity: var(--v2-fog-middle);
+  filter: blur(18px);
+  animation: journey-v2-fog-middle 19s ease-in-out infinite alternate;
+}
+
+.journey-v2__fog-depth--middle i {
+  background:
+    radial-gradient(ellipse at 36% 56%, rgba(242, 239, 217, 0.88) 0 18%, transparent 51%),
+    radial-gradient(ellipse at 82% 68%, rgba(222, 228, 216, 0.82) 0 16%, transparent 49%);
+}
+
+.journey-v2__fog-depth--middle b {
+  background: radial-gradient(ellipse at 8% 68%, rgba(231, 228, 210, 0.78) 0 18%, transparent 50%);
+}
+
+.journey-v2__fog-depth--near {
+  opacity: var(--v2-fog-near);
   filter: blur(11px);
-  animation: journey-v2-fog-front 13s ease-in-out infinite alternate;
+  animation: journey-v2-fog-near 14s ease-in-out infinite alternate;
+}
+
+.journey-v2__fog-depth--near i {
+  background:
+    radial-gradient(ellipse at 26% 78%, rgba(238, 235, 217, 0.68) 0 13%, transparent 43%),
+    radial-gradient(ellipse at 72% 78%, rgba(238, 240, 227, 0.58) 0 12%, transparent 42%);
 }
 
 .journey-v2__fog-paper {
-  opacity: 0.18;
+  inset: -10%;
+  opacity: calc(var(--v2-fog) * 0.16);
   background-image:
     repeating-radial-gradient(circle at 20% 30%, rgba(77, 87, 69, 0.19) 0 0.45px, transparent 0.8px 3.2px),
     repeating-linear-gradient(87deg, rgba(255, 255, 255, 0.08) 0 1px, transparent 1px 5px);
@@ -179,8 +259,6 @@
 .journey-v2__cave {
   position: absolute;
   inset: -2%;
-  width: 104%;
-  height: 104%;
   opacity: var(--v2-cave-opacity);
   transform: scale(var(--v2-cave-scale));
   transform-origin: 51% 56%;
@@ -188,29 +266,61 @@
   pointer-events: none;
 }
 
-.journey-v2__cave-mass {
-  opacity: 0.995;
+.journey-v2__cave-layer,
+.journey-v2__cave-bounce,
+.journey-v2__cave-light,
+.journey-v2__cave-grain {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
 }
 
-.journey-v2__cave-rim {
-  fill: none;
-  vector-effect: non-scaling-stroke;
+.journey-v2__cave-layer--back {
+  transform: translate3d(calc(var(--v2-pointer-x) * -1.5px), calc(var(--v2-pointer-y) * -0.7px + var(--v2-cave-travel) * -0.45%), 0) scale(calc(1.02 + var(--v2-cave-travel) * 0.01));
+}
+
+.journey-v2__cave-layer--middle {
+  transform: translate3d(calc(var(--v2-pointer-x) * -5px), calc(var(--v2-pointer-y) * -2.1px + var(--v2-cave-travel) * -0.9%), 0) scale(calc(1.015 + var(--v2-cave-travel) * 0.025));
+}
+
+.journey-v2__cave-layer--front {
+  transform: translate3d(calc(var(--v2-pointer-x) * -11px), calc(var(--v2-pointer-y) * -4.2px + var(--v2-cave-travel) * -1.45%), 0) scale(calc(1.01 + var(--v2-cave-travel) * 0.045));
+}
+
+.journey-v2__cave-bounce {
+  z-index: 4;
+  background:
+    radial-gradient(ellipse at 53% 56%, transparent 0 12%, rgba(196, 196, 148, 0.3) 15%, rgba(78, 91, 67, 0.16) 25%, transparent 42%),
+    radial-gradient(ellipse at 52% 58%, rgba(130, 143, 105, 0.13), transparent 54%);
   mix-blend-mode: screen;
 }
 
-.journey-v2__cave-rim--outer {
-  stroke: rgba(159, 158, 126, 0.18);
-  stroke-width: 4.5;
-  filter: blur(1.7px);
+.journey-v2__cave-light {
+  z-index: 5;
+  inset: 24% 28% 13% 27%;
+  background: radial-gradient(ellipse at 52% 50%, rgba(245, 240, 205, 0.2), rgba(204, 213, 176, 0.07) 28%, transparent 68%);
+  filter: blur(18px);
+  mix-blend-mode: screen;
+  opacity: calc(0.12 + var(--v2-cave-travel) * 0.34);
 }
 
-.journey-v2__cave-rim--inner {
-  stroke: rgba(231, 225, 187, 0.1);
-  stroke-width: 1.1;
+.journey-v2__cave-grain {
+  z-index: 6;
+  opacity: 0.32;
+  background:
+    radial-gradient(ellipse at 16% 24%, rgba(145, 147, 110, 0.15), transparent 28%),
+    radial-gradient(ellipse at 86% 42%, rgba(112, 124, 92, 0.13), transparent 33%),
+    linear-gradient(74deg, transparent 0 16%, rgba(138, 143, 106, 0.12) 27%, transparent 38%),
+    linear-gradient(109deg, transparent 0 66%, rgba(116, 127, 94, 0.12) 78%, transparent 88%),
+    linear-gradient(118deg, transparent 24%, rgba(186, 177, 126, 0.09) 42%, transparent 57%),
+    radial-gradient(circle at 50% 56%, transparent 0 16%, rgba(116, 122, 93, 0.18) 28%, rgba(0, 0, 0, 0.72) 54%);
+  mix-blend-mode: screen;
+  pointer-events: none;
 }
 
 .journey-v2__paper {
-  opacity: 0.18;
+  opacity: calc(0.06 + var(--v2-fog) * 0.1 + var(--v2-ridge-reveal) * 0.05);
   pointer-events: none;
   background-image:
     repeating-radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.24) 0 0.3px, transparent 0.5px 3px),
@@ -302,6 +412,18 @@
   opacity: calc(0.4 + var(--v2-clear) * 0.52);
 }
 
+.journey-v2.is-visual-mode .journey-v2__header,
+.journey-v2.is-visual-mode .journey-v2__chapter,
+.journey-v2.is-visual-mode .journey-v2__return {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.journey-v2.is-visual-mode .journey-v2__prompt,
+.journey-v2.is-visual-mode .journey-v2__sound {
+  opacity: 0.42;
+}
+
 .journey-v2__header a,
 .journey-v2__return {
   color: inherit;
@@ -382,19 +504,19 @@
   100% { transform: scale(1) rotate(0); opacity: 1; filter: blur(0); }
 }
 
-@keyframes journey-v2-fog-back {
-  from { transform: translate3d(-2%, -1%, 0) scale(1); }
-  to { transform: translate3d(3%, 2%, 0) scale(1.04); }
+@keyframes journey-v2-fog-far {
+  from { transform: translate3d(-3%, -1%, 0) scale(1); }
+  to { transform: translate3d(5%, 1.5%, 0) scale(1.045); }
 }
 
 @keyframes journey-v2-fog-middle {
-  from { transform: translate3d(2%, 1%, 0) scale(1.03); }
-  to { transform: translate3d(-3%, -2%, 0) scale(0.98); }
+  from { transform: translate3d(3%, 1%, 0) scale(1.03); }
+  to { transform: translate3d(-5%, -1%, 0) scale(0.985); }
 }
 
-@keyframes journey-v2-fog-front {
-  from { transform: translate3d(-1%, 2%, 0); }
-  to { transform: translate3d(2%, -1%, 0); }
+@keyframes journey-v2-fog-near {
+  from { transform: translate3d(-2%, 2%, 0); }
+  to { transform: translate3d(4%, -0.5%, 0); }
 }
 
 @keyframes journey-v2-water-breathe {
@@ -417,7 +539,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .journey-v2__fog-wash,
+  .journey-v2__fog-depth,
   .journey-v2__river-light,
   .journey-v2__loader-stain {
     animation: none;
