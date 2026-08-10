@@ -1,0 +1,850 @@
+{
+  "schemaVersion": 1,
+  "phase": "Journey V3 Phase 1C.2 input audit",
+  "sourceBlend": "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/work/blender/journey-v3/phase1c/journey-v3-macro-massing-v002.blend",
+  "sourceBlendSha256Before": "9bc96a17b6aee6c09a59fdc77bc05083197fd9be9d2aab10c8585f4642e13237",
+  "sourceBlendSha256After": "9bc96a17b6aee6c09a59fdc77bc05083197fd9be9d2aab10c8585f4642e13237",
+  "sourceBlendUnchanged": true,
+  "dayClearCamera": "CAM_V3_DAY_CLEAR_START_1440x900",
+  "topology": [
+    {
+      "name": "V3_V002_DISTANT_RANGE",
+      "role": "distant-range",
+      "vertexCount": 1872,
+      "faceCount": 1751,
+      "edgeCount": 3622,
+      "boundaryEdgeCount": 240,
+      "nonManifoldEdgeCount": 240,
+      "closed": false,
+      "planFootprintArea": 84912.0,
+      "cameraForwardDepth": 145.56197357177734,
+      "cameraHorizontalWidth": 699.741135597229,
+      "depthToWidthRatio": 0.2080226045986852,
+      "height": 129.2880620956421,
+      "bounds": {
+        "min": [
+          -348.0,
+          414.0,
+          9.23799991607666
+        ],
+        "max": [
+          348.0,
+          536.0,
+          138.52606201171875
+        ],
+        "size": [
+          696.0,
+          122.0,
+          129.2880620956421
+        ]
+      },
+      "surfaceArea": 168142.73724964476,
+      "volume": null,
+      "generator": {
+        "primaryOrOpposing": null,
+        "midOrFar": "distant_range()",
+        "ground": null,
+        "river": null
+      },
+      "structuralClassification": [
+        "shallow ridge strip",
+        "background curtain",
+        "camera-facing sheet"
+      ]
+    },
+    {
+      "name": "V3_V002_LEFT_RIVERBANK_PROXY",
+      "role": "irregular-riverbank",
+      "vertexCount": 250,
+      "faceCount": 196,
+      "edgeCount": 445,
+      "boundaryEdgeCount": 106,
+      "nonManifoldEdgeCount": 106,
+      "closed": false,
+      "planFootprintArea": 13078.456899268806,
+      "cameraForwardDepth": 401.4470801502466,
+      "cameraHorizontalWidth": 62.47176897525787,
+      "depthToWidthRatio": 6.42605590869759,
+      "height": 11.250997424125671,
+      "bounds": {
+        "min": [
+          -44.100887298583984,
+          -42.0,
+          -1.9196842908859253
+        ],
+        "max": [
+          14.783486366271973,
+          360.0,
+          9.331313133239746
+        ],
+        "size": [
+          58.88437366485596,
+          402.0,
+          11.250997424125671
+        ]
+      },
+      "surfaceArea": 1796.4445447178944,
+      "volume": null,
+      "generator": {
+        "primaryOrOpposing": null,
+        "midOrFar": null,
+        "ground": null,
+        "river": "river_objects()"
+      },
+      "structuralClassification": [
+        "narrow ribbon terrain"
+      ]
+    },
+    {
+      "name": "V3_V002_MEADOW_BASE",
+      "role": "continuous-meadow-terrain",
+      "vertexCount": 1786,
+      "faceCount": 1702,
+      "edgeCount": 3487,
+      "boundaryEdgeCount": 166,
+      "nonManifoldEdgeCount": 166,
+      "closed": false,
+      "planFootprintArea": 72859.09171604941,
+      "cameraForwardDepth": 234.05519580841064,
+      "cameraHorizontalWidth": 341.8176978826523,
+      "depthToWidthRatio": 0.6847369146133649,
+      "height": 10.008352041244507,
+      "bounds": {
+        "min": [
+          -176.98048400878906,
+          -42.0,
+          -3.2246177196502686
+        ],
+        "max": [
+          162.19973754882812,
+          182.0,
+          6.783734321594238
+        ],
+        "size": [
+          339.1802215576172,
+          224.0,
+          10.008352041244507
+        ]
+      },
+      "surfaceArea": 72629.21029330733,
+      "volume": null,
+      "generator": {
+        "primaryOrOpposing": null,
+        "midOrFar": null,
+        "ground": "continuous_ground()",
+        "river": null
+      },
+      "structuralClassification": [
+        "rectangular terrain patch"
+      ]
+    },
+    {
+      "name": "V3_V002_MIDGROUND_RANGE",
+      "role": "midground-range",
+      "vertexCount": 1872,
+      "faceCount": 1751,
+      "edgeCount": 3622,
+      "boundaryEdgeCount": 240,
+      "nonManifoldEdgeCount": 240,
+      "closed": false,
+      "planFootprintArea": 66960.0,
+      "cameraForwardDepth": 128.98949241638184,
+      "cameraHorizontalWidth": 623.3095960617065,
+      "depthToWidthRatio": 0.20694289520229384,
+      "height": 142.59143352508545,
+      "bounds": {
+        "min": [
+          -310.0,
+          300.0,
+          7.300000190734863
+        ],
+        "max": [
+          310.0,
+          408.0,
+          149.8914337158203
+        ],
+        "size": [
+          620.0,
+          108.0,
+          142.59143352508545
+        ]
+      },
+      "surfaceArea": 163940.4183417912,
+      "volume": null,
+      "generator": {
+        "primaryOrOpposing": null,
+        "midOrFar": "distant_range()",
+        "ground": null,
+        "river": null
+      },
+      "structuralClassification": [
+        "shallow ridge strip",
+        "background curtain",
+        "camera-facing sheet"
+      ]
+    },
+    {
+      "name": "V3_V002_OPPOSING_RIDGES",
+      "role": "receding-side-ridges",
+      "vertexCount": 4256,
+      "faceCount": 4125,
+      "edgeCount": 8380,
+      "boundaryEdgeCount": 260,
+      "nonManifoldEdgeCount": 260,
+      "closed": false,
+      "planFootprintArea": 61663.4963958897,
+      "cameraForwardDepth": 286.09855818748474,
+      "cameraHorizontalWidth": 243.0967617034912,
+      "depthToWidthRatio": 1.1768916878310518,
+      "height": 71.67453908920288,
+      "bounds": {
+        "min": [
+          26.766613006591797,
+          154.0,
+          4.372000217437744
+        ],
+        "max": [
+          270.0,
+          432.0,
+          76.04653930664062
+        ],
+        "size": [
+          243.2333869934082,
+          278.0,
+          71.67453908920288
+        ]
+      },
+      "surfaceArea": 73987.56041409096,
+      "volume": null,
+      "generator": {
+        "primaryOrOpposing": "side_range()",
+        "midOrFar": null,
+        "ground": null,
+        "river": null
+      },
+      "structuralClassification": [
+        "profile extrusion",
+        "ribbon terrain",
+        "open height-field patch"
+      ]
+    },
+    {
+      "name": "V3_V002_PRIMARY_MASSIF",
+      "role": "dominant-massif",
+      "vertexCount": 4256,
+      "faceCount": 4125,
+      "edgeCount": 8380,
+      "boundaryEdgeCount": 260,
+      "nonManifoldEdgeCount": 260,
+      "closed": false,
+      "planFootprintArea": 64589.54813926419,
+      "cameraForwardDepth": 294.78802490234375,
+      "cameraHorizontalWidth": 246.87504649162292,
+      "depthToWidthRatio": 1.194077850684462,
+      "height": 101.99818706512451,
+      "bounds": {
+        "min": [
+          -282.0,
+          96.0,
+          3.328000068664551
+        ],
+        "max": [
+          -44.361968994140625,
+          384.0,
+          105.32618713378906
+        ],
+        "size": [
+          237.63803100585938,
+          288.0,
+          101.99818706512451
+        ]
+      },
+      "surfaceArea": 88503.02929308427,
+      "volume": null,
+      "generator": {
+        "primaryOrOpposing": "side_range()",
+        "midOrFar": null,
+        "ground": null,
+        "river": null
+      },
+      "structuralClassification": [
+        "profile extrusion",
+        "ribbon terrain",
+        "open height-field patch"
+      ]
+    },
+    {
+      "name": "V3_V002_RIGHT_RIVERBANK_PROXY",
+      "role": "irregular-riverbank",
+      "vertexCount": 250,
+      "faceCount": 196,
+      "edgeCount": 445,
+      "boundaryEdgeCount": 106,
+      "nonManifoldEdgeCount": 106,
+      "closed": false,
+      "planFootprintArea": 12879.580755378749,
+      "cameraForwardDepth": 402.45782619714737,
+      "cameraHorizontalWidth": 48.33093649148941,
+      "depthToWidthRatio": 8.32712658626046,
+      "height": 10.99604856967926,
+      "bounds": {
+        "min": [
+          -5.6995697021484375,
+          -42.0,
+          -1.8631311655044556
+        ],
+        "max": [
+          44.25792694091797,
+          360.0,
+          9.132917404174805
+        ],
+        "size": [
+          49.957496643066406,
+          402.0,
+          10.99604856967926
+        ]
+      },
+      "surfaceArea": 1952.8763009491647,
+      "volume": null,
+      "generator": {
+        "primaryOrOpposing": null,
+        "midOrFar": null,
+        "ground": null,
+        "river": "river_objects()"
+      },
+      "structuralClassification": [
+        "narrow ribbon terrain"
+      ]
+    },
+    {
+      "name": "V3_V002_RIVERBED_PROXY",
+      "role": "single-riverbed",
+      "vertexCount": 650,
+      "faceCount": 588,
+      "edgeCount": 1237,
+      "boundaryEdgeCount": 122,
+      "nonManifoldEdgeCount": 122,
+      "closed": false,
+      "planFootprintArea": 21423.05877033705,
+      "cameraForwardDepth": 402.6832615043968,
+      "cameraHorizontalWidth": 78.9200006723404,
+      "depthToWidthRatio": 5.102423442395228,
+      "height": 9.820000171661377,
+      "bounds": {
+        "min": [
+          -36.91301727294922,
+          -42.0,
+          -2.4000000953674316
+        ],
+        "max": [
+          38.4290771484375,
+          360.0,
+          7.420000076293945
+        ],
+        "size": [
+          75.34209442138672,
+          402.0,
+          9.820000171661377
+        ]
+      },
+      "surfaceArea": 10746.304979327862,
+      "volume": null,
+      "generator": {
+        "primaryOrOpposing": null,
+        "midOrFar": null,
+        "ground": null,
+        "river": "river_objects()"
+      },
+      "structuralClassification": []
+    },
+    {
+      "name": "V3_V002_VALLEY_FLOOR",
+      "role": "continuous-valley-floor",
+      "vertexCount": 1504,
+      "faceCount": 1426,
+      "edgeCount": 2929,
+      "boundaryEdgeCount": 154,
+      "nonManifoldEdgeCount": 154,
+      "closed": false,
+      "planFootprintArea": 88128.8389388084,
+      "cameraForwardDepth": 250.29599714279175,
+      "cameraHorizontalWidth": 378.74317932128906,
+      "depthToWidthRatio": 0.6608594182245717,
+      "height": 12.445835441350937,
+      "bounds": {
+        "min": [
+          -198.9764404296875,
+          150.0,
+          0.18779626488685608
+        ],
+        "max": [
+          178.82620239257812,
+          388.0,
+          12.633631706237793
+        ],
+        "size": [
+          377.8026428222656,
+          238.0,
+          12.445835441350937
+        ]
+      },
+      "surfaceArea": 85441.8082076816,
+      "volume": null,
+      "generator": {
+        "primaryOrOpposing": null,
+        "midOrFar": null,
+        "ground": "continuous_ground()",
+        "river": null
+      },
+      "structuralClassification": [
+        "rectangular terrain patch"
+      ]
+    }
+  ],
+  "runtimeCaveObjects": [
+    {
+      "name": "CAVE_HQ_FLOOR_WATER",
+      "type": "MESH",
+      "materials": [
+        "MAT_CaveHQ_Floor_Water"
+      ],
+      "matrixWorld": [
+        13.75,
+        0.0,
+        0.0,
+        -0.716796875,
+        0.0,
+        13.75,
+        0.0,
+        -13.75,
+        0.0,
+        0.0,
+        13.75,
+        -0.25390625,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "matrixLocal": [
+        13.75,
+        0.0,
+        0.0,
+        -0.716796875,
+        0.0,
+        13.75,
+        0.0,
+        -13.75,
+        0.0,
+        0.0,
+        13.75,
+        -0.25390625,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "parentChain": [],
+      "bounds": {
+        "min": [
+          -2.855228900909424,
+          -27.5,
+          -0.27404847741127014
+        ],
+        "max": [
+          1.4216351509094238,
+          0.0,
+          -0.23376403748989105
+        ],
+        "size": [
+          4.276864051818848,
+          27.5,
+          0.04028443992137909
+        ]
+      }
+    },
+    {
+      "name": "CAVE_HQ_GROUND",
+      "type": "MESH",
+      "materials": [
+        "MAT_V13_CAVE_GRANITE_PBR"
+      ],
+      "matrixWorld": [
+        15.5,
+        0.0,
+        0.0,
+        -0.947265625,
+        0.0,
+        15.5,
+        0.0,
+        -14.5,
+        0.0,
+        0.0,
+        15.5,
+        -0.2421875,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "matrixLocal": [
+        15.5,
+        0.0,
+        0.0,
+        -0.947265625,
+        0.0,
+        15.5,
+        0.0,
+        -14.5,
+        0.0,
+        0.0,
+        15.5,
+        -0.2421875,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "parentChain": [],
+      "bounds": {
+        "min": [
+          -6.8625922203063965,
+          -30.0,
+          -0.46924519538879395
+        ],
+        "max": [
+          4.9680609703063965,
+          1.0,
+          -0.01512978971004486
+        ],
+        "size": [
+          11.830653190612793,
+          31.0,
+          0.4541154056787491
+        ]
+      }
+    },
+    {
+      "name": "CAVE_HQ_INTERIOR_SHELL",
+      "type": "MESH",
+      "materials": [
+        "MAT_V13_CAVE_GRANITE_PBR"
+      ],
+      "matrixWorld": [
+        15.5,
+        0.0,
+        0.0,
+        -0.841796875,
+        0.0,
+        15.5,
+        0.0,
+        -14.5,
+        0.0,
+        0.0,
+        15.5,
+        3.17578125,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "matrixLocal": [
+        15.5,
+        0.0,
+        0.0,
+        -0.841796875,
+        0.0,
+        15.5,
+        0.0,
+        -14.5,
+        0.0,
+        0.0,
+        15.5,
+        3.17578125,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "parentChain": [],
+      "bounds": {
+        "min": [
+          -7.652109146118164,
+          -30.0,
+          -0.8133392333984375
+        ],
+        "max": [
+          5.968515396118164,
+          1.0,
+          7.1649017333984375
+        ],
+        "size": [
+          13.620624542236328,
+          31.0,
+          7.978240966796875
+        ]
+      }
+    },
+    {
+      "name": "WEB_CAVE_HQ_DEBRIS_00",
+      "type": "MESH",
+      "materials": [
+        "MAT_CaveHQ_Rock_Mid"
+      ],
+      "matrixWorld": [
+        5.374850273,
+        8.593410492,
+        -5.700689793,
+        0.608787,
+        -8.726927757,
+        7.284427166,
+        0.583237827,
+        -13.223670006,
+        3.72584939,
+        4.665343761,
+        9.589821815,
+        0.832980812,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "matrixLocal": [
+        5.374850273,
+        8.593410492,
+        -5.700689793,
+        0.608787,
+        -8.726927757,
+        7.284427166,
+        0.583237827,
+        -13.223670006,
+        3.72584939,
+        4.665343761,
+        9.589821815,
+        0.832980812,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "parentChain": [],
+      "bounds": {
+        "min": [
+          -13.553897857666016,
+          -28.111759185791016,
+          -9.63263988494873
+        ],
+        "max": [
+          14.771471977233887,
+          1.6644198894500732,
+          11.298601150512695
+        ],
+        "size": [
+          28.325369834899902,
+          29.77617907524109,
+          20.931241035461426
+        ]
+      }
+    },
+    {
+      "name": "WEB_CAVE_HQ_DEBRIS_01",
+      "type": "MESH",
+      "materials": [
+        "MAT_CaveHQ_Rock_Dark"
+      ],
+      "matrixWorld": [
+        12.301628113,
+        6.56747818,
+        1.590299726,
+        -1.299925327,
+        -8.289860725,
+        9.047571182,
+        3.781277895,
+        -14.858646393,
+        1.235770106,
+        -4.683369637,
+        9.534938812,
+        -0.111392647,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "matrixLocal": [
+        12.301628113,
+        6.56747818,
+        1.590299726,
+        -1.299925327,
+        -8.289860725,
+        9.047571182,
+        3.781277895,
+        -14.858646393,
+        1.235770106,
+        -4.683369637,
+        9.534938812,
+        -0.111392647,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "parentChain": [],
+      "bounds": {
+        "min": [
+          -18.17585563659668,
+          -32.412994384765625,
+          -11.228182792663574
+        ],
+        "max": [
+          15.576004981994629,
+          2.6957035064697266,
+          11.00539779663086
+        ],
+        "size": [
+          33.75186061859131,
+          35.10869789123535,
+          22.233580589294434
+        ]
+      }
+    },
+    {
+      "name": "WEB_CAVE_HQ_HANGING_PLANTS_00",
+      "type": "MESH",
+      "materials": [
+        "MAT_CaveHQ_Hanging_Leaf"
+      ],
+      "matrixWorld": [
+        0.5,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.5,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.5,
+        0.5,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "matrixLocal": [
+        0.5,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.5,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.5,
+        0.5,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "parentChain": [],
+      "bounds": {
+        "min": [
+          -0.5,
+          0.0,
+          0.0
+        ],
+        "max": [
+          0.5,
+          0.0,
+          1.0
+        ],
+        "size": [
+          1.0,
+          0.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "name": "WEB_CAVE_HQ_MOSS_00",
+      "type": "MESH",
+      "materials": [
+        "MAT_CaveHQ_Moss"
+      ],
+      "matrixWorld": [
+        -17.423431396,
+        6.263812542,
+        -15.345362663,
+        -0.783880889,
+        -33.87928772,
+        -2.43333745,
+        20.055469513,
+        -4.12042284,
+        8.712965965,
+        3.064096451,
+        47.296886444,
+        1.990437746,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "matrixLocal": [
+        -17.423431396,
+        6.263812542,
+        -15.345362663,
+        -0.783880889,
+        -33.87928772,
+        -2.43333745,
+        20.055469513,
+        -4.12042284,
+        8.712965965,
+        3.064096451,
+        47.296886444,
+        1.990437746,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "parentChain": [],
+      "bounds": {
+        "min": [
+          -10.87254810333252,
+          -13.202852249145508,
+          -6.178749084472656
+        ],
+        "max": [
+          9.304786682128906,
+          4.96200704574585,
+          10.159625053405762
+        ],
+        "size": [
+          20.177334785461426,
+          18.164859294891357,
+          16.338374137878418
+        ]
+      }
+    }
+  ],
+  "true3dShownCaveObjects": [
+    "CAVE_HQ_FLOOR_WATER",
+    "CAVE_HQ_GROUND",
+    "CAVE_HQ_INTERIOR_SHELL",
+    "WEB_CAVE_HQ_DEBRIS_00",
+    "WEB_CAVE_HQ_DEBRIS_01",
+    "WEB_CAVE_HQ_HANGING_PLANTS_00",
+    "WEB_CAVE_HQ_MOSS_00"
+  ],
+  "runtimeCaveObjectsOmittedFromTrue3dReview": [],
+  "true3dObjectsNotClassifiedAsRuntimeCave": [],
+  "runtimeCaveFade": {
+    "formula": "1 - smoothstep(13.5, 20.2, progress)",
+    "visibleCondition": "cavePresence > 0.004",
+    "materialOpacity": "journeyCaveBaseOpacity * cavePresence",
+    "depthWriteCondition": "cavePresence > 0.18"
+  }
+}

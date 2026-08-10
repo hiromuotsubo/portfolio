@@ -1,0 +1,716 @@
+{
+  "schemaVersion": 1,
+  "phase": "Journey V3 Phase 1C.2",
+  "visualVersion": "v003",
+  "sourceV002Blend": "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/work/blender/journey-v3/phase1c/journey-v3-macro-massing-v002.blend",
+  "sourceV002Sha256Before": "9bc96a17b6aee6c09a59fdc77bc05083197fd9be9d2aab10c8585f4642e13237",
+  "sourceV002Sha256After": "9bc96a17b6aee6c09a59fdc77bc05083197fd9be9d2aab10c8585f4642e13237",
+  "sourceV002Unchanged": true,
+  "outputBlend": "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/work/blender/journey-v3/phase1c2/journey-v3-volumetric-terrain-v003.blend",
+  "cameraGltf": "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/work/blender/journey-v3/phase1c2/reference/journey-v3-full-story-cameras.glb",
+  "cameraGltfSha256": "4656b5bbd9129012b4315fe676142fdd6d16370e1a9acc4da76a7a231169d2ab",
+  "lockedReferenceSignatureBefore": "7e2c2d841e24d27055f92d6323ef2dd0c1bb0c8e0b79138f281a9218a7d140e2",
+  "lockedReferenceSignatureAfter": "7e2c2d841e24d27055f92d6323ef2dd0c1bb0c8e0b79138f281a9218a7d140e2",
+  "lockedReferenceUnchanged": true,
+  "grid": {
+    "xCount": 210,
+    "yCount": 236,
+    "xRange": [
+      -620.0,
+      620.0
+    ],
+    "yRange": [
+      -300.0,
+      1100.0
+    ],
+    "bottomZ": -48.0
+  },
+  "objects": [
+    {
+      "name": "V3_VALLEY_TERRAIN",
+      "role": "continuous-volumetric-height-field",
+      "vertexCount": 38220,
+      "faceCount": 37829,
+      "boundaryEdgeCount": 780,
+      "nonManifoldEdgeCount": 780,
+      "closed": false,
+      "volume": null,
+      "bounds": {
+        "min": [
+          -620.0,
+          18.0,
+          -0.6120738983154297
+        ],
+        "max": [
+          620.0,
+          1100.0,
+          489.305908203125
+        ],
+        "size": [
+          1240.0,
+          1082.0,
+          489.91798210144043
+        ]
+      }
+    },
+    {
+      "name": "V3_CAVE_EXIT_TRANSITION_TERRAIN",
+      "role": "cave-exit-side-transition",
+      "vertexCount": 11175,
+      "faceCount": 10860,
+      "boundaryEdgeCount": 626,
+      "nonManifoldEdgeCount": 626,
+      "closed": false,
+      "volume": null,
+      "bounds": {
+        "min": [
+          -620.0,
+          -300.0,
+          -4.528476715087891
+        ],
+        "max": [
+          620.0,
+          18.0,
+          39.36144256591797
+        ],
+        "size": [
+          1240.0,
+          318.0,
+          43.88991928100586
+        ]
+      }
+    },
+    {
+      "name": "V3_TERRAIN_SKIRT_AND_BOTTOM",
+      "role": "terrain-guard-skirt",
+      "vertexCount": 1776,
+      "faceCount": 889,
+      "boundaryEdgeCount": 888,
+      "nonManifoldEdgeCount": 888,
+      "closed": false,
+      "volume": null,
+      "bounds": {
+        "min": [
+          -620.0,
+          -300.0,
+          -48.0
+        ],
+        "max": [
+          620.0,
+          1100.0,
+          400.9441223144531
+        ],
+        "size": [
+          1240.0,
+          1400.0,
+          448.9441223144531
+        ]
+      }
+    },
+    {
+      "name": "V3_CAVE_EXIT_FLOOR_CONNECTOR",
+      "role": "cave-floor-connector",
+      "vertexCount": 18,
+      "faceCount": 8,
+      "boundaryEdgeCount": 18,
+      "nonManifoldEdgeCount": 18,
+      "closed": false,
+      "volume": null,
+      "bounds": {
+        "min": [
+          -14.0,
+          1.0,
+          -0.416265070438385
+        ],
+        "max": [
+          12.0,
+          6.0,
+          -0.011309248395264149
+        ],
+        "size": [
+          26.0,
+          5.0,
+          0.40495582204312086
+        ]
+      }
+    },
+    {
+      "name": "V3_CAVE_TO_MEADOW_TRANSITION",
+      "role": "cave-to-meadow-transition",
+      "vertexCount": 18,
+      "faceCount": 8,
+      "boundaryEdgeCount": 18,
+      "nonManifoldEdgeCount": 18,
+      "closed": false,
+      "volume": null,
+      "bounds": {
+        "min": [
+          -14.0,
+          6.0,
+          -0.30911892652511597
+        ],
+        "max": [
+          12.0,
+          18.0,
+          0.6832977533340454
+        ],
+        "size": [
+          26.0,
+          12.0,
+          0.9924166798591614
+        ]
+      }
+    },
+    {
+      "name": "V3_CAVE_FADE_REPLACEMENT_FLOOR",
+      "role": "runtime-exclusive-cave-floor-replacement",
+      "vertexCount": 1836,
+      "faceCount": 1712,
+      "boundaryEdgeCount": 246,
+      "nonManifoldEdgeCount": 246,
+      "closed": false,
+      "volume": null,
+      "bounds": {
+        "min": [
+          -22.0,
+          -300.0,
+          -4.307281970977783
+        ],
+        "max": [
+          20.0,
+          18.0,
+          0.7280069589614868
+        ],
+        "size": [
+          42.0,
+          318.0,
+          5.03528892993927
+        ]
+      }
+    }
+  ],
+  "regionFootprints": {
+    "V3_LEFT_DOMINANT_MASSIF": {
+      "sampleVertexCount": 16139,
+      "bounds": {
+        "min": [
+          -620.0,
+          18.0,
+          0.05150119587779045
+        ],
+        "max": [
+          28.0,
+          1100.0,
+          472.1063232421875
+        ],
+        "size": [
+          648.0,
+          1082.0,
+          472.0548220463097
+        ]
+      },
+      "planFootprintBoundingArea": 701136.0,
+      "depth": 1082.0,
+      "width": 648.0
+    },
+    "V3_RIGHT_MIDGROUND_RIDGES": {
+      "sampleVertexCount": 14677,
+      "bounds": {
+        "min": [
+          22.0,
+          18.0,
+          0.009369872510433197
+        ],
+        "max": [
+          620.0,
+          1100.0,
+          489.305908203125
+        ],
+        "size": [
+          598.0,
+          1082.0,
+          489.29653833061457
+        ]
+      },
+      "planFootprintBoundingArea": 647036.0,
+      "depth": 1082.0,
+      "width": 598.0
+    },
+    "V3_DISTANT_MOUNTAIN_RANGE": {
+      "sampleVertexCount": 18371,
+      "bounds": {
+        "min": [
+          -620.0,
+          564.0,
+          109.37797546386719
+        ],
+        "max": [
+          620.0,
+          1100.0,
+          489.305908203125
+        ],
+        "size": [
+          1240.0,
+          536.0,
+          379.9279327392578
+        ]
+      },
+      "planFootprintBoundingArea": 664640.0,
+      "depth": 536.0,
+      "width": 1240.0
+    },
+    "V3_RIVERBED": {
+      "sampleVertexCount": 921,
+      "bounds": {
+        "min": [
+          -32.0,
+          18.0,
+          -0.6120738983154297
+        ],
+        "max": [
+          58.0,
+          1100.0,
+          348.7095031738281
+        ],
+        "size": [
+          90.0,
+          1082.0,
+          349.32157707214355
+        ]
+      },
+      "planFootprintBoundingArea": 97380.0,
+      "depth": 1082.0,
+      "width": 90.0
+    },
+    "V3_MEADOW_TERRAIN": {
+      "sampleVertexCount": 6109,
+      "bounds": {
+        "min": [
+          -620.0,
+          18.0,
+          -0.5140355229377747
+        ],
+        "max": [
+          620.0,
+          192.0,
+          139.9878692626953
+        ],
+        "size": [
+          1240.0,
+          174.0,
+          140.5019047856331
+        ]
+      },
+      "planFootprintBoundingArea": 215760.0,
+      "depth": 174.0,
+      "width": 1240.0
+    }
+  },
+  "caveConnector": {
+    "exitVertexCount": 9,
+    "seamDistance": {
+      "minimum": 0.0,
+      "maximum": 0.0
+    },
+    "coreCaveIntersections": []
+  },
+  "caveCauseClassification": {
+    "omittedRuntimeCaveGeometry": [],
+    "runtimeOpacityFade": "cavePresence = 1 - smoothstep(13.5, 20.2, progress)",
+    "transformMismatch": false,
+    "actualGeometryIssues": [
+      "v002 cave-floor to riverbed gap measured 1.842-2.218 units",
+      "raw geometry at progress 11.5 does not produce the expected cave-opening frame"
+    ],
+    "correctFadeDependentReentry": "At progress 28.25 and 30 the retained shell may project into frame, but runtime cave visibility is already false because cavePresence <= 0.004."
+  },
+  "cameraReview": [
+    {
+      "camera": "CAM_V3_CAVE_EXIT_1440x900",
+      "progress": 11.5,
+      "mountainVisibleSampleCount": 18499,
+      "mountainNdcBounds": {
+        "min": [
+          9.443184535484761e-05,
+          0.1563938856124878
+        ],
+        "max": [
+          0.999971330165863,
+          0.9999520778656006
+        ]
+      },
+      "outerSkirtVertexCountInFrame": 441
+    },
+    {
+      "camera": "CAM_V3_DAY_CLEAR_LATE_1440x900",
+      "progress": 37.9,
+      "mountainVisibleSampleCount": 25406,
+      "mountainNdcBounds": {
+        "min": [
+          0.00022833199182059616,
+          0.21138392388820648
+        ],
+        "max": [
+          0.999920666217804,
+          0.8555539846420288
+        ]
+      },
+      "outerSkirtVertexCountInFrame": 685
+    },
+    {
+      "camera": "CAM_V3_DAY_CLEAR_START_1440x900",
+      "progress": 30,
+      "mountainVisibleSampleCount": 25406,
+      "mountainNdcBounds": {
+        "min": [
+          0.00022833199182059616,
+          0.21138392388820648
+        ],
+        "max": [
+          0.999920666217804,
+          0.8555539846420288
+        ]
+      },
+      "outerSkirtVertexCountInFrame": 685
+    },
+    {
+      "camera": "CAM_V3_SWEEP_P011_50",
+      "progress": 11.5,
+      "mountainVisibleSampleCount": 18499,
+      "mountainNdcBounds": {
+        "min": [
+          9.443184535484761e-05,
+          0.1563938856124878
+        ],
+        "max": [
+          0.999971330165863,
+          0.9999520778656006
+        ]
+      },
+      "outerSkirtVertexCountInFrame": 441
+    },
+    {
+      "camera": "CAM_V3_SWEEP_P012_00",
+      "progress": 12,
+      "mountainVisibleSampleCount": 18468,
+      "mountainNdcBounds": {
+        "min": [
+          0.0001485543471062556,
+          0.15273021161556244
+        ],
+        "max": [
+          0.9999844431877136,
+          0.9998870491981506
+        ]
+      },
+      "outerSkirtVertexCountInFrame": 440
+    },
+    {
+      "camera": "CAM_V3_SWEEP_P013_50",
+      "progress": 13.5,
+      "mountainVisibleSampleCount": 18430,
+      "mountainNdcBounds": {
+        "min": [
+          0.00021834115614183247,
+          0.1554626077413559
+        ],
+        "max": [
+          0.9998539090156555,
+          0.9998919367790222
+        ]
+      },
+      "outerSkirtVertexCountInFrame": 440
+    },
+    {
+      "camera": "CAM_V3_SWEEP_P016_00",
+      "progress": 16,
+      "mountainVisibleSampleCount": 18398,
+      "mountainNdcBounds": {
+        "min": [
+          6.105607462814078e-05,
+          0.15093104541301727
+        ],
+        "max": [
+          0.9999793767929077,
+          0.9996594786643982
+        ]
+      },
+      "outerSkirtVertexCountInFrame": 440
+    },
+    {
+      "camera": "CAM_V3_SWEEP_P020_00",
+      "progress": 20,
+      "mountainVisibleSampleCount": 19091,
+      "mountainNdcBounds": {
+        "min": [
+          0.00013978265633340925,
+          0.15013977885246277
+        ],
+        "max": [
+          0.9999263286590576,
+          0.9999920129776001
+        ]
+      },
+      "outerSkirtVertexCountInFrame": 460
+    },
+    {
+      "camera": "CAM_V3_SWEEP_P022_00",
+      "progress": 22,
+      "mountainVisibleSampleCount": 21569,
+      "mountainNdcBounds": {
+        "min": [
+          3.0328763386933133e-05,
+          0.17781056463718414
+        ],
+        "max": [
+          0.9999911785125732,
+          0.9999872446060181
+        ]
+      },
+      "outerSkirtVertexCountInFrame": 543
+    },
+    {
+      "camera": "CAM_V3_SWEEP_P023_50",
+      "progress": 23.5,
+      "mountainVisibleSampleCount": 23383,
+      "mountainNdcBounds": {
+        "min": [
+          4.144437752984231e-06,
+          0.19231346249580383
+        ],
+        "max": [
+          0.9999067187309265,
+          0.9545770287513733
+        ]
+      },
+      "outerSkirtVertexCountInFrame": 606
+    },
+    {
+      "camera": "CAM_V3_SWEEP_P025_00",
+      "progress": 25,
+      "mountainVisibleSampleCount": 24499,
+      "mountainNdcBounds": {
+        "min": [
+          4.008572068414651e-05,
+          0.20551583170890808
+        ],
+        "max": [
+          0.9998098015785217,
+          0.9009512066841125
+        ]
+      },
+      "outerSkirtVertexCountInFrame": 650
+    },
+    {
+      "camera": "CAM_V3_SWEEP_P028_25",
+      "progress": 28.25,
+      "mountainVisibleSampleCount": 25406,
+      "mountainNdcBounds": {
+        "min": [
+          0.00022833199182059616,
+          0.21138392388820648
+        ],
+        "max": [
+          0.999920666217804,
+          0.8555539846420288
+        ]
+      },
+      "outerSkirtVertexCountInFrame": 685
+    },
+    {
+      "camera": "CAM_V3_SWEEP_P030_00",
+      "progress": 30,
+      "mountainVisibleSampleCount": 25406,
+      "mountainNdcBounds": {
+        "min": [
+          0.00022833199182059616,
+          0.21138392388820648
+        ],
+        "max": [
+          0.999920666217804,
+          0.8555539846420288
+        ]
+      },
+      "outerSkirtVertexCountInFrame": 685
+    },
+    {
+      "camera": "CAM_V3_STORY_ENDING_1440x900",
+      "progress": 100,
+      "mountainVisibleSampleCount": 26014,
+      "mountainNdcBounds": {
+        "min": [
+          0.0001642781135160476,
+          0.17180165648460388
+        ],
+        "max": [
+          0.9999528527259827,
+          0.7758728265762329
+        ]
+      },
+      "outerSkirtVertexCountInFrame": 703
+    },
+    {
+      "camera": "CAM_V3_STORY_FINAL_WIDE_1440x900",
+      "progress": 96,
+      "mountainVisibleSampleCount": 27051,
+      "mountainNdcBounds": {
+        "min": [
+          8.753845031606033e-05,
+          0.21196408569812775
+        ],
+        "max": [
+          0.9997397065162659,
+          0.7483798265457153
+        ]
+      },
+      "outerSkirtVertexCountInFrame": 748
+    },
+    {
+      "camera": "CAM_V3_STORY_MILKY_WAY_1440x900",
+      "progress": 80,
+      "mountainVisibleSampleCount": 20758,
+      "mountainNdcBounds": {
+        "min": [
+          1.4604081115976442e-05,
+          0.1567947417497635
+        ],
+        "max": [
+          0.9999784231185913,
+          0.9999780654907227
+        ]
+      },
+      "outerSkirtVertexCountInFrame": 512
+    },
+    {
+      "camera": "CAM_V3_STORY_NIGHT_1440x900",
+      "progress": 68,
+      "mountainVisibleSampleCount": 20550,
+      "mountainNdcBounds": {
+        "min": [
+          4.272878413758008e-06,
+          0.17941667139530182
+        ],
+        "max": [
+          0.9999516010284424,
+          0.9998032450675964
+        ]
+      },
+      "outerSkirtVertexCountInFrame": 513
+    },
+    {
+      "camera": "CAM_V3_STORY_RIVER_HOLD_1440x900",
+      "progress": 70,
+      "mountainVisibleSampleCount": 20550,
+      "mountainNdcBounds": {
+        "min": [
+          4.272878413758008e-06,
+          0.17941667139530182
+        ],
+        "max": [
+          0.9999516010284424,
+          0.9998032450675964
+        ]
+      },
+      "outerSkirtVertexCountInFrame": 513
+    },
+    {
+      "camera": "CAM_V3_STORY_SEATED_FIGURE_1440x900",
+      "progress": 84,
+      "mountainVisibleSampleCount": 21228,
+      "mountainNdcBounds": {
+        "min": [
+          5.700775363948196e-05,
+          0.08146227896213531
+        ],
+        "max": [
+          0.9999629855155945,
+          0.9688538312911987
+        ]
+      },
+      "outerSkirtVertexCountInFrame": 507
+    },
+    {
+      "camera": "CAM_V3_STORY_SUNSET_1440x900",
+      "progress": 46,
+      "mountainVisibleSampleCount": 25406,
+      "mountainNdcBounds": {
+        "min": [
+          0.00022833199182059616,
+          0.21138392388820648
+        ],
+        "max": [
+          0.999920666217804,
+          0.8555539846420288
+        ]
+      },
+      "outerSkirtVertexCountInFrame": 685
+    }
+  ],
+  "fullStoryCameras": [
+    "CAM_V3_STORY_ENDING_1440x900",
+    "CAM_V3_STORY_FINAL_WIDE_1440x900",
+    "CAM_V3_STORY_MILKY_WAY_1440x900",
+    "CAM_V3_STORY_NIGHT_1440x900",
+    "CAM_V3_STORY_RIVER_HOLD_1440x900",
+    "CAM_V3_STORY_SEATED_FIGURE_1440x900",
+    "CAM_V3_STORY_SUNSET_1440x900"
+  ],
+  "reviewCameras": [
+    "CAM_V003_ELEVATED_THREE_QUARTER",
+    "CAM_V003_ORBIT_LEFT_30",
+    "CAM_V003_ORBIT_RIGHT_30",
+    "CAM_V003_SIDE",
+    "CAM_V003_TOP"
+  ],
+  "guides": [
+    "GUIDE_V003_LEFT_MAIN_RIDGE",
+    "GUIDE_V003_RIGHT_RECEDING_RIDGE",
+    "GUIDE_V003_RIVER_CENTERLINE"
+  ],
+  "renderedFiles": [
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/volumetric/v003-day-clear-clay.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/volumetric/v003-day-clear-wireframe.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/volumetric/v003-top-view.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/volumetric/v003-top-view-wireframe.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/volumetric/v003-side-view.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/volumetric/v003-side-view-wireframe.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/volumetric/v003-orbit-left-30.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/volumetric/v003-orbit-right-30.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/volumetric/v003-elevated-three-quarter.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/volumetric/diagnostic/v003-cave-geometry-p11-5.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/volumetric/diagnostic/v003-cave-runtime-p11-5.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/volumetric/diagnostic/v003-cave-geometry-p13-5.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/volumetric/diagnostic/v003-cave-runtime-p13-5.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/volumetric/diagnostic/v003-cave-geometry-p16-0.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/volumetric/diagnostic/v003-cave-runtime-p16-0.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/volumetric/diagnostic/v003-cave-geometry-p20-0.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/volumetric/diagnostic/v003-cave-runtime-p20-0.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/volumetric/diagnostic/v003-cave-geometry-p23-5.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/volumetric/diagnostic/v003-cave-runtime-p23-5.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/volumetric/diagnostic/v003-cave-geometry-p25-0.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/volumetric/diagnostic/v003-cave-runtime-p25-0.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/volumetric/diagnostic/v003-cave-geometry-p28-25.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/volumetric/diagnostic/v003-cave-runtime-p28-25.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/volumetric/diagnostic/v003-cave-geometry-p30-0.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/volumetric/diagnostic/v003-cave-runtime-p30-0.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/volumetric/diagnostic/v003-sweep-p11-5.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/volumetric/diagnostic/v003-sweep-p12-0.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/volumetric/diagnostic/v003-sweep-p13-5.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/volumetric/diagnostic/v003-sweep-p16-0.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/volumetric/diagnostic/v003-sweep-p20-0.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/volumetric/diagnostic/v003-sweep-p22-0.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/volumetric/diagnostic/v003-sweep-p23-5.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/volumetric/diagnostic/v003-sweep-p25-0.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/volumetric/diagnostic/v003-sweep-p28-25.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/volumetric/diagnostic/v003-sweep-p30-0.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/volumetric/diagnostic/v003-story-sunset.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/volumetric/diagnostic/v003-story-night.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/volumetric/diagnostic/v003-story-river-hold.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/volumetric/diagnostic/v003-story-milky-way.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/volumetric/diagnostic/v003-story-seated-figure.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/volumetric/diagnostic/v003-story-final-wide.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/volumetric/diagnostic/v003-story-ending.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/volumetric/v003-final-wide.png"
+  ],
+  "deterministicSignature": "483c571d0f90ef76620ea586e2ed06d4085952b00a0ace738a26200ec60c8ab5"
+}
