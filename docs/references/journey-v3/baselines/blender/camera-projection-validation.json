@@ -1,0 +1,2700 @@
+{
+  "schemaVersion": 1,
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "coordinateConversion": "BlenderWorld = C * glTFWorld, C maps (x,y,z) to (x,-z,y).",
+  "landmarkSelection": {
+    "method": "Nearest sampled mesh vertex to each of 12 screen-space target cells per comparison camera.",
+    "targetNdc": [
+      [
+        -0.78,
+        0.68
+      ],
+      [
+        -0.28,
+        0.68
+      ],
+      [
+        0.28,
+        0.68
+      ],
+      [
+        0.78,
+        0.68
+      ],
+      [
+        -0.82,
+        0.18
+      ],
+      [
+        -0.3,
+        0.18
+      ],
+      [
+        0.3,
+        0.18
+      ],
+      [
+        0.82,
+        0.18
+      ],
+      [
+        -0.76,
+        -0.58
+      ],
+      [
+        -0.26,
+        -0.58
+      ],
+      [
+        0.26,
+        -0.58
+      ],
+      [
+        0.76,
+        -0.58
+      ]
+    ],
+    "candidateCount": 48452
+  },
+  "cameras": [
+    {
+      "key": "cave-exit",
+      "cameraName": "CAM_V3_CAVE_EXIT_1440x900",
+      "landmarks": [
+        {
+          "id": "cave-exit-01",
+          "label": "Mesh-derived screen landmark 1",
+          "sourceNodeName": "TER_V13_FICTIONAL_NAGANO_MASSIF",
+          "sourceMeshName": "GEO_V13_FICTIONAL_NAGANO_MASSIF.001",
+          "sourcePrimitiveIndex": 0,
+          "sourceVertexIndex": 113010,
+          "resolvedBlenderObject": "TER_V13_FICTIONAL_NAGANO_MASSIF",
+          "resolvedBlenderVertexIndex": 113010,
+          "threeWorldPosition": [
+            -144.01151501510668,
+            138.99665893848993,
+            -270.23949209570605
+          ],
+          "threeNdc": [
+            -0.7846155004481835,
+            0.6929433087545581,
+            0.9997048126738309
+          ],
+          "threePixelCoordinate": [
+            155.07683967730787,
+            138.17551106044886
+          ],
+          "expectedBlenderWorldPosition": [
+            -144.0115203857422,
+            270.239501953125,
+            138.9966583251953
+          ],
+          "blenderWorldPosition": [
+            -144.01150512695312,
+            270.239501953125,
+            138.9966583251953
+          ],
+          "blenderPixelCoordinate": [
+            155.07687091827393,
+            138.1756603717804
+          ],
+          "worldPositionError": 1.52587890625e-05,
+          "pixelError": 0.00015254465472864384
+        },
+        {
+          "id": "cave-exit-02",
+          "label": "Mesh-derived screen landmark 2",
+          "sourceNodeName": "TER_V13_FICTIONAL_NAGANO_MASSIF",
+          "sourceMeshName": "GEO_V13_FICTIONAL_NAGANO_MASSIF.001",
+          "sourcePrimitiveIndex": 0,
+          "sourceVertexIndex": 105780,
+          "resolvedBlenderObject": "TER_V13_FICTIONAL_NAGANO_MASSIF",
+          "resolvedBlenderVertexIndex": 105780,
+          "threeWorldPosition": [
+            -51.74284913174841,
+            125.25188523323772,
+            -246.76341860713524
+          ],
+          "threeNdc": [
+            -0.279581283682484,
+            0.68671139936353,
+            0.9996684953916221
+          ],
+          "threePixelCoordinate": [
+            518.7014757486115,
+            140.9798702864115
+          ],
+          "expectedBlenderWorldPosition": [
+            -51.74284744262695,
+            246.76341247558594,
+            125.25188446044922
+          ],
+          "blenderWorldPosition": [
+            -51.74284744262695,
+            246.76341247558594,
+            125.25188446044922
+          ],
+          "blenderPixelCoordinate": [
+            518.7014579772949,
+            140.97996354103088
+          ],
+          "worldPositionError": 0.0,
+          "pixelError": 9.493283798677529e-05
+        },
+        {
+          "id": "cave-exit-03",
+          "label": "Mesh-derived screen landmark 3",
+          "sourceNodeName": "TER_V13_FICTIONAL_NAGANO_MASSIF",
+          "sourceMeshName": "GEO_V13_FICTIONAL_NAGANO_MASSIF.001",
+          "sourcePrimitiveIndex": 0,
+          "sourceVertexIndex": 99270,
+          "resolvedBlenderObject": "TER_V13_FICTIONAL_NAGANO_MASSIF",
+          "resolvedBlenderVertexIndex": 99270,
+          "threeWorldPosition": [
+            36.99340990936003,
+            129.4852755344554,
+            -262.7623352000488
+          ],
+          "threeNdc": [
+            0.2816499899649161,
+            0.6674390242613534,
+            0.9996864900713677
+          ],
+          "threePixelCoordinate": [
+            922.7879927747396,
+            149.65243908239097
+          ],
+          "expectedBlenderWorldPosition": [
+            36.993408203125,
+            262.7623291015625,
+            129.4852752685547
+          ],
+          "blenderWorldPosition": [
+            36.993408203125,
+            262.7623291015625,
+            129.4852752685547
+          ],
+          "blenderPixelCoordinate": [
+            922.7879619598389,
+            149.65256452560425
+          ],
+          "worldPositionError": 0.0,
+          "pixelError": 0.0001291725894395842
+        },
+        {
+          "id": "cave-exit-04",
+          "label": "Mesh-derived screen landmark 4",
+          "sourceNodeName": "TER_V13_FICTIONAL_NAGANO_MASSIF",
+          "sourceMeshName": "GEO_V13_FICTIONAL_NAGANO_MASSIF.001",
+          "sourcePrimitiveIndex": 0,
+          "sourceVertexIndex": 109980,
+          "resolvedBlenderObject": "TER_V13_FICTIONAL_NAGANO_MASSIF",
+          "resolvedBlenderVertexIndex": 109980,
+          "threeWorldPosition": [
+            135.99701490829187,
+            147.73833501503037,
+            -299.00043107394634
+          ],
+          "threeNdc": [
+            0.7950657604556262,
+            0.6870801034968534,
+            0.9997267153304491
+          ],
+          "threePixelCoordinate": [
+            1292.4473475280508,
+            140.81395342641596
+          ],
+          "expectedBlenderWorldPosition": [
+            135.99700927734375,
+            299.00042724609375,
+            147.73834228515625
+          ],
+          "blenderWorldPosition": [
+            135.99700927734375,
+            299.00042724609375,
+            147.73834228515625
+          ],
+          "blenderPixelCoordinate": [
+            1292.4473476409912,
+            140.81404209136963
+          ],
+          "worldPositionError": 0.0,
+          "pixelError": 8.86650255963544e-05
+        },
+        {
+          "id": "cave-exit-05",
+          "label": "Mesh-derived screen landmark 5",
+          "sourceNodeName": "MTN_V13_FAR_CENTRAL_RIDGE",
+          "sourceMeshName": "GEO_V13_FAR_CENTRAL_RIDGE.001",
+          "sourcePrimitiveIndex": 0,
+          "sourceVertexIndex": 16600,
+          "resolvedBlenderObject": "MTN_V13_FAR_CENTRAL_RIDGE",
+          "resolvedBlenderVertexIndex": 16600,
+          "threeWorldPosition": [
+            -165.2600177007355,
+            93.24169133579517,
+            -309.26505325479906
+          ],
+          "threeNdc": [
+            -0.8198648099471201,
+            0.18064762083909566,
+            0.9997349897601018
+          ],
+          "threePixelCoordinate": [
+            129.69733683807354,
+            368.70857062240697
+          ],
+          "expectedBlenderWorldPosition": [
+            -165.26002502441406,
+            309.2650451660156,
+            93.24169158935547
+          ],
+          "blenderWorldPosition": [
+            -165.26002502441406,
+            309.2650451660156,
+            93.24169158935547
+          ],
+          "blenderPixelCoordinate": [
+            129.69715476036072,
+            368.7086820602417
+          ],
+          "worldPositionError": 0.0,
+          "pixelError": 0.0002134729128395774
+        },
+        {
+          "id": "cave-exit-06",
+          "label": "Mesh-derived screen landmark 6",
+          "sourceNodeName": "MTN_V13_FAR_CENTRAL_RIDGE",
+          "sourceMeshName": "GEO_V13_FAR_CENTRAL_RIDGE.001",
+          "sourcePrimitiveIndex": 0,
+          "sourceVertexIndex": 12888,
+          "resolvedBlenderObject": "MTN_V13_FAR_CENTRAL_RIDGE",
+          "resolvedBlenderVertexIndex": 12888,
+          "threeWorldPosition": [
+            -79.26099429303873,
+            111.51007110812708,
+            -373.5046845912046
+          ],
+          "threeNdc": [
+            -0.29504334753195394,
+            0.18635951664917644,
+            0.9997851440856241
+          ],
+          "threePixelCoordinate": [
+            507.5687897769932,
+            366.1382175078706
+          ],
+          "expectedBlenderWorldPosition": [
+            -79.26099395751953,
+            373.50469970703125,
+            111.51007080078125
+          ],
+          "blenderWorldPosition": [
+            -79.26099395751953,
+            373.50469970703125,
+            111.51007080078125
+          ],
+          "blenderPixelCoordinate": [
+            507.56874561309814,
+            366.13837480545044
+          ],
+          "worldPositionError": 0.0,
+          "pixelError": 0.0001633798587672087
+        },
+        {
+          "id": "cave-exit-07",
+          "label": "Mesh-derived screen landmark 7",
+          "sourceNodeName": "MTN_V13_FAR_CENTRAL_RIDGE",
+          "sourceMeshName": "GEO_V13_FAR_CENTRAL_RIDGE.001",
+          "sourcePrimitiveIndex": 0,
+          "sourceVertexIndex": 7104,
+          "resolvedBlenderObject": "MTN_V13_FAR_CENTRAL_RIDGE",
+          "resolvedBlenderVertexIndex": 7104,
+          "threeWorldPosition": [
+            54.7613452558977,
+            110.2588122196112,
+            -377.008209479049
+          ],
+          "threeNdc": [
+            0.30034203541670046,
+            0.17984186270330726,
+            0.9997842931641592
+          ],
+          "threePixelCoordinate": [
+            936.2462655000243,
+            369.07116178351174
+          ],
+          "expectedBlenderWorldPosition": [
+            54.76134490966797,
+            377.0082092285156,
+            110.2588119506836
+          ],
+          "blenderWorldPosition": [
+            54.761348724365234,
+            377.0082092285156,
+            110.2588119506836
+          ],
+          "blenderPixelCoordinate": [
+            936.2462997436523,
+            369.0713167190552
+          ],
+          "worldPositionError": 3.814697265625e-06,
+          "pixelError": 0.00015867466301676576
+        },
+        {
+          "id": "cave-exit-08",
+          "label": "Mesh-derived screen landmark 8",
+          "sourceNodeName": "MTN_V13_FAR_CENTRAL_RIDGE",
+          "sourceMeshName": "GEO_V13_FAR_CENTRAL_RIDGE.001",
+          "sourcePrimitiveIndex": 0,
+          "sourceVertexIndex": 2270,
+          "resolvedBlenderObject": "MTN_V13_FAR_CENTRAL_RIDGE",
+          "resolvedBlenderVertexIndex": 2270,
+          "threeWorldPosition": [
+            166.76152836695456,
+            106.25478377636037,
+            -370.0011597033601
+          ],
+          "threeNdc": [
+            0.8213238979468211,
+            0.173243875398995,
+            0.9997765090532957
+          ],
+          "threePixelCoordinate": [
+            1311.3532065217112,
+            372.04025607045224
+          ],
+          "expectedBlenderWorldPosition": [
+            166.76153564453125,
+            370.00115966796875,
+            106.2547836303711
+          ],
+          "blenderWorldPosition": [
+            166.7615203857422,
+            370.00115966796875,
+            106.2547836303711
+          ],
+          "blenderPixelCoordinate": [
+            1311.3531875610352,
+            372.04041481018066
+          ],
+          "worldPositionError": 1.52587890625e-05,
+          "pixelError": 0.00015986809754841997
+        },
+        {
+          "id": "cave-exit-09",
+          "label": "Mesh-derived screen landmark 9",
+          "sourceNodeName": "TER_V13_FICTIONAL_NAGANO_MASSIF",
+          "sourceMeshName": "GEO_V13_FICTIONAL_NAGANO_MASSIF.001",
+          "sourcePrimitiveIndex": 0,
+          "sourceVertexIndex": 36660,
+          "resolvedBlenderObject": "TER_V13_FICTIONAL_NAGANO_MASSIF",
+          "resolvedBlenderVertexIndex": 36660,
+          "threeWorldPosition": [
+            -34.86426702169866,
+            5.115690662480546,
+            -70.87154950102237
+          ],
+          "threeNdc": [
+            -0.7979388587433874,
+            -0.5432742470630627,
+            0.9986189883916932
+          ],
+          "threePixelCoordinate": [
+            145.48402170476103,
+            694.4734111783782
+          ],
+          "expectedBlenderWorldPosition": [
+            -34.86426544189453,
+            70.87155151367188,
+            5.1156907081604
+          ],
+          "blenderWorldPosition": [
+            -34.8642692565918,
+            70.87155151367188,
+            5.115692138671875
+          ],
+          "blenderPixelCoordinate": [
+            145.48395037651062,
+            694.4735482335091
+          ],
+          "worldPositionError": 4.074098342243815e-06,
+          "pixelError": 0.00015450510734410408
+        },
+        {
+          "id": "cave-exit-10",
+          "label": "Mesh-derived screen landmark 10",
+          "sourceNodeName": "TER_V13_FICTIONAL_NAGANO_MASSIF",
+          "sourceMeshName": "GEO_V13_FICTIONAL_NAGANO_MASSIF.001",
+          "sourcePrimitiveIndex": 0,
+          "sourceVertexIndex": 37065,
+          "resolvedBlenderObject": "TER_V13_FICTIONAL_NAGANO_MASSIF",
+          "resolvedBlenderVertexIndex": 37065,
+          "threeWorldPosition": [
+            -14.631960127567371,
+            4.510920619449436,
+            -87.94255844294564
+          ],
+          "threeNdc": [
+            -0.23368514579456293,
+            -0.5726550606253111,
+            0.9988811744763114
+          ],
+          "threePixelCoordinate": [
+            551.7466950279147,
+            707.69477728139
+          ],
+          "expectedBlenderWorldPosition": [
+            -14.631959915161133,
+            87.94255828857422,
+            4.510920524597168
+          ],
+          "blenderWorldPosition": [
+            -14.631959915161133,
+            87.94255828857422,
+            4.51092529296875
+          ],
+          "blenderPixelCoordinate": [
+            551.7466592788696,
+            707.6948940753937
+          ],
+          "worldPositionError": 4.76837158203125e-06,
+          "pixelError": 0.00012214267691956144
+        },
+        {
+          "id": "cave-exit-11",
+          "label": "Mesh-derived screen landmark 11",
+          "sourceNodeName": "TER_V13_FICTIONAL_NAGANO_MASSIF",
+          "sourceMeshName": "GEO_V13_FICTIONAL_NAGANO_MASSIF.001",
+          "sourcePrimitiveIndex": 0,
+          "sourceVertexIndex": 43905,
+          "resolvedBlenderObject": "TER_V13_FICTIONAL_NAGANO_MASSIF",
+          "resolvedBlenderVertexIndex": 43905,
+          "threeWorldPosition": [
+            12.362775429548021,
+            4.565899714270444,
+            -119.88541253395184
+          ],
+          "threeNdc": [
+            0.2435080094047681,
+            -0.577130925848777,
+            0.9991832643945548
+          ],
+          "threePixelCoordinate": [
+            895.3257667714331,
+            709.7089166319497
+          ],
+          "expectedBlenderWorldPosition": [
+            12.362775802612305,
+            119.88541412353516,
+            4.565899848937988
+          ],
+          "blenderWorldPosition": [
+            12.362775802612305,
+            119.88540649414062,
+            4.5659027099609375
+          ],
+          "blenderPixelCoordinate": [
+            895.3257465362549,
+            709.7090721130371
+          ],
+          "worldPositionError": 8.14819668448763e-06,
+          "pixelError": 0.00015679231798208608
+        },
+        {
+          "id": "cave-exit-12",
+          "label": "Mesh-derived screen landmark 12",
+          "sourceNodeName": "TER_V13_FICTIONAL_NAGANO_MASSIF",
+          "sourceMeshName": "GEO_V13_FICTIONAL_NAGANO_MASSIF.001",
+          "sourcePrimitiveIndex": 0,
+          "sourceVertexIndex": 35805,
+          "resolvedBlenderObject": "TER_V13_FICTIONAL_NAGANO_MASSIF",
+          "resolvedBlenderVertexIndex": 35805,
+          "threeWorldPosition": [
+            37.13085764641255,
+            4.620878809091465,
+            -97.50892094180121
+          ],
+          "threeNdc": [
+            0.7443656953762603,
+            -0.5711604363158942,
+            0.9989758187965256
+          ],
+          "threePixelCoordinate": [
+            1255.9433006709073,
+            707.0221963421524
+          ],
+          "expectedBlenderWorldPosition": [
+            37.130859375,
+            97.50891876220703,
+            4.62087869644165
+          ],
+          "blenderWorldPosition": [
+            37.130855560302734,
+            97.50892639160156,
+            4.620880126953125
+          ],
+          "blenderPixelCoordinate": [
+            1255.9432983398438,
+            707.0223703980446
+          ],
+          "worldPositionError": 8.649042683828156e-06,
+          "pixelError": 0.00017407150103523016
+        }
+      ]
+    },
+    {
+      "key": "day-clear-start",
+      "cameraName": "CAM_V3_DAY_CLEAR_START_1440x900",
+      "landmarks": [
+        {
+          "id": "day-clear-start-01",
+          "label": "Mesh-derived screen landmark 1",
+          "sourceNodeName": "TER_V13_FICTIONAL_NAGANO_MASSIF",
+          "sourceMeshName": "GEO_V13_FICTIONAL_NAGANO_MASSIF.001",
+          "sourcePrimitiveIndex": 0,
+          "sourceVertexIndex": 104340,
+          "resolvedBlenderObject": "TER_V13_FICTIONAL_NAGANO_MASSIF",
+          "resolvedBlenderVertexIndex": 104340,
+          "threeWorldPosition": [
+            -211.50522629474776,
+            162.75450028801845,
+            -243.49216246528522
+          ],
+          "threeNdc": [
+            -0.8057925077036749,
+            0.5452137547710301,
+            0.9996910689375186
+          ],
+          "threePixelCoordinate": [
+            139.82939445335404,
+            204.65381035303648
+          ],
+          "expectedBlenderWorldPosition": [
+            -211.50523376464844,
+            243.49215698242188,
+            162.75450134277344
+          ],
+          "blenderWorldPosition": [
+            -211.50523376464844,
+            243.49215698242188,
+            162.75450134277344
+          ],
+          "blenderPixelCoordinate": [
+            139.82946753501892,
+            204.65410351753235
+          ],
+          "worldPositionError": 0.0,
+          "pixelError": 0.00030213631258350335
+        },
+        {
+          "id": "day-clear-start-02",
+          "label": "Mesh-derived screen landmark 2",
+          "sourceNodeName": "TER_V13_FICTIONAL_NAGANO_MASSIF",
+          "sourceMeshName": "GEO_V13_FICTIONAL_NAGANO_MASSIF.001",
+          "sourcePrimitiveIndex": 0,
+          "sourceVertexIndex": 87810,
+          "resolvedBlenderObject": "TER_V13_FICTIONAL_NAGANO_MASSIF",
+          "resolvedBlenderVertexIndex": 87810,
+          "threeWorldPosition": [
+            -80.99859996337779,
+            138.99665893848993,
+            -199.85937833796197
+          ],
+          "threeNdc": [
+            -0.3612464065114271,
+            0.5900625153860014,
+            0.9996117344367028
+          ],
+          "threePixelCoordinate": [
+            459.90258731177244,
+            184.47186807629936
+          ],
+          "expectedBlenderWorldPosition": [
+            -80.99859619140625,
+            199.859375,
+            138.9966583251953
+          ],
+          "blenderWorldPosition": [
+            -80.99859619140625,
+            199.859375,
+            138.9966583251953
+          ],
+          "blenderPixelCoordinate": [
+            459.90267276763916,
+            184.47219729423523
+          ],
+          "worldPositionError": 0.0,
+          "pixelError": 0.0003401281441702666
+        },
+        {
+          "id": "day-clear-start-03",
+          "label": "Mesh-derived screen landmark 3",
+          "sourceNodeName": "CAVE_HQ_INTERIOR_SHELL",
+          "sourceMeshName": "CAVE_HQ_INTERIOR_SHELL_MESH",
+          "sourcePrimitiveIndex": 0,
+          "sourceVertexIndex": 1710,
+          "resolvedBlenderObject": "CAVE_HQ_INTERIOR_SHELL",
+          "resolvedBlenderVertexIndex": 1710,
+          "threeWorldPosition": [
+            0.9216846765610218,
+            5.8247878725165565,
+            -1
+          ],
+          "threeNdc": [
+            0.320207059003986,
+            0.766442101499516,
+            0.9651895700054515
+          ],
+          "threePixelCoordinate": [
+            950.54908248287,
+            105.10105432521782
+          ],
+          "expectedBlenderWorldPosition": [
+            0.9216846823692322,
+            1.0,
+            5.8247880935668945
+          ],
+          "blenderWorldPosition": [
+            0.9216846227645874,
+            1.0,
+            5.8247880935668945
+          ],
+          "blenderPixelCoordinate": [
+            950.5490398406982,
+            105.10123372077942
+          ],
+          "worldPositionError": 5.960464477539063e-08,
+          "pixelError": 0.0001843939324664847
+        },
+        {
+          "id": "day-clear-start-04",
+          "label": "Mesh-derived screen landmark 4",
+          "sourceNodeName": "TER_V13_FICTIONAL_NAGANO_MASSIF",
+          "sourceMeshName": "GEO_V13_FICTIONAL_NAGANO_MASSIF.001",
+          "sourcePrimitiveIndex": 0,
+          "sourceVertexIndex": 72945,
+          "resolvedBlenderObject": "TER_V13_FICTIONAL_NAGANO_MASSIF",
+          "resolvedBlenderVertexIndex": 72945,
+          "threeWorldPosition": [
+            146.11316835535752,
+            141.8830614165929,
+            -195.48854029969175
+          ],
+          "threeNdc": [
+            0.7778510016802247,
+            0.6679703405444499,
+            0.9995906502609352
+          ],
+          "threePixelCoordinate": [
+            1280.0527212097618,
+            149.41334675499752
+          ],
+          "expectedBlenderWorldPosition": [
+            146.11317443847656,
+            195.48854064941406,
+            141.883056640625
+          ],
+          "blenderWorldPosition": [
+            146.1131591796875,
+            195.48854064941406,
+            141.883056640625
+          ],
+          "blenderPixelCoordinate": [
+            1280.0526237487793,
+            149.41368699073792
+          ],
+          "worldPositionError": 1.52587890625e-05,
+          "pixelError": 0.00035391948540607526
+        },
+        {
+          "id": "day-clear-start-05",
+          "label": "Mesh-derived screen landmark 5",
+          "sourceNodeName": "TER_V13_FICTIONAL_NAGANO_MASSIF",
+          "sourceMeshName": "GEO_V13_FICTIONAL_NAGANO_MASSIF.001",
+          "sourcePrimitiveIndex": 0,
+          "sourceVertexIndex": 61230,
+          "resolvedBlenderObject": "TER_V13_FICTIONAL_NAGANO_MASSIF",
+          "resolvedBlenderVertexIndex": 61230,
+          "threeWorldPosition": [
+            -109.12040696432386,
+            57.38019267670217,
+            -132.61994537186803
+          ],
+          "threeNdc": [
+            -0.8053774259663834,
+            0.18278885710945558,
+            0.9993613680714345
+          ],
+          "threePixelCoordinate": [
+            140.12825330420395,
+            367.74501430074497
+          ],
+          "expectedBlenderWorldPosition": [
+            -109.12040710449219,
+            132.6199493408203,
+            57.380191802978516
+          ],
+          "blenderWorldPosition": [
+            -109.12040710449219,
+            132.6199493408203,
+            57.380191802978516
+          ],
+          "blenderPixelCoordinate": [
+            140.1283299922943,
+            367.7453398704529
+          ],
+          "worldPositionError": 0.0,
+          "pixelError": 0.00033447974215550274
+        },
+        {
+          "id": "day-clear-start-06",
+          "label": "Mesh-derived screen landmark 6",
+          "sourceNodeName": "MTN_V13_FAR_CENTRAL_RIDGE",
+          "sourceMeshName": "GEO_V13_FAR_CENTRAL_RIDGE.001",
+          "sourcePrimitiveIndex": 0,
+          "sourceVertexIndex": 14260,
+          "resolvedBlenderObject": "MTN_V13_FAR_CENTRAL_RIDGE",
+          "resolvedBlenderVertexIndex": 14260,
+          "threeWorldPosition": [
+            -110.74892422254096,
+            138.48721274452956,
+            -344
+          ],
+          "threeNdc": [
+            -0.30114851641148405,
+            0.17838216550277036,
+            0.9997730497330644
+          ],
+          "threePixelCoordinate": [
+            503.1730681837315,
+            369.72802552375333
+          ],
+          "expectedBlenderWorldPosition": [
+            -110.7489242553711,
+            344.0,
+            138.48721313476562
+          ],
+          "blenderWorldPosition": [
+            -110.74893188476562,
+            344.0,
+            138.48721313476562
+          ],
+          "blenderPixelCoordinate": [
+            503.1730556488037,
+            369.72829699516296
+          ],
+          "worldPositionError": 7.62939453125e-06,
+          "pixelError": 0.0002717606495854304
+        },
+        {
+          "id": "day-clear-start-07",
+          "label": "Mesh-derived screen landmark 7",
+          "sourceNodeName": "MTN_V13_FAR_CENTRAL_RIDGE",
+          "sourceMeshName": "GEO_V13_FAR_CENTRAL_RIDGE.001",
+          "sourcePrimitiveIndex": 0,
+          "sourceVertexIndex": 5988,
+          "resolvedBlenderObject": "MTN_V13_FAR_CENTRAL_RIDGE",
+          "resolvedBlenderVertexIndex": 5988,
+          "threeWorldPosition": [
+            80.73747978148748,
+            128.00166325876643,
+            -323.25412762840665
+          ],
+          "threeNdc": [
+            0.30151847827859646,
+            0.17846802582498497,
+            0.9997503190318158
+          ],
+          "threePixelCoordinate": [
+            937.0933043605894,
+            369.68938837875675
+          ],
+          "expectedBlenderWorldPosition": [
+            80.73748016357422,
+            323.2541198730469,
+            128.0016632080078
+          ],
+          "blenderWorldPosition": [
+            80.73748016357422,
+            323.2541198730469,
+            128.0016632080078
+          ],
+          "blenderPixelCoordinate": [
+            937.0932769775391,
+            369.6896195411682
+          ],
+          "worldPositionError": 0.0,
+          "pixelError": 0.0002327786328702335
+        },
+        {
+          "id": "day-clear-start-08",
+          "label": "Mesh-derived screen landmark 8",
+          "sourceNodeName": "TER_V13_FICTIONAL_NAGANO_MASSIF",
+          "sourceMeshName": "GEO_V13_FICTIONAL_NAGANO_MASSIF.001",
+          "sourcePrimitiveIndex": 0,
+          "sourceVertexIndex": 50310,
+          "resolvedBlenderObject": "TER_V13_FICTIONAL_NAGANO_MASSIF",
+          "resolvedBlenderVertexIndex": 50310,
+          "threeWorldPosition": [
+            95.6354869228187,
+            54.63123793565172,
+            -135.89120151371807
+          ],
+          "threeNdc": [
+            0.7927393834309934,
+            0.16712897527488735,
+            0.9993409543578584
+          ],
+          "threePixelCoordinate": [
+            1290.7723560703153,
+            374.7919611263007
+          ],
+          "expectedBlenderWorldPosition": [
+            95.63549041748047,
+            135.89120483398438,
+            54.6312370300293
+          ],
+          "blenderWorldPosition": [
+            95.63548278808594,
+            135.89120483398438,
+            54.6312370300293
+          ],
+          "blenderPixelCoordinate": [
+            1290.7722759246826,
+            374.79225397109985
+          ],
+          "worldPositionError": 7.62939453125e-06,
+          "pixelError": 0.00030361389761854026
+        },
+        {
+          "id": "day-clear-start-09",
+          "label": "Mesh-derived screen landmark 9",
+          "sourceNodeName": "TER_V13_FICTIONAL_NAGANO_MASSIF",
+          "sourceMeshName": "GEO_V13_FICTIONAL_NAGANO_MASSIF.001",
+          "sourcePrimitiveIndex": 0,
+          "sourceVertexIndex": 27300,
+          "resolvedBlenderObject": "TER_V13_FICTIONAL_NAGANO_MASSIF",
+          "resolvedBlenderVertexIndex": 27300,
+          "threeWorldPosition": [
+            -37.11840990936003,
+            2.256777731788077,
+            -57.009945219275494
+          ],
+          "threeNdc": [
+            -0.6989348122403932,
+            -0.5539169792625196,
+            0.9982908145830784
+          ],
+          "threePixelCoordinate": [
+            216.76693518691687,
+            699.2626406681338
+          ],
+          "expectedBlenderWorldPosition": [
+            -37.118408203125,
+            57.009944915771484,
+            2.256777763366699
+          ],
+          "blenderWorldPosition": [
+            -37.118408203125,
+            57.00994873046875,
+            2.25677490234375
+          ],
+          "blenderPixelCoordinate": [
+            216.76701307296753,
+            699.2629542946815
+          ],
+          "worldPositionError": 4.76837158203125e-06,
+          "pixelError": 0.0003231529797539956
+        },
+        {
+          "id": "day-clear-start-10",
+          "label": "Mesh-derived screen landmark 10",
+          "sourceNodeName": "RIV_V13_EMERALD_S_WATER.001",
+          "sourceMeshName": "GEO_RIV_V13_EMERALD_S_WATER.001",
+          "sourcePrimitiveIndex": 0,
+          "sourceVertexIndex": 5156,
+          "resolvedBlenderObject": "RIV_V13_EMERALD_S_WATER.001",
+          "resolvedBlenderVertexIndex": 5164,
+          "threeWorldPosition": [
+            -16.31682051492355,
+            0.13028375537888692,
+            -64.37846003601184
+          ],
+          "threeNdc": [
+            -0.25615741734020886,
+            -0.612328338592049,
+            0.9984534907980855
+          ],
+          "threePixelCoordinate": [
+            535.5666595150497,
+            725.5477523664221
+          ],
+          "expectedBlenderWorldPosition": [
+            -16.31682014465332,
+            64.37846374511719,
+            0.13028375804424286
+          ],
+          "blenderWorldPosition": [
+            -16.31682014465332,
+            64.37846374511719,
+            0.13028335571289062
+          ],
+          "blenderPixelCoordinate": [
+            535.5666732788086,
+            725.5479991436005
+          ],
+          "worldPositionError": 4.023313522338867e-07,
+          "pixelError": 0.0002471607105534971
+        },
+        {
+          "id": "day-clear-start-11",
+          "label": "Mesh-derived screen landmark 11",
+          "sourceNodeName": "RIV_V13_EMERALD_S_WATER.001",
+          "sourceMeshName": "GEO_RIV_V13_EMERALD_S_WATER.001",
+          "sourcePrimitiveIndex": 0,
+          "sourceVertexIndex": 1739,
+          "resolvedBlenderObject": "RIV_V13_EMERALD_S_WATER.001",
+          "resolvedBlenderVertexIndex": 1739,
+          "threeWorldPosition": [
+            16.379856019394516,
+            0.37418768311105666,
+            -86.56355479598376
+          ],
+          "threeNdc": [
+            0.2600865994737678,
+            -0.579453523308372,
+            0.9988416216286206
+          ],
+          "threePixelCoordinate": [
+            907.2623516211128,
+            710.7540854887674
+          ],
+          "expectedBlenderWorldPosition": [
+            16.37985610961914,
+            86.56355285644531,
+            0.3741876780986786
+          ],
+          "blenderWorldPosition": [
+            16.37985610961914,
+            86.56355285644531,
+            0.3741874694824219
+          ],
+          "blenderPixelCoordinate": [
+            907.2623920440674,
+            710.7543423771858
+          ],
+          "worldPositionError": 2.086162567138672e-07,
+          "pixelError": 0.0002600493699136496
+        },
+        {
+          "id": "day-clear-start-12",
+          "label": "Mesh-derived screen landmark 12",
+          "sourceNodeName": "TER_V13_FICTIONAL_NAGANO_MASSIF",
+          "sourceMeshName": "GEO_V13_FICTIONAL_NAGANO_MASSIF.001",
+          "sourcePrimitiveIndex": 0,
+          "sourceVertexIndex": 10305,
+          "resolvedBlenderObject": "TER_V13_FICTIONAL_NAGANO_MASSIF",
+          "resolvedBlenderVertexIndex": 10305,
+          "threeWorldPosition": [
+            21.37934698019349,
+            1.4320913094729377,
+            -34.63345362712485
+          ],
+          "threeNdc": [
+            0.7577540232381308,
+            -0.6382310387899882,
+            0.9970500394645965
+          ],
+          "threePixelCoordinate": [
+            1265.5828967314542,
+            737.2039674554948
+          ],
+          "expectedBlenderWorldPosition": [
+            21.37934684753418,
+            34.633453369140625,
+            1.4320913553237915
+          ],
+          "blenderWorldPosition": [
+            21.37934684753418,
+            34.633453369140625,
+            1.4320907592773438
+          ],
+          "blenderPixelCoordinate": [
+            1265.582857131958,
+            737.2042089700699
+          ],
+          "worldPositionError": 5.960464477539062e-07,
+          "pixelError": 0.0002447394739191332
+        }
+      ]
+    },
+    {
+      "key": "day-clear-late",
+      "cameraName": "CAM_V3_DAY_CLEAR_LATE_1440x900",
+      "landmarks": [
+        {
+          "id": "day-clear-late-01",
+          "label": "Mesh-derived screen landmark 1",
+          "sourceNodeName": "TER_V13_FICTIONAL_NAGANO_MASSIF",
+          "sourceMeshName": "GEO_V13_FICTIONAL_NAGANO_MASSIF.001",
+          "sourcePrimitiveIndex": 0,
+          "sourceVertexIndex": 104340,
+          "resolvedBlenderObject": "TER_V13_FICTIONAL_NAGANO_MASSIF",
+          "resolvedBlenderVertexIndex": 104340,
+          "threeWorldPosition": [
+            -211.50522629474776,
+            162.75450028801845,
+            -243.49216246528522
+          ],
+          "threeNdc": [
+            -0.8057925077036749,
+            0.5452137547710301,
+            0.9996910689375186
+          ],
+          "threePixelCoordinate": [
+            139.82939445335404,
+            204.65381035303648
+          ],
+          "expectedBlenderWorldPosition": [
+            -211.50523376464844,
+            243.49215698242188,
+            162.75450134277344
+          ],
+          "blenderWorldPosition": [
+            -211.50523376464844,
+            243.49215698242188,
+            162.75450134277344
+          ],
+          "blenderPixelCoordinate": [
+            139.82946753501892,
+            204.65410351753235
+          ],
+          "worldPositionError": 0.0,
+          "pixelError": 0.00030213631258350335
+        },
+        {
+          "id": "day-clear-late-02",
+          "label": "Mesh-derived screen landmark 2",
+          "sourceNodeName": "TER_V13_FICTIONAL_NAGANO_MASSIF",
+          "sourceMeshName": "GEO_V13_FICTIONAL_NAGANO_MASSIF.001",
+          "sourcePrimitiveIndex": 0,
+          "sourceVertexIndex": 87810,
+          "resolvedBlenderObject": "TER_V13_FICTIONAL_NAGANO_MASSIF",
+          "resolvedBlenderVertexIndex": 87810,
+          "threeWorldPosition": [
+            -80.99859996337779,
+            138.99665893848993,
+            -199.85937833796197
+          ],
+          "threeNdc": [
+            -0.3612464065114271,
+            0.5900625153860014,
+            0.9996117344367028
+          ],
+          "threePixelCoordinate": [
+            459.90258731177244,
+            184.47186807629936
+          ],
+          "expectedBlenderWorldPosition": [
+            -80.99859619140625,
+            199.859375,
+            138.9966583251953
+          ],
+          "blenderWorldPosition": [
+            -80.99859619140625,
+            199.859375,
+            138.9966583251953
+          ],
+          "blenderPixelCoordinate": [
+            459.90267276763916,
+            184.47219729423523
+          ],
+          "worldPositionError": 0.0,
+          "pixelError": 0.0003401281441702666
+        },
+        {
+          "id": "day-clear-late-03",
+          "label": "Mesh-derived screen landmark 3",
+          "sourceNodeName": "CAVE_HQ_INTERIOR_SHELL",
+          "sourceMeshName": "CAVE_HQ_INTERIOR_SHELL_MESH",
+          "sourcePrimitiveIndex": 0,
+          "sourceVertexIndex": 1710,
+          "resolvedBlenderObject": "CAVE_HQ_INTERIOR_SHELL",
+          "resolvedBlenderVertexIndex": 1710,
+          "threeWorldPosition": [
+            0.9216846765610218,
+            5.8247878725165565,
+            -1
+          ],
+          "threeNdc": [
+            0.320207059003986,
+            0.766442101499516,
+            0.9651895700054515
+          ],
+          "threePixelCoordinate": [
+            950.54908248287,
+            105.10105432521782
+          ],
+          "expectedBlenderWorldPosition": [
+            0.9216846823692322,
+            1.0,
+            5.8247880935668945
+          ],
+          "blenderWorldPosition": [
+            0.9216846227645874,
+            1.0,
+            5.8247880935668945
+          ],
+          "blenderPixelCoordinate": [
+            950.5490398406982,
+            105.10123372077942
+          ],
+          "worldPositionError": 5.960464477539063e-08,
+          "pixelError": 0.0001843939324664847
+        },
+        {
+          "id": "day-clear-late-04",
+          "label": "Mesh-derived screen landmark 4",
+          "sourceNodeName": "TER_V13_FICTIONAL_NAGANO_MASSIF",
+          "sourceMeshName": "GEO_V13_FICTIONAL_NAGANO_MASSIF.001",
+          "sourcePrimitiveIndex": 0,
+          "sourceVertexIndex": 72945,
+          "resolvedBlenderObject": "TER_V13_FICTIONAL_NAGANO_MASSIF",
+          "resolvedBlenderVertexIndex": 72945,
+          "threeWorldPosition": [
+            146.11316835535752,
+            141.8830614165929,
+            -195.48854029969175
+          ],
+          "threeNdc": [
+            0.7778510016802247,
+            0.6679703405444499,
+            0.9995906502609352
+          ],
+          "threePixelCoordinate": [
+            1280.0527212097618,
+            149.41334675499752
+          ],
+          "expectedBlenderWorldPosition": [
+            146.11317443847656,
+            195.48854064941406,
+            141.883056640625
+          ],
+          "blenderWorldPosition": [
+            146.1131591796875,
+            195.48854064941406,
+            141.883056640625
+          ],
+          "blenderPixelCoordinate": [
+            1280.0526237487793,
+            149.41368699073792
+          ],
+          "worldPositionError": 1.52587890625e-05,
+          "pixelError": 0.00035391948540607526
+        },
+        {
+          "id": "day-clear-late-05",
+          "label": "Mesh-derived screen landmark 5",
+          "sourceNodeName": "TER_V13_FICTIONAL_NAGANO_MASSIF",
+          "sourceMeshName": "GEO_V13_FICTIONAL_NAGANO_MASSIF.001",
+          "sourcePrimitiveIndex": 0,
+          "sourceVertexIndex": 61230,
+          "resolvedBlenderObject": "TER_V13_FICTIONAL_NAGANO_MASSIF",
+          "resolvedBlenderVertexIndex": 61230,
+          "threeWorldPosition": [
+            -109.12040696432386,
+            57.38019267670217,
+            -132.61994537186803
+          ],
+          "threeNdc": [
+            -0.8053774259663834,
+            0.18278885710945558,
+            0.9993613680714345
+          ],
+          "threePixelCoordinate": [
+            140.12825330420395,
+            367.74501430074497
+          ],
+          "expectedBlenderWorldPosition": [
+            -109.12040710449219,
+            132.6199493408203,
+            57.380191802978516
+          ],
+          "blenderWorldPosition": [
+            -109.12040710449219,
+            132.6199493408203,
+            57.380191802978516
+          ],
+          "blenderPixelCoordinate": [
+            140.1283299922943,
+            367.7453398704529
+          ],
+          "worldPositionError": 0.0,
+          "pixelError": 0.00033447974215550274
+        },
+        {
+          "id": "day-clear-late-06",
+          "label": "Mesh-derived screen landmark 6",
+          "sourceNodeName": "MTN_V13_FAR_CENTRAL_RIDGE",
+          "sourceMeshName": "GEO_V13_FAR_CENTRAL_RIDGE.001",
+          "sourcePrimitiveIndex": 0,
+          "sourceVertexIndex": 14260,
+          "resolvedBlenderObject": "MTN_V13_FAR_CENTRAL_RIDGE",
+          "resolvedBlenderVertexIndex": 14260,
+          "threeWorldPosition": [
+            -110.74892422254096,
+            138.48721274452956,
+            -344
+          ],
+          "threeNdc": [
+            -0.30114851641148405,
+            0.17838216550277036,
+            0.9997730497330644
+          ],
+          "threePixelCoordinate": [
+            503.1730681837315,
+            369.72802552375333
+          ],
+          "expectedBlenderWorldPosition": [
+            -110.7489242553711,
+            344.0,
+            138.48721313476562
+          ],
+          "blenderWorldPosition": [
+            -110.74893188476562,
+            344.0,
+            138.48721313476562
+          ],
+          "blenderPixelCoordinate": [
+            503.1730556488037,
+            369.72829699516296
+          ],
+          "worldPositionError": 7.62939453125e-06,
+          "pixelError": 0.0002717606495854304
+        },
+        {
+          "id": "day-clear-late-07",
+          "label": "Mesh-derived screen landmark 7",
+          "sourceNodeName": "MTN_V13_FAR_CENTRAL_RIDGE",
+          "sourceMeshName": "GEO_V13_FAR_CENTRAL_RIDGE.001",
+          "sourcePrimitiveIndex": 0,
+          "sourceVertexIndex": 5988,
+          "resolvedBlenderObject": "MTN_V13_FAR_CENTRAL_RIDGE",
+          "resolvedBlenderVertexIndex": 5988,
+          "threeWorldPosition": [
+            80.73747978148748,
+            128.00166325876643,
+            -323.25412762840665
+          ],
+          "threeNdc": [
+            0.30151847827859646,
+            0.17846802582498497,
+            0.9997503190318158
+          ],
+          "threePixelCoordinate": [
+            937.0933043605894,
+            369.68938837875675
+          ],
+          "expectedBlenderWorldPosition": [
+            80.73748016357422,
+            323.2541198730469,
+            128.0016632080078
+          ],
+          "blenderWorldPosition": [
+            80.73748016357422,
+            323.2541198730469,
+            128.0016632080078
+          ],
+          "blenderPixelCoordinate": [
+            937.0932769775391,
+            369.6896195411682
+          ],
+          "worldPositionError": 0.0,
+          "pixelError": 0.0002327786328702335
+        },
+        {
+          "id": "day-clear-late-08",
+          "label": "Mesh-derived screen landmark 8",
+          "sourceNodeName": "TER_V13_FICTIONAL_NAGANO_MASSIF",
+          "sourceMeshName": "GEO_V13_FICTIONAL_NAGANO_MASSIF.001",
+          "sourcePrimitiveIndex": 0,
+          "sourceVertexIndex": 50310,
+          "resolvedBlenderObject": "TER_V13_FICTIONAL_NAGANO_MASSIF",
+          "resolvedBlenderVertexIndex": 50310,
+          "threeWorldPosition": [
+            95.6354869228187,
+            54.63123793565172,
+            -135.89120151371807
+          ],
+          "threeNdc": [
+            0.7927393834309934,
+            0.16712897527488735,
+            0.9993409543578584
+          ],
+          "threePixelCoordinate": [
+            1290.7723560703153,
+            374.7919611263007
+          ],
+          "expectedBlenderWorldPosition": [
+            95.63549041748047,
+            135.89120483398438,
+            54.6312370300293
+          ],
+          "blenderWorldPosition": [
+            95.63548278808594,
+            135.89120483398438,
+            54.6312370300293
+          ],
+          "blenderPixelCoordinate": [
+            1290.7722759246826,
+            374.79225397109985
+          ],
+          "worldPositionError": 7.62939453125e-06,
+          "pixelError": 0.00030361389761854026
+        },
+        {
+          "id": "day-clear-late-09",
+          "label": "Mesh-derived screen landmark 9",
+          "sourceNodeName": "TER_V13_FICTIONAL_NAGANO_MASSIF",
+          "sourceMeshName": "GEO_V13_FICTIONAL_NAGANO_MASSIF.001",
+          "sourcePrimitiveIndex": 0,
+          "sourceVertexIndex": 27300,
+          "resolvedBlenderObject": "TER_V13_FICTIONAL_NAGANO_MASSIF",
+          "resolvedBlenderVertexIndex": 27300,
+          "threeWorldPosition": [
+            -37.11840990936003,
+            2.256777731788077,
+            -57.009945219275494
+          ],
+          "threeNdc": [
+            -0.6989348122403932,
+            -0.5539169792625196,
+            0.9982908145830784
+          ],
+          "threePixelCoordinate": [
+            216.76693518691687,
+            699.2626406681338
+          ],
+          "expectedBlenderWorldPosition": [
+            -37.118408203125,
+            57.009944915771484,
+            2.256777763366699
+          ],
+          "blenderWorldPosition": [
+            -37.118408203125,
+            57.00994873046875,
+            2.25677490234375
+          ],
+          "blenderPixelCoordinate": [
+            216.76701307296753,
+            699.2629542946815
+          ],
+          "worldPositionError": 4.76837158203125e-06,
+          "pixelError": 0.0003231529797539956
+        },
+        {
+          "id": "day-clear-late-10",
+          "label": "Mesh-derived screen landmark 10",
+          "sourceNodeName": "RIV_V13_EMERALD_S_WATER.001",
+          "sourceMeshName": "GEO_RIV_V13_EMERALD_S_WATER.001",
+          "sourcePrimitiveIndex": 0,
+          "sourceVertexIndex": 5156,
+          "resolvedBlenderObject": "RIV_V13_EMERALD_S_WATER.001",
+          "resolvedBlenderVertexIndex": 5164,
+          "threeWorldPosition": [
+            -16.31682051492355,
+            0.13028375537888692,
+            -64.37846003601184
+          ],
+          "threeNdc": [
+            -0.25615741734020886,
+            -0.612328338592049,
+            0.9984534907980855
+          ],
+          "threePixelCoordinate": [
+            535.5666595150497,
+            725.5477523664221
+          ],
+          "expectedBlenderWorldPosition": [
+            -16.31682014465332,
+            64.37846374511719,
+            0.13028375804424286
+          ],
+          "blenderWorldPosition": [
+            -16.31682014465332,
+            64.37846374511719,
+            0.13028335571289062
+          ],
+          "blenderPixelCoordinate": [
+            535.5666732788086,
+            725.5479991436005
+          ],
+          "worldPositionError": 4.023313522338867e-07,
+          "pixelError": 0.0002471607105534971
+        },
+        {
+          "id": "day-clear-late-11",
+          "label": "Mesh-derived screen landmark 11",
+          "sourceNodeName": "RIV_V13_EMERALD_S_WATER.001",
+          "sourceMeshName": "GEO_RIV_V13_EMERALD_S_WATER.001",
+          "sourcePrimitiveIndex": 0,
+          "sourceVertexIndex": 1739,
+          "resolvedBlenderObject": "RIV_V13_EMERALD_S_WATER.001",
+          "resolvedBlenderVertexIndex": 1739,
+          "threeWorldPosition": [
+            16.379856019394516,
+            0.37418768311105666,
+            -86.56355479598376
+          ],
+          "threeNdc": [
+            0.2600865994737678,
+            -0.579453523308372,
+            0.9988416216286206
+          ],
+          "threePixelCoordinate": [
+            907.2623516211128,
+            710.7540854887674
+          ],
+          "expectedBlenderWorldPosition": [
+            16.37985610961914,
+            86.56355285644531,
+            0.3741876780986786
+          ],
+          "blenderWorldPosition": [
+            16.37985610961914,
+            86.56355285644531,
+            0.3741874694824219
+          ],
+          "blenderPixelCoordinate": [
+            907.2623920440674,
+            710.7543423771858
+          ],
+          "worldPositionError": 2.086162567138672e-07,
+          "pixelError": 0.0002600493699136496
+        },
+        {
+          "id": "day-clear-late-12",
+          "label": "Mesh-derived screen landmark 12",
+          "sourceNodeName": "TER_V13_FICTIONAL_NAGANO_MASSIF",
+          "sourceMeshName": "GEO_V13_FICTIONAL_NAGANO_MASSIF.001",
+          "sourcePrimitiveIndex": 0,
+          "sourceVertexIndex": 10305,
+          "resolvedBlenderObject": "TER_V13_FICTIONAL_NAGANO_MASSIF",
+          "resolvedBlenderVertexIndex": 10305,
+          "threeWorldPosition": [
+            21.37934698019349,
+            1.4320913094729377,
+            -34.63345362712485
+          ],
+          "threeNdc": [
+            0.7577540232381308,
+            -0.6382310387899882,
+            0.9970500394645965
+          ],
+          "threePixelCoordinate": [
+            1265.5828967314542,
+            737.2039674554948
+          ],
+          "expectedBlenderWorldPosition": [
+            21.37934684753418,
+            34.633453369140625,
+            1.4320913553237915
+          ],
+          "blenderWorldPosition": [
+            21.37934684753418,
+            34.633453369140625,
+            1.4320907592773438
+          ],
+          "blenderPixelCoordinate": [
+            1265.582857131958,
+            737.2042089700699
+          ],
+          "worldPositionError": 5.960464477539062e-07,
+          "pixelError": 0.0002447394739191332
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "landmarkCount": 36,
+    "medianPixelError": 0.00024595009223631514,
+    "maximumPixelError": 0.00035391948540607526,
+    "medianWorldPositionError": 4.023313522338867e-07,
+    "maximumWorldPositionError": 1.52587890625e-05,
+    "targetMedianPixelError": 0.75,
+    "targetMaximumPixelError": 2.0,
+    "passed": true
+  },
+  "matrixConversionValidation": [
+    {
+      "cameraName": "CAM_V3_CAVE_EXIT_1440x900",
+      "progress": 11.5,
+      "formulaErrors": {
+        "C_times_M": 1.4901161193847656e-07,
+        "C_times_M_times_C_inverse": 1.187964677810669,
+        "M_times_C_inverse": 4.222196042537689
+      },
+      "selectedFormula": "C_times_M",
+      "selectedMatrixMaxAbsError": 1.4901161193847656e-07,
+      "importedMatrixWorld": [
+        0.9994233846664429,
+        0.0339544303715229,
+        1.9655383987071673e-09,
+        0.0,
+        0.007141810841858387,
+        -0.2102140337228775,
+        0.9776294231414795,
+        0.0,
+        0.03319484740495682,
+        -0.9770656824111938,
+        -0.21033531427383423,
+        0.0,
+        0.0,
+        0.391295850276947,
+        3.830900192260742,
+        1.0
+      ],
+      "formulaMatrixWorld": [
+        0.9994233846664429,
+        0.0339544303715229,
+        -4.336808689942018e-19,
+        0.0,
+        0.007141810841858387,
+        -0.21021388471126556,
+        0.9776293635368347,
+        0.0,
+        0.03319484740495682,
+        -0.9770656228065491,
+        -0.2103351652622223,
+        0.0,
+        0.0,
+        0.391295850276947,
+        3.830900192260742,
+        1.0
+      ],
+      "importedPosition": [
+        0.0,
+        0.391295850276947,
+        3.830900192260742
+      ],
+      "importedQuaternion": [
+        0.6282662749290466,
+        0.7778130769729614,
+        0.013208907097578049,
+        0.010669288225471973
+      ],
+      "importedForward": [
+        -0.03319484740495682,
+        0.9770655632019043,
+        0.21033528447151184
+      ],
+      "formulaForward": [
+        -0.03319484740495682,
+        0.9770656824111938,
+        0.21033504605293274
+      ],
+      "importedUp": [
+        0.007141813635826111,
+        -0.2102140337228775,
+        0.9776293039321899
+      ],
+      "formulaUp": [
+        0.007141809910535812,
+        -0.2102137953042984,
+        0.9776294231414795
+      ],
+      "yfovRadiansImported": 0.6939552426338196,
+      "yfovRadiansSource": 0.6939552426338196,
+      "yfovErrorRadians": 0.0,
+      "lensMillimeters": 33.185184478759766,
+      "sensorFit": "VERTICAL",
+      "sensorWidth": 36.0,
+      "sensorHeight": 24.0
+    },
+    {
+      "cameraName": "CAM_V3_DAY_CLEAR_LATE_1440x900",
+      "progress": 37.9,
+      "formulaErrors": {
+        "C_times_M": 3.8743019104003906e-07,
+        "C_times_M_times_C_inverse": 1.230349212884903,
+        "M_times_C_inverse": 5.356255412101746
+      },
+      "selectedFormula": "C_times_M",
+      "selectedMatrixMaxAbsError": 3.8743019104003906e-07,
+      "importedMatrixWorld": [
+        0.9994233846664429,
+        0.0339544378221035,
+        -5.739884123556749e-10,
+        0.0,
+        0.009049514308571815,
+        -0.2663659453392029,
+        0.9638298153877258,
+        0.0,
+        0.03272629156708717,
+        -0.9632740616798401,
+        -0.2665196359157562,
+        0.0,
+        0.19253012537956238,
+        -1.4677618741989136,
+        3.888493537902832,
+        1.0
+      ],
+      "formulaMatrixWorld": [
+        0.9994233846664429,
+        0.0339544303715229,
+        0.0,
+        0.0,
+        0.009049509651958942,
+        -0.26636555790901184,
+        0.9638295769691467,
+        0.0,
+        0.03272628411650658,
+        -0.963273823261261,
+        -0.2665192484855652,
+        0.0,
+        0.19253012537956238,
+        -1.4677618741989136,
+        3.888493537902832,
+        1.0
+      ],
+      "importedPosition": [
+        0.19253012537956238,
+        -1.4677618741989136,
+        3.888493537902832
+      ],
+      "importedQuaternion": [
+        0.605503499507904,
+        0.7956615090370178,
+        0.013512012548744678,
+        0.010282727889716625
+      ],
+      "importedForward": [
+        -0.03272628411650658,
+        0.9632737636566162,
+        0.26651960611343384
+      ],
+      "formulaForward": [
+        -0.03272628411650658,
+        0.963273823261261,
+        0.2665192186832428
+      ],
+      "importedUp": [
+        0.009049521759152412,
+        -0.2663659453392029,
+        0.963829517364502
+      ],
+      "formulaUp": [
+        0.009049509651958942,
+        -0.26636555790901184,
+        0.9638295769691467
+      ],
+      "yfovRadiansImported": 1.0098598003387451,
+      "yfovRadiansSource": 1.0098598372447931,
+      "yfovErrorRadians": 3.690604799544417e-08,
+      "lensMillimeters": 21.710771560668945,
+      "sensorFit": "VERTICAL",
+      "sensorWidth": 36.0,
+      "sensorHeight": 24.0
+    },
+    {
+      "cameraName": "CAM_V3_DAY_CLEAR_START_1440x900",
+      "progress": 30,
+      "formulaErrors": {
+        "C_times_M": 3.8743019104003906e-07,
+        "C_times_M_times_C_inverse": 1.230349212884903,
+        "M_times_C_inverse": 5.356255412101746
+      },
+      "selectedFormula": "C_times_M",
+      "selectedMatrixMaxAbsError": 3.8743019104003906e-07,
+      "importedMatrixWorld": [
+        0.9994233846664429,
+        0.0339544378221035,
+        -5.739884123556749e-10,
+        0.0,
+        0.009049514308571815,
+        -0.2663659453392029,
+        0.9638298153877258,
+        0.0,
+        0.03272629156708717,
+        -0.9632740616798401,
+        -0.2665196359157562,
+        0.0,
+        0.19253012537956238,
+        -1.4677618741989136,
+        3.888493537902832,
+        1.0
+      ],
+      "formulaMatrixWorld": [
+        0.9994233846664429,
+        0.0339544303715229,
+        0.0,
+        0.0,
+        0.009049509651958942,
+        -0.26636555790901184,
+        0.9638295769691467,
+        0.0,
+        0.03272628411650658,
+        -0.963273823261261,
+        -0.2665192484855652,
+        0.0,
+        0.19253012537956238,
+        -1.4677618741989136,
+        3.888493537902832,
+        1.0
+      ],
+      "importedPosition": [
+        0.19253012537956238,
+        -1.4677618741989136,
+        3.888493537902832
+      ],
+      "importedQuaternion": [
+        0.605503499507904,
+        0.7956615090370178,
+        0.013512012548744678,
+        0.010282727889716625
+      ],
+      "importedForward": [
+        -0.03272628411650658,
+        0.9632737636566162,
+        0.26651960611343384
+      ],
+      "formulaForward": [
+        -0.03272628411650658,
+        0.963273823261261,
+        0.2665192186832428
+      ],
+      "importedUp": [
+        0.009049521759152412,
+        -0.2663659453392029,
+        0.963829517364502
+      ],
+      "formulaUp": [
+        0.009049509651958942,
+        -0.26636555790901184,
+        0.9638295769691467
+      ],
+      "yfovRadiansImported": 1.0098598003387451,
+      "yfovRadiansSource": 1.0098598372447931,
+      "yfovErrorRadians": 3.690604799544417e-08,
+      "lensMillimeters": 21.710771560668945,
+      "sensorFit": "VERTICAL",
+      "sensorWidth": 36.0,
+      "sensorHeight": 24.0
+    },
+    {
+      "cameraName": "CAM_V3_SWEEP_P011_50",
+      "progress": 11.5,
+      "formulaErrors": {
+        "C_times_M": 1.4901161193847656e-07,
+        "C_times_M_times_C_inverse": 1.187964677810669,
+        "M_times_C_inverse": 4.222196042537689
+      },
+      "selectedFormula": "C_times_M",
+      "selectedMatrixMaxAbsError": 1.4901161193847656e-07,
+      "importedMatrixWorld": [
+        0.9994233846664429,
+        0.0339544303715229,
+        1.9655383987071673e-09,
+        0.0,
+        0.007141810841858387,
+        -0.2102140337228775,
+        0.9776294231414795,
+        0.0,
+        0.03319484740495682,
+        -0.9770656824111938,
+        -0.21033531427383423,
+        0.0,
+        0.0,
+        0.391295850276947,
+        3.830900192260742,
+        1.0
+      ],
+      "formulaMatrixWorld": [
+        0.9994233846664429,
+        0.0339544303715229,
+        -4.336808689942018e-19,
+        0.0,
+        0.007141810841858387,
+        -0.21021388471126556,
+        0.9776293635368347,
+        0.0,
+        0.03319484740495682,
+        -0.9770656228065491,
+        -0.2103351652622223,
+        0.0,
+        0.0,
+        0.391295850276947,
+        3.830900192260742,
+        1.0
+      ],
+      "importedPosition": [
+        0.0,
+        0.391295850276947,
+        3.830900192260742
+      ],
+      "importedQuaternion": [
+        0.6282662749290466,
+        0.7778130769729614,
+        0.013208907097578049,
+        0.010669288225471973
+      ],
+      "importedForward": [
+        -0.03319484740495682,
+        0.9770655632019043,
+        0.21033528447151184
+      ],
+      "formulaForward": [
+        -0.03319484740495682,
+        0.9770656824111938,
+        0.21033504605293274
+      ],
+      "importedUp": [
+        0.007141813635826111,
+        -0.2102140337228775,
+        0.9776293039321899
+      ],
+      "formulaUp": [
+        0.007141809910535812,
+        -0.2102137953042984,
+        0.9776294231414795
+      ],
+      "yfovRadiansImported": 0.6939552426338196,
+      "yfovRadiansSource": 0.6939552426338196,
+      "yfovErrorRadians": 0.0,
+      "lensMillimeters": 33.185184478759766,
+      "sensorFit": "VERTICAL",
+      "sensorWidth": 36.0,
+      "sensorHeight": 24.0
+    },
+    {
+      "cameraName": "CAM_V3_SWEEP_P012_00",
+      "progress": 12,
+      "formulaErrors": {
+        "C_times_M": 1.4901161193847656e-07,
+        "C_times_M_times_C_inverse": 1.187964677810669,
+        "M_times_C_inverse": 5.319915175437927
+      },
+      "selectedFormula": "C_times_M",
+      "selectedMatrixMaxAbsError": 1.4901161193847656e-07,
+      "importedMatrixWorld": [
+        0.9994233846664429,
+        0.0339544303715229,
+        1.9655383987071673e-09,
+        0.0,
+        0.007141810841858387,
+        -0.2102140337228775,
+        0.9776294231414795,
+        0.0,
+        0.03319484740495682,
+        -0.9770656824111938,
+        -0.21033531427383423,
+        0.0,
+        0.0,
+        1.3074277639389038,
+        4.012487411499023,
+        1.0
+      ],
+      "formulaMatrixWorld": [
+        0.9994233846664429,
+        0.0339544303715229,
+        -4.336808689942018e-19,
+        0.0,
+        0.007141810841858387,
+        -0.21021388471126556,
+        0.9776293635368347,
+        0.0,
+        0.03319484740495682,
+        -0.9770656228065491,
+        -0.2103351652622223,
+        0.0,
+        0.0,
+        1.3074277639389038,
+        4.012487411499023,
+        1.0
+      ],
+      "importedPosition": [
+        0.0,
+        1.3074277639389038,
+        4.012487411499023
+      ],
+      "importedQuaternion": [
+        0.6282662749290466,
+        0.7778130769729614,
+        0.013208907097578049,
+        0.010669288225471973
+      ],
+      "importedForward": [
+        -0.03319484740495682,
+        0.9770655632019043,
+        0.21033528447151184
+      ],
+      "formulaForward": [
+        -0.03319484740495682,
+        0.9770656824111938,
+        0.21033504605293274
+      ],
+      "importedUp": [
+        0.007141813635826111,
+        -0.2102140337228775,
+        0.9776293039321899
+      ],
+      "formulaUp": [
+        0.007141809910535812,
+        -0.2102137953042984,
+        0.9776294231414795
+      ],
+      "yfovRadiansImported": 0.6939552426338196,
+      "yfovRadiansSource": 0.6939552426338196,
+      "yfovErrorRadians": 0.0,
+      "lensMillimeters": 33.185184478759766,
+      "sensorFit": "VERTICAL",
+      "sensorWidth": 36.0,
+      "sensorHeight": 24.0
+    },
+    {
+      "cameraName": "CAM_V3_SWEEP_P013_50",
+      "progress": 13.5,
+      "formulaErrors": {
+        "C_times_M": 1.4901161193847656e-07,
+        "C_times_M_times_C_inverse": 1.187964677810669,
+        "M_times_C_inverse": 6.659985542297363
+      },
+      "selectedFormula": "C_times_M",
+      "selectedMatrixMaxAbsError": 1.4901161193847656e-07,
+      "importedMatrixWorld": [
+        0.9994233846664429,
+        0.0339544303715229,
+        1.9655383987071673e-09,
+        0.0,
+        0.007141810841858387,
+        -0.2102140337228775,
+        0.9776294231414795,
+        0.0,
+        0.03319484740495682,
+        -0.9770656824111938,
+        -0.21033531427383423,
+        0.0,
+        0.0,
+        2.415738582611084,
+        4.244246959686279,
+        1.0
+      ],
+      "formulaMatrixWorld": [
+        0.9994233846664429,
+        0.0339544303715229,
+        -4.336808689942018e-19,
+        0.0,
+        0.007141810841858387,
+        -0.21021388471126556,
+        0.9776293635368347,
+        0.0,
+        0.03319484740495682,
+        -0.9770656228065491,
+        -0.2103351652622223,
+        0.0,
+        0.0,
+        2.415738582611084,
+        4.244246959686279,
+        1.0
+      ],
+      "importedPosition": [
+        0.0,
+        2.415738582611084,
+        4.244246959686279
+      ],
+      "importedQuaternion": [
+        0.6282662749290466,
+        0.7778130769729614,
+        0.013208907097578049,
+        0.010669288225471973
+      ],
+      "importedForward": [
+        -0.03319484740495682,
+        0.9770655632019043,
+        0.21033528447151184
+      ],
+      "formulaForward": [
+        -0.03319484740495682,
+        0.9770656824111938,
+        0.21033504605293274
+      ],
+      "importedUp": [
+        0.007141813635826111,
+        -0.2102140337228775,
+        0.9776293039321899
+      ],
+      "formulaUp": [
+        0.007141809910535812,
+        -0.2102137953042984,
+        0.9776294231414795
+      ],
+      "yfovRadiansImported": 0.6939552426338196,
+      "yfovRadiansSource": 0.6939552426338196,
+      "yfovErrorRadians": 0.0,
+      "lensMillimeters": 33.185184478759766,
+      "sensorFit": "VERTICAL",
+      "sensorWidth": 36.0,
+      "sensorHeight": 24.0
+    },
+    {
+      "cameraName": "CAM_V3_SWEEP_P016_00",
+      "progress": 16,
+      "formulaErrors": {
+        "C_times_M": 1.4901161193847656e-07,
+        "C_times_M_times_C_inverse": 1.187964677810669,
+        "M_times_C_inverse": 7.9598000049591064
+      },
+      "selectedFormula": "C_times_M",
+      "selectedMatrixMaxAbsError": 1.4901161193847656e-07,
+      "importedMatrixWorld": [
+        0.9994233846664429,
+        0.0339544303715229,
+        1.9655383987071673e-09,
+        0.0,
+        0.007141810841858387,
+        -0.2102140337228775,
+        0.9776294231414795,
+        0.0,
+        0.03319484740495682,
+        -0.9770656824111938,
+        -0.21033531427383423,
+        0.0,
+        0.0,
+        3.477661371231079,
+        4.482138633728027,
+        1.0
+      ],
+      "formulaMatrixWorld": [
+        0.9994233846664429,
+        0.0339544303715229,
+        -4.336808689942018e-19,
+        0.0,
+        0.007141810841858387,
+        -0.21021388471126556,
+        0.9776293635368347,
+        0.0,
+        0.03319484740495682,
+        -0.9770656228065491,
+        -0.2103351652622223,
+        0.0,
+        0.0,
+        3.477661371231079,
+        4.482138633728027,
+        1.0
+      ],
+      "importedPosition": [
+        0.0,
+        3.477661371231079,
+        4.482138633728027
+      ],
+      "importedQuaternion": [
+        0.6282662749290466,
+        0.7778130769729614,
+        0.013208907097578049,
+        0.010669288225471973
+      ],
+      "importedForward": [
+        -0.03319484740495682,
+        0.9770655632019043,
+        0.21033528447151184
+      ],
+      "formulaForward": [
+        -0.03319484740495682,
+        0.9770656824111938,
+        0.21033504605293274
+      ],
+      "importedUp": [
+        0.007141813635826111,
+        -0.2102140337228775,
+        0.9776293039321899
+      ],
+      "formulaUp": [
+        0.007141809910535812,
+        -0.2102137953042984,
+        0.9776294231414795
+      ],
+      "yfovRadiansImported": 0.6939552426338196,
+      "yfovRadiansSource": 0.6939552426338196,
+      "yfovErrorRadians": 0.0,
+      "lensMillimeters": 33.185184478759766,
+      "sensorFit": "VERTICAL",
+      "sensorWidth": 36.0,
+      "sensorHeight": 24.0
+    },
+    {
+      "cameraName": "CAM_V3_SWEEP_P020_00",
+      "progress": 20,
+      "formulaErrors": {
+        "C_times_M": 2.682209014892578e-07,
+        "C_times_M_times_C_inverse": 1.18950517475605,
+        "M_times_C_inverse": 8.627254486083984
+      },
+      "selectedFormula": "C_times_M",
+      "selectedMatrixMaxAbsError": 2.682209014892578e-07,
+      "importedMatrixWorld": [
+        0.9994233846664429,
+        0.0339544378221035,
+        -6.749647507575673e-10,
+        0.0,
+        0.007208544760942459,
+        -0.2121783047914505,
+        0.9772046208381653,
+        0.0,
+        0.03318042680621147,
+        -0.9766411185264587,
+        -0.21230073273181915,
+        0.0,
+        0.006602542009204626,
+        4.004878044128418,
+        4.622376441955566,
+        1.0
+      ],
+      "formulaMatrixWorld": [
+        0.9994233846664429,
+        0.0339544303715229,
+        4.336808689942018e-19,
+        0.0,
+        0.007208541501313448,
+        -0.2121780514717102,
+        0.977204442024231,
+        0.0,
+        0.033180419355630875,
+        -0.9766409397125244,
+        -0.21230046451091766,
+        0.0,
+        0.006602542009204626,
+        4.004878044128418,
+        4.622376441955566,
+        1.0
+      ],
+      "importedPosition": [
+        0.006602542009204626,
+        4.004878044128418,
+        4.622376441955566
+      ],
+      "importedQuaternion": [
+        0.6274839639663696,
+        0.7784443497657776,
+        0.013219629414379597,
+        0.010656002908945084
+      ],
+      "importedForward": [
+        -0.03318042308092117,
+        0.9766409993171692,
+        0.21230071783065796
+      ],
+      "formulaForward": [
+        -0.03318042308092117,
+        0.9766411185264587,
+        0.21230044960975647
+      ],
+      "importedUp": [
+        0.007208549417555332,
+        -0.2121782898902893,
+        0.977204442024231
+      ],
+      "formulaUp": [
+        0.007208541035652161,
+        -0.21217802166938782,
+        0.9772045612335205
+      ],
+      "yfovRadiansImported": 0.7176659107208252,
+      "yfovRadiansSource": 0.717665900027308,
+      "yfovErrorRadians": 1.0693517182858159e-08,
+      "lensMillimeters": 31.993938446044922,
+      "sensorFit": "VERTICAL",
+      "sensorWidth": 36.0,
+      "sensorHeight": 24.0
+    },
+    {
+      "cameraName": "CAM_V3_SWEEP_P022_00",
+      "progress": 22,
+      "formulaErrors": {
+        "C_times_M": 7.450580596923828e-08,
+        "C_times_M_times_C_inverse": 1.1994572877883911,
+        "M_times_C_inverse": 7.1814165115356445
+      },
+      "selectedFormula": "C_times_M",
+      "selectedMatrixMaxAbsError": 7.450580596923828e-08,
+      "importedMatrixWorld": [
+        0.9994233846664429,
+        0.0339544303715229,
+        -1.903935897829001e-09,
+        0.0,
+        0.0076440987177193165,
+        -0.22499831020832062,
+        0.9743291735649109,
+        0.0,
+        0.03308279067277908,
+        -0.9737673401832581,
+        -0.22512811422348022,
+        0.0,
+        0.049915216863155365,
+        2.730001449584961,
+        4.451415061950684,
+        1.0
+      ],
+      "formulaMatrixWorld": [
+        0.9994233846664429,
+        0.0339544303715229,
+        0.0,
+        0.0,
+        0.007644099183380604,
+        -0.2249983698129654,
+        0.9743291735649109,
+        0.0,
+        0.03308279067277908,
+        -0.9737673401832581,
+        -0.2251281887292862,
+        0.0,
+        0.049915216863155365,
+        2.730001449584961,
+        4.451415061950684,
+        1.0
+      ],
+      "importedPosition": [
+        0.049915216863155365,
+        2.730001449584961,
+        4.451415061950684
+      ],
+      "importedQuaternion": [
+        0.6223538517951965,
+        0.7825518846511841,
+        0.013289383612573147,
+        0.01056888047605753
+      ],
+      "importedForward": [
+        -0.03308279439806938,
+        0.9737675189971924,
+        0.22512808442115784
+      ],
+      "formulaForward": [
+        -0.03308279067277908,
+        0.9737673997879028,
+        0.2251281440258026
+      ],
+      "importedUp": [
+        0.0076440973207354546,
+        -0.22499826550483704,
+        0.9743292927742004
+      ],
+      "formulaUp": [
+        0.007644098252058029,
+        -0.2249983251094818,
+        0.9743291735649109
+      ],
+      "yfovRadiansImported": 0.8031219244003296,
+      "yfovRadiansSource": 0.8031219029505485,
+      "yfovErrorRadians": 2.1449781062443662e-08,
+      "lensMillimeters": 28.259601593017578,
+      "sensorFit": "VERTICAL",
+      "sensorWidth": 36.0,
+      "sensorHeight": 24.0
+    },
+    {
+      "cameraName": "CAM_V3_SWEEP_P023_50",
+      "progress": 23.5,
+      "formulaErrors": {
+        "C_times_M": 5.960464477539063e-08,
+        "C_times_M_times_C_inverse": 1.2098136395215988,
+        "M_times_C_inverse": 5.634194016456604
+      },
+      "selectedFormula": "C_times_M",
+      "selectedMatrixMaxAbsError": 5.960464477539063e-08,
+      "importedMatrixWorld": [
+        0.9994233846664429,
+        0.0339544303715229,
+        8.808318519015756e-10,
+        0.0,
+        0.00810583122074604,
+        -0.23858918249607086,
+        0.9710868000984192,
+        0.0,
+        0.03297269716858864,
+        -0.9705268740653992,
+        -0.23872683942317963,
+        0.0,
+        0.09626506268978119,
+        1.365728497505188,
+        4.268465518951416,
+        1.0
+      ],
+      "formulaMatrixWorld": [
+        0.9994233846664429,
+        0.0339544303715229,
+        1.734723475976807e-18,
+        0.0,
+        0.008105832152068615,
+        -0.2385891228914261,
+        0.9710868000984192,
+        0.0,
+        0.03297270089387894,
+        -0.9705268144607544,
+        -0.23872677981853485,
+        0.0,
+        0.09626506268978119,
+        1.365728497505188,
+        4.268465518951416,
+        1.0
+      ],
+      "importedPosition": [
+        0.09626506268978119,
+        1.365728497505188,
+        4.268465518951416
+      ],
+      "importedQuaternion": [
+        0.6168686151504517,
+        0.7868829965591431,
+        0.01336293388158083,
+        0.010475730523467064
+      ],
+      "importedForward": [
+        -0.03297269716858864,
+        0.9705268740653992,
+        0.23872679471969604
+      ],
+      "formulaForward": [
+        -0.03297270089387894,
+        0.9705268740653992,
+        0.23872679471969604
+      ],
+      "importedUp": [
+        0.00810583308339119,
+        -0.2385891228914261,
+        0.9710868000984192
+      ],
+      "formulaUp": [
+        0.008105832152068615,
+        -0.2385891228914261,
+        0.9710868000984192
+      ],
+      "yfovRadiansImported": 0.8819038271903992,
+      "yfovRadiansSource": 0.8819037963256229,
+      "yfovErrorRadians": 3.086477629032913e-08,
+      "lensMillimeters": 25.42675018310547,
+      "sensorFit": "VERTICAL",
+      "sensorWidth": 36.0,
+      "sensorHeight": 24.0
+    },
+    {
+      "cameraName": "CAM_V3_SWEEP_P025_00",
+      "progress": 25,
+      "formulaErrors": {
+        "C_times_M": 2.682209014892578e-07,
+        "C_times_M_times_C_inverse": 1.2198652923107147,
+        "M_times_C_inverse": 4.086971332901157
+      },
+      "selectedFormula": "C_times_M",
+      "selectedMatrixMaxAbsError": 2.682209014892578e-07,
+      "importedMatrixWorld": [
+        0.9994233846664429,
+        0.0339544378221035,
+        -9.593895677895148e-10,
+        0.0,
+        0.008562847040593624,
+        -0.252041220664978,
+        0.9676789045333862,
+        0.0,
+        0.03285698592662811,
+        -0.9671209454536438,
+        -0.2521866261959076,
+        0.0,
+        0.14261490106582642,
+        0.0014553569490090013,
+        4.085515975952148,
+        1.0
+      ],
+      "formulaMatrixWorld": [
+        0.9994233846664429,
+        0.0339544303715229,
+        0.0,
+        0.0,
+        0.008562845177948475,
+        -0.25204095244407654,
+        0.9676786661148071,
+        0.0,
+        0.032856978476047516,
+        -0.9671207070350647,
+        -0.2521863877773285,
+        0.0,
+        0.14261490106582642,
+        0.0014553569490090013,
+        4.085515975952148,
+        1.0
+      ],
+      "importedPosition": [
+        0.14261490106582642,
+        0.0014553569490090013,
+        4.085515975952148
+      ],
+      "importedQuaternion": [
+        0.611391007900238,
+        0.7911465167999268,
+        0.01343533769249916,
+        0.01038271002471447
+      ],
+      "importedForward": [
+        -0.032856978476047516,
+        0.9671207666397095,
+        0.25218653678894043
+      ],
+      "formulaForward": [
+        -0.03285698592662811,
+        0.9671207666397095,
+        0.25218620896339417
+      ],
+      "importedUp": [
+        0.008562849834561348,
+        -0.2520411014556885,
+        0.9676787257194519
+      ],
+      "formulaUp": [
+        0.008562841452658176,
+        -0.2520407736301422,
+        0.9676787853240967
+      ],
+      "yfovRadiansImported": 0.948320746421814,
+      "yfovRadiansSource": 0.9483208206559561,
+      "yfovErrorRadians": 7.423414216667368e-08,
+      "lensMillimeters": 23.382200241088867,
+      "sensorFit": "VERTICAL",
+      "sensorWidth": 36.0,
+      "sensorHeight": 24.0
+    },
+    {
+      "cameraName": "CAM_V3_SWEEP_P028_25",
+      "progress": 28.25,
+      "formulaErrors": {
+        "C_times_M": 3.8743019104003906e-07,
+        "C_times_M_times_C_inverse": 1.230349212884903,
+        "M_times_C_inverse": 5.356255412101746
+      },
+      "selectedFormula": "C_times_M",
+      "selectedMatrixMaxAbsError": 3.8743019104003906e-07,
+      "importedMatrixWorld": [
+        0.9994233846664429,
+        0.0339544378221035,
+        -5.739884123556749e-10,
+        0.0,
+        0.009049514308571815,
+        -0.2663659453392029,
+        0.9638298153877258,
+        0.0,
+        0.03272629156708717,
+        -0.9632740616798401,
+        -0.2665196359157562,
+        0.0,
+        0.19253012537956238,
+        -1.4677618741989136,
+        3.888493537902832,
+        1.0
+      ],
+      "formulaMatrixWorld": [
+        0.9994233846664429,
+        0.0339544303715229,
+        0.0,
+        0.0,
+        0.009049509651958942,
+        -0.26636555790901184,
+        0.9638295769691467,
+        0.0,
+        0.03272628411650658,
+        -0.963273823261261,
+        -0.2665192484855652,
+        0.0,
+        0.19253012537956238,
+        -1.4677618741989136,
+        3.888493537902832,
+        1.0
+      ],
+      "importedPosition": [
+        0.19253012537956238,
+        -1.4677618741989136,
+        3.888493537902832
+      ],
+      "importedQuaternion": [
+        0.605503499507904,
+        0.7956615090370178,
+        0.013512012548744678,
+        0.010282727889716625
+      ],
+      "importedForward": [
+        -0.03272628411650658,
+        0.9632737636566162,
+        0.26651960611343384
+      ],
+      "formulaForward": [
+        -0.03272628411650658,
+        0.963273823261261,
+        0.2665192186832428
+      ],
+      "importedUp": [
+        0.009049521759152412,
+        -0.2663659453392029,
+        0.963829517364502
+      ],
+      "formulaUp": [
+        0.009049509651958942,
+        -0.26636555790901184,
+        0.9638295769691467
+      ],
+      "yfovRadiansImported": 1.0098598003387451,
+      "yfovRadiansSource": 1.0098598372447931,
+      "yfovErrorRadians": 3.690604799544417e-08,
+      "lensMillimeters": 21.710771560668945,
+      "sensorFit": "VERTICAL",
+      "sensorWidth": 36.0,
+      "sensorHeight": 24.0
+    },
+    {
+      "cameraName": "CAM_V3_SWEEP_P030_00",
+      "progress": 30,
+      "formulaErrors": {
+        "C_times_M": 3.8743019104003906e-07,
+        "C_times_M_times_C_inverse": 1.230349212884903,
+        "M_times_C_inverse": 5.356255412101746
+      },
+      "selectedFormula": "C_times_M",
+      "selectedMatrixMaxAbsError": 3.8743019104003906e-07,
+      "importedMatrixWorld": [
+        0.9994233846664429,
+        0.0339544378221035,
+        -5.739884123556749e-10,
+        0.0,
+        0.009049514308571815,
+        -0.2663659453392029,
+        0.9638298153877258,
+        0.0,
+        0.03272629156708717,
+        -0.9632740616798401,
+        -0.2665196359157562,
+        0.0,
+        0.19253012537956238,
+        -1.4677618741989136,
+        3.888493537902832,
+        1.0
+      ],
+      "formulaMatrixWorld": [
+        0.9994233846664429,
+        0.0339544303715229,
+        0.0,
+        0.0,
+        0.009049509651958942,
+        -0.26636555790901184,
+        0.9638295769691467,
+        0.0,
+        0.03272628411650658,
+        -0.963273823261261,
+        -0.2665192484855652,
+        0.0,
+        0.19253012537956238,
+        -1.4677618741989136,
+        3.888493537902832,
+        1.0
+      ],
+      "importedPosition": [
+        0.19253012537956238,
+        -1.4677618741989136,
+        3.888493537902832
+      ],
+      "importedQuaternion": [
+        0.605503499507904,
+        0.7956615090370178,
+        0.013512012548744678,
+        0.010282727889716625
+      ],
+      "importedForward": [
+        -0.03272628411650658,
+        0.9632737636566162,
+        0.26651960611343384
+      ],
+      "formulaForward": [
+        -0.03272628411650658,
+        0.963273823261261,
+        0.2665192186832428
+      ],
+      "importedUp": [
+        0.009049521759152412,
+        -0.2663659453392029,
+        0.963829517364502
+      ],
+      "formulaUp": [
+        0.009049509651958942,
+        -0.26636555790901184,
+        0.9638295769691467
+      ],
+      "yfovRadiansImported": 1.0098598003387451,
+      "yfovRadiansSource": 1.0098598372447931,
+      "yfovErrorRadians": 3.690604799544417e-08,
+      "lensMillimeters": 21.710771560668945,
+      "sensorFit": "VERTICAL",
+      "sensorWidth": 36.0,
+      "sensorHeight": 24.0
+    }
+  ],
+  "sources": {
+    "mainSpatialReference": "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/work/blender/journey-v3/phase1b/reference/journey-v16-spatial-reference.glb",
+    "mainSpatialReferenceSha256": "8a78a9589e12fc84dbe24e3d34e24f8e1e3ff14ef28bbba1745817dab720d007",
+    "phase2Environment": "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/public/journey/models/journey-phase2-environment.glb",
+    "phase2EnvironmentSha256": "27626ac20d358fc9f0ee3a588f1e84a5e1b8ac668d48dc9f6f8da8444978e713",
+    "cameraGlb": "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/work/blender/journey-v3/phase1b/reference/journey-v3-camera-baselines.glb",
+    "cameraGlbSha256": "c409233351215d6683c91298efc794f4be47d17fe6d4927e662a64a0f62934ce",
+    "cameraManifest": "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/work/blender/journey-v3/phase1b/reference/journey-v3-camera-baselines-manifest.json",
+    "landmarkManifest": "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/work/blender/journey-v3/phase1b/reference/journey-v3-landmarks.json"
+  },
+  "diagnosticRenders": [
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/blender/cave-exit-blender.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/blender/day-clear-start-blender.png",
+    "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/blender/day-clear-late-blender.png"
+  ],
+  "structure": {
+    "collections": [
+      {
+        "name": "V1_MAIN_SPATIAL_REFERENCE_LOCKED",
+        "objectCount": 17,
+        "exportEnabled": false,
+        "lockedReference": true
+      },
+      {
+        "name": "V1_PHASE2_ENV_REFERENCE_LOCKED",
+        "objectCount": 6,
+        "exportEnabled": false,
+        "lockedReference": true
+      },
+      {
+        "name": "V3_CAMERA_BASELINES",
+        "objectCount": 13,
+        "exportEnabled": null,
+        "lockedReference": null
+      },
+      {
+        "name": "V3_CAMERA_FRUSTUMS",
+        "objectCount": 11,
+        "exportEnabled": null,
+        "lockedReference": null
+      },
+      {
+        "name": "V3_REVIEW_GUIDES",
+        "objectCount": 3,
+        "exportEnabled": null,
+        "lockedReference": null
+      },
+      {
+        "name": "V3_ENVIRONMENT_WORK",
+        "objectCount": 0,
+        "exportEnabled": true,
+        "lockedReference": false
+      }
+    ],
+    "mainObjectCount": 17,
+    "phase2ObjectCount": 6,
+    "cameraCount": 13,
+    "frustumObjectCount": 11,
+    "guideObjectCount": 3,
+    "environmentWorkObjectCount": 0
+  }
+}

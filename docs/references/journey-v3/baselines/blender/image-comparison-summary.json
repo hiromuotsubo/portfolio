@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "comparisons": [
+    {
+      "key": "cave-exit",
+      "width": 1440,
+      "height": 900,
+      "browser": "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/blender/cave-exit-browser.png",
+      "blender": "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/blender/cave-exit-blender.png",
+      "overlay": "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/blender/cave-exit-overlay.png",
+      "edges": "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/blender/cave-exit-edges.png",
+      "edgeLegend": {
+        "browser": "red",
+        "blender": "cyan",
+        "overlap": "near white"
+      },
+      "meanAbsoluteRgbDifference": 46.376194444444444,
+      "browserEdgePixels": 11012,
+      "blenderEdgePixels": 25075,
+      "interpretation": "Color difference is diagnostic only. Projection validity is determined by mesh-derived landmark pixel error."
+    },
+    {
+      "key": "day-clear-start",
+      "width": 1440,
+      "height": 900,
+      "browser": "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/blender/day-clear-start-browser.png",
+      "blender": "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/blender/day-clear-start-blender.png",
+      "overlay": "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/blender/day-clear-start-overlay.png",
+      "edges": "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/blender/day-clear-start-edges.png",
+      "edgeLegend": {
+        "browser": "red",
+        "blender": "cyan",
+        "overlap": "near white"
+      },
+      "meanAbsoluteRgbDifference": 46.16586651234568,
+      "browserEdgePixels": 137360,
+      "blenderEdgePixels": 30924,
+      "interpretation": "Color difference is diagnostic only. Projection validity is determined by mesh-derived landmark pixel error."
+    },
+    {
+      "key": "day-clear-late",
+      "width": 1440,
+      "height": 900,
+      "browser": "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/blender/day-clear-late-browser.png",
+      "blender": "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/blender/day-clear-late-blender.png",
+      "overlay": "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/blender/day-clear-late-overlay.png",
+      "edges": "/Users/tsubo/Documents/Codex/2026-08-08/new-chat/portfolio/docs/references/journey-v3/baselines/blender/day-clear-late-edges.png",
+      "edgeLegend": {
+        "browser": "red",
+        "blender": "cyan",
+        "overlap": "near white"
+      },
+      "meanAbsoluteRgbDifference": 45.860536265432096,
+      "browserEdgePixels": 141359,
+      "blenderEdgePixels": 30924,
+      "interpretation": "Color difference is diagnostic only. Projection validity is determined by mesh-derived landmark pixel error."
+    }
+  ]
+}

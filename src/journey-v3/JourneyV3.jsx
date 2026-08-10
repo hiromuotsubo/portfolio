@@ -7,6 +7,10 @@ const JourneyV3Canvas = lazy(() => import('./JourneyV3Canvas.jsx'))
 // gate and sky-connection values instead of a parallel visual approximation.
 const PREVIEW_QUERY = new URLSearchParams(window.location.search)
 const REQUESTED_PREVIEW = PREVIEW_QUERY.get('preview')
+const REQUESTED_CAPTURE_PROGRESS_QUERY = PREVIEW_QUERY.get('captureProgress')
+const REQUESTED_CAPTURE_PROGRESS = REQUESTED_CAPTURE_PROGRESS_QUERY == null
+  ? null
+  : Number(REQUESTED_CAPTURE_PROGRESS_QUERY)
 const PREVIEW_STATES = {
   loading: { progress: 0, entered: false },
   cave: { progress: 5 },
@@ -52,21 +56,42 @@ const DEV_PREVIEW = Object.hasOwn(PREVIEW_STATES, REQUESTED_PREVIEW)
   ? REQUESTED_PREVIEW
   : null
 const PREVIEW_STATE = DEV_PREVIEW ? PREVIEW_STATES[DEV_PREVIEW] : PREVIEW_STATES.loading
-const PREVIEW_PROGRESS = DEV_PREVIEW ? PREVIEW_STATE.progress : 0
-const PREVIEW_GATE = DEV_PREVIEW ? PREVIEW_STATE.gate ?? null : null
-const PREVIEW_HOLD_PROGRESS = DEV_PREVIEW ? PREVIEW_STATE.holdProgress ?? 0 : 0
+const CAPTURE_CAMERA = DEV_PREVIEW && PREVIEW_QUERY.get('captureCamera') === '1'
+const FREEZE_RUNTIME = CAPTURE_CAMERA && PREVIEW_QUERY.get('freezeRuntime') === '1'
+const CAPTURE_MODE = Boolean(CAPTURE_CAMERA && FREEZE_RUNTIME)
+const HAS_CAPTURE_PROGRESS = CAPTURE_MODE &&
+  Number.isFinite(REQUESTED_CAPTURE_PROGRESS) &&
+  REQUESTED_CAPTURE_PROGRESS >= 0 &&
+  REQUESTED_CAPTURE_PROGRESS <= 100
+const PREVIEW_PROGRESS = HAS_CAPTURE_PROGRESS
+  ? REQUESTED_CAPTURE_PROGRESS
+  : DEV_PREVIEW
+    ? PREVIEW_STATE.progress
+    : 0
+const CAPTURE_PROGRESS_IS_FOG_HOLD = HAS_CAPTURE_PROGRESS &&
+  PREVIEW_PROGRESS >= 13.5 &&
+  PREVIEW_PROGRESS < 20
+const PREVIEW_GATE = CAPTURE_PROGRESS_IS_FOG_HOLD
+  ? 'fog'
+  : DEV_PREVIEW
+    ? PREVIEW_STATE.gate ?? null
+    : null
+const PREVIEW_HOLD_PROGRESS = CAPTURE_PROGRESS_IS_FOG_HOLD
+  ? (PREVIEW_PROGRESS - 13.5) / (20 - 13.5)
+  : DEV_PREVIEW
+    ? PREVIEW_STATE.holdProgress ?? 0
+    : 0
 const PREVIEW_SKY_CONNECTION = DEV_PREVIEW
   ? PREVIEW_STATE.skyConnectionProgress ?? 0
   : 0
 const PREVIEW_FOG_COMPLETED = DEV_PREVIEW
-  ? PREVIEW_STATE.fogCompleted ?? PREVIEW_PROGRESS >= 20
+  ? HAS_CAPTURE_PROGRESS
+    ? PREVIEW_PROGRESS >= 20
+    : PREVIEW_STATE.fogCompleted ?? PREVIEW_PROGRESS >= 20
   : false
 const PREVIEW_ENTERED = DEV_PREVIEW ? PREVIEW_STATE.entered ?? true : false
 const PREVIEW_SHOW_OUTRO = Boolean(DEV_PREVIEW && PREVIEW_STATE.showOutro)
 const NEUTRAL_POINTER = PREVIEW_QUERY.get('neutralPointer') === '1'
-const CAPTURE_CAMERA = DEV_PREVIEW && PREVIEW_QUERY.get('captureCamera') === '1'
-const FREEZE_RUNTIME = CAPTURE_CAMERA && PREVIEW_QUERY.get('freezeRuntime') === '1'
-const CAPTURE_MODE = Boolean(CAPTURE_CAMERA && FREEZE_RUNTIME)
 const CAPTURE_GIT_COMMIT = PREVIEW_QUERY.get('gitCommit')
 const PORTFOLIO_PAGES = ['home', 'about', 'project', 'contact']
 const PORTFOLIO_PATHS = {
