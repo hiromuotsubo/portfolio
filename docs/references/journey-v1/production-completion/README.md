@@ -46,3 +46,10 @@ npm run build # pass
 
 Vite continues to report its existing large-chunk advisory for the KTX2 loader;
 it is a build-size advisory, not a build failure.
+
+## Release record
+
+- Git commit: `c39b7ee` — `fix(journey): refine v1 river and cave readability`
+- Production deployment: <https://portfolio-5rmpi6ak0-hiromu2.vercel.app/journey>
+- Deployment check: Vercel reported **Ready** for Production and the public
+  page completed asset loading and entered the cave start frame.
