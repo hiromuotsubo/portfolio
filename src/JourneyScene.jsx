@@ -1554,7 +1554,10 @@ float journeyRiverCenter(float z) {
 
 float journeyRiverHalfWidth(float z) {
   float travel = clamp((12.0 - z) / 222.0, 0.0, 1.0);
-  return mix(10.7, 1.35, travel);
+  // The browser-final camera is low to the foreground. A modestly narrower
+  // channel leaves a true meadow bank on both sides rather than reading as a
+  // flooded basin, while preserving the existing S-curve centerline.
+  return mix(6.35, 1.2, travel);
 }`,
       )
       .replace(
@@ -1752,9 +1755,21 @@ diffuseColor.rgb += vec3(0.12, 0.46, 0.72) * journeyConnectionWake * uJourneySky
 // The source terrain contains a pale guide ribbon below the water. Keep the
 // daytime surface optically deep enough to hide it, while preserving apparent
 // clarity through the procedural riverbed detail above.
+//
+// The original river mesh is intentionally generous so it can carry the
+// authored night sequence, but that must not turn the Day Clear view into a
+// lake.  The same world-space S-curve that drives depth and gravel now trims
+// the physical surface at an irregular, shallow bank.  This preserves the
+// existing river/camera relationship while exposing the continuous meadow and
+// bank geometry outside the actual channel.
+float journeyChannelEdge = 1.0 - smoothstep(
+  0.94 + (journeyBankContourNoise - 0.5) * 0.06,
+  1.11 + (journeyBankContourNoise - 0.5) * 0.08,
+  journeyChannelDistance
+);
 float journeyDayAlpha = mix(0.97, 1.0, journeyWaterFresnel);
 float journeyNightAlpha = mix(0.43, 0.72, journeyWaterFresnel);
-diffuseColor.a *= mix(journeyDayAlpha, journeyNightAlpha, uJourneyNight);`,
+diffuseColor.a *= journeyChannelEdge * mix(journeyDayAlpha, journeyNightAlpha, uJourneyNight);`,
       )
       .replace(
         '#include <emissivemap_fragment>',
@@ -1774,7 +1789,7 @@ gl_FragColor.rgb = mix(gl_FragColor.rgb, diffuseColor.rgb, journeyPigmentStrengt
 gl_FragColor.rgb += vec3(0.16, 0.72, 0.68) * journeyFineCurrent * (1.0 - uJourneyNight) * 0.045;`,
       )
   }
-  material.customProgramCacheKey = () => 'journey-water-reflection-v24-clear-bed'
+  material.customProgramCacheKey = () => 'journey-water-reflection-v25-channel-mask'
 }
 
 function createClearRiverMaterial() {
@@ -1965,6 +1980,10 @@ function prepareWorld(source) {
       materials.forEach((material) => {
         material.userData.journeyCaveBaseOpacity = material.opacity
         material.transparent = true
+        // The opening camera starts inside the authored shell. Preserve its
+        // geometry and lighting, but render the inner faces so the cave is a
+        // readable place rather than an all-black loading-like interval.
+        material.side = THREE.DoubleSide
         material.color?.lerp(new THREE.Color(CAVE_LOOK.materialTint), 0.7)
         if ('roughness' in material) material.roughness = 0.96
         if ('metalness' in material) material.metalness = 0
@@ -3571,17 +3590,20 @@ export default function JourneyScene({
     const openValley = smoothstep(16.5, 22, progress)
     if (heroRiverbankRef.current && heroRiverbankMaterialRef.current) {
       heroRiverbankRef.current.visible = openValley > 0.02
-      heroRiverbankMaterialRef.current.opacity = openValley * THREE.MathUtils.lerp(0.5, 0.26, night)
+      // Keep the authored alluvial detail subordinate to the meadow. At full
+      // daylight these should read as damp, broken gravel at the waterline —
+      // not as pale geometric islands on top of the river source mesh.
+      heroRiverbankMaterialRef.current.opacity = openValley * THREE.MathUtils.lerp(0.3, 0.19, night)
       heroRiverbankMaterialRef.current.color
-        .set('#d2d0c4')
+        .set('#8d9688')
         .lerp(new THREE.Color('#9c7768'), sunset * 0.34)
         .lerp(new THREE.Color('#445667'), night * 0.72)
     }
     if (heroRiverbankStonesRef.current && heroRiverbankStonesMaterialRef.current) {
       heroRiverbankStonesRef.current.visible = openValley > 0.02
-      heroRiverbankStonesMaterialRef.current.opacity = openValley * THREE.MathUtils.lerp(0.74, 0.38, night)
+      heroRiverbankStonesMaterialRef.current.opacity = openValley * THREE.MathUtils.lerp(0.48, 0.3, night)
       heroRiverbankStonesMaterialRef.current.color
-        .set('#8c918b')
+        .set('#6f7a70')
         .lerp(new THREE.Color('#876f65'), sunset * 0.3)
         .lerp(new THREE.Color('#455866'), night * 0.7)
     }

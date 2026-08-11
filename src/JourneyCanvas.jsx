@@ -104,7 +104,6 @@ export default function JourneyCanvas({
       }}
     >
       <AdaptiveQualityController tier={qualityTier} onTierChange={setQualityTier} />
-      <JourneyLoadBridge onProgress={onAssetsProgress} />
       <Suspense fallback={null}>
         <JourneyScene
           progress={presentationMode ? 28 : progress}
@@ -118,6 +117,10 @@ export default function JourneyCanvas({
           onListenerPose={onListenerPose}
           quality={quality}
         />
+        {/* Mount after the scene resolves. Reading the loader store while the
+            GLTF hooks suspend used to trigger a React cross-component update
+            warning during the first frame. */}
+        <JourneyLoadBridge onProgress={onAssetsProgress} />
       </Suspense>
     </Canvas>
   )
