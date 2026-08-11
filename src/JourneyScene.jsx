@@ -57,6 +57,36 @@ const smoothstep = (edge0, edge1, value) => {
   return x * x * (3 - 2 * x)
 }
 
+// The source river climbs into the distant valley rather than sitting on a
+// flat world plane. Supplemental banks, water and meadow instances share this
+// profile so they remain attached to the authored terrain at every depth.
+const VALLEY_RIVER_PROFILE = [
+  { z: 12, y: -0.34 },
+  { z: -12, y: -0.24 },
+  { z: -37, y: -0.06 },
+  { z: -64, y: 0.16 },
+  { z: -94, y: 0.46 },
+  { z: -128, y: 0.86 },
+  { z: -150, y: 6.8 },
+  { z: -166, y: 15.2 },
+  { z: -190, y: 29.8 },
+  { z: -210, y: 36.4 },
+]
+
+const getValleyRiverHeight = (z) => {
+  if (z >= VALLEY_RIVER_PROFILE[0].z) return VALLEY_RIVER_PROFILE[0].y
+  const last = VALLEY_RIVER_PROFILE[VALLEY_RIVER_PROFILE.length - 1]
+  if (z <= last.z) return last.y
+  for (let index = 0; index < VALLEY_RIVER_PROFILE.length - 1; index += 1) {
+    const near = VALLEY_RIVER_PROFILE[index]
+    const far = VALLEY_RIVER_PROFILE[index + 1]
+    if (z <= near.z && z >= far.z) {
+      return THREE.MathUtils.lerp(near.y, far.y, (z - near.z) / (far.z - near.z))
+    }
+  }
+  return last.y
+}
+
 const storyProgressToClipProgress = (progress) => {
   if (progress <= 13.5) {
     return THREE.MathUtils.lerp(0, 0.395, smoothstep(0, 13.5, progress))
@@ -673,7 +703,6 @@ const getAlpineForestSurfaceTexture = () => {
   alpineForestSurfaceTexture.wrapT = THREE.RepeatWrapping
   alpineForestSurfaceTexture.minFilter = THREE.LinearMipmapLinearFilter
   alpineForestSurfaceTexture.magFilter = THREE.LinearFilter
-  alpineForestSurfaceTexture.needsUpdate = true
   return alpineForestSurfaceTexture
 }
 
@@ -981,7 +1010,7 @@ vec3 journeyConiferDark = vec3(0.022, 0.095, 0.052);
 vec3 journeyConiferLight = vec3(0.12, 0.285, 0.105);
 vec3 journeyCrownColor = mix(journeyConiferDark, journeyConiferLight, journeyCanopyTexture);
 journeyCrownColor *= mix(0.72, 1.16, journeyTreeBands);
-journeyPaint = mix(journeyPaint, journeyCrownColor, journeyCrownPresence * 0.67);
+journeyPaint = mix(journeyPaint, journeyCrownColor, journeyCrownPresence * 0.32);
 // Crown-scale cellular breakup makes the green read as thousands of trees,
 // while two offset frequencies avoid a tiled procedural carpet.
 float journeyCrownCellsLarge = journeyCanopyCells(
@@ -1001,7 +1030,7 @@ vec3 journeyCrownLit = mix(
   smoothstep(0.2, 0.9, journeyCrownCellsLarge * 0.68 + journeyCrownCellsSmall * 0.32)
 );
 journeyCrownLit *= mix(0.68, 1.12, journeyMacro * 0.55 + journeyValleyMoisture * 0.45);
-journeyPaint = mix(journeyPaint, journeyCrownLit, journeyCrownOcclusion * 0.22);
+journeyPaint = mix(journeyPaint, journeyCrownLit, journeyCrownOcclusion * 0.11);
 vec2 journeyTreeUv = vec2(
   vJourneyWorldPosition.x + vJourneyWorldPosition.z * 0.22,
   vJourneyWorldPosition.y - vJourneyWorldPosition.z * 0.035
@@ -1041,7 +1070,7 @@ vec3 journeyForestStandColor = mix(
 journeyPaint = mix(
   journeyPaint,
   journeyForestStandColor,
-  journeyForestSurface * (0.34 + journeyVegetationDensity * 0.42) *
+  journeyForestSurface * (0.20 + journeyVegetationDensity * 0.28) *
     mix(0.48, 1.0, journeyForestPatch) * mix(0.72, 1.0, journeyValleyMoisture)
 );
 float journeyScrubTransition =
@@ -1062,7 +1091,7 @@ vec3 journeyLowerForestColor = mix(
 journeyPaint = mix(
   journeyPaint,
   journeyLowerForestColor,
-  journeyLowerForestBelt * (0.43 + journeyVegetationDensity * 0.31) *
+  journeyLowerForestBelt * (0.28 + journeyVegetationDensity * 0.22) *
     mix(0.45, 1.0, journeyForestPatch) * mix(0.74, 1.0, journeyValleyMoisture)
 );
 float journeyForestShadow = journeyForestSurface * smoothstep(
@@ -1096,7 +1125,7 @@ float journeySurfaceFine = journeyNoise(vec2(
 ) + vec2(17.0, -63.0));
 float journeySurfaceFacing = dot(
   normalize(vJourneyWorldNormal),
-  normalize(vec3(-0.46, 0.72, 0.38))
+  normalize(vec3(-0.55, 0.80, -0.24))
 ) * 0.5 + 0.5;
 float journeySurfaceValleyShade = smoothstep(0.62, 0.12, journeySurfaceFacing) *
   (0.46 + journeySteepness * 0.54);
@@ -1118,8 +1147,8 @@ vec3 journeyShadowForest = mix(
   journeyValleyMoisture
 );
 vec3 journeySunForest = mix(
-  vec3(0.07, 0.19, 0.055),
-  vec3(0.31, 0.43, 0.085),
+  vec3(0.055, 0.145, 0.065),
+  vec3(0.22, 0.31, 0.12),
   journeyCanopyResponse
 );
 vec3 journeySurfaceForest = mix(
@@ -1127,15 +1156,15 @@ vec3 journeySurfaceForest = mix(
   journeySunForest,
   clamp(journeyCanopyResponse * 0.72 + journeySurfaceFacing * 0.38, 0.0, 1.0)
 );
-journeySurfaceForest *= mix(0.48, 1.38, smoothstep(0.16, 0.86, journeySurfaceMedium));
-journeySurfaceForest *= mix(0.8, 1.2, journeySurfaceFine);
+journeySurfaceForest *= mix(0.72, 1.12, smoothstep(0.16, 0.86, journeySurfaceMedium));
+journeySurfaceForest *= mix(0.88, 1.10, journeySurfaceFine);
 journeySurfaceForest = mix(
   journeySurfaceForest,
   journeyShadowForest * 0.72,
   journeyWetGully * 0.58 + journeySurfaceValleyShade * 0.18
 );
 journeySurfaceForest *= mix(0.76, 1.18, journeySurfaceLarge);
-journeyPaint = mix(journeyPaint, journeySurfaceForest, journeySurfaceForestMask * 0.96);
+journeyPaint = mix(journeyPaint, journeySurfaceForest, journeySurfaceForestMask * 0.70);
 vec3 journeySurfaceBlend = pow(abs(normalize(vJourneyWorldNormal)), vec3(5.0));
 journeySurfaceBlend /= max(
   journeySurfaceBlend.x + journeySurfaceBlend.y + journeySurfaceBlend.z,
@@ -1165,12 +1194,12 @@ vec3 journeyForestTexture =
 float journeyForestTextureLuma = dot(journeyForestTexture, vec3(0.22, 0.62, 0.16));
 float journeyForestTextureRelief = smoothstep(0.18, 0.82, journeyForestTextureLuma);
 journeyForestTexture = mix(
-  journeySurfaceForest * mix(0.54, 1.38, journeyForestTextureRelief),
+  journeySurfaceForest * mix(0.70, 1.16, journeyForestTextureRelief),
   journeyForestTexture * vec3(0.72, 0.93, 0.62),
-  0.72
+  0.34
 );
 float journeyForestTextureMix = journeySurfaceForestMask *
-  mix(0.7, 0.94, journeyForestBiome) * (1.0 - journeyRockMask * 0.72);
+  mix(0.24, 0.44, journeyForestBiome) * (1.0 - journeyRockMask * 0.72);
 journeyPaint = mix(journeyPaint, journeyForestTexture, journeyForestTextureMix);
 float journeySurfaceRockVein = smoothstep(
   0.7,
@@ -1206,7 +1235,8 @@ journeyPaint = mix(journeyPaint, vec3(0.038, 0.095, 0.082), journeyWetGully * 0.
 float journeyLowerValley = 1.0 - smoothstep(7.0, 30.0, vJourneyWorldPosition.y);
 float journeyValleyPigment = mix(0.79, 1.07, journeyMacro * 0.72 + journeyFine * 0.28);
 journeyPaint *= mix(1.0, journeyValleyPigment, journeyLowerValley * 0.58);
-vec3 journeyLightDirection = normalize(vec3(-0.46, 0.72, 0.38));
+// Keep the illustrative slope response aligned with the actual daylight rig.
+vec3 journeyLightDirection = normalize(vec3(-0.55, 0.80, -0.24));
 float journeyFacing = dot(normalize(vJourneyWorldNormal), journeyLightDirection) * 0.5 + 0.5;
 float journeyRidgeLight = smoothstep(0.40, 0.86, journeyFacing);
 float journeyValleyShade = smoothstep(0.62, 0.12, journeyFacing) * (0.46 + journeySteepness * 0.54);
@@ -2136,10 +2166,8 @@ function prepareWorld(source) {
         material.depthWrite = true
         material.depthTest = true
         if (material.map) {
-          material.map = material.map.clone()
           material.map.wrapS = THREE.RepeatWrapping
           material.map.wrapT = THREE.RepeatWrapping
-          material.map.needsUpdate = true
         }
         material.color?.set(isFarRidge ? '#839493' : '#6e9362')
         if ('roughness' in material) material.roughness = 0.93
@@ -2676,10 +2704,10 @@ function HeroRiverbankPatches({ groupRef, materialRef }) {
     return result
   }, [])
   const patches = useMemo(() => [
-    { position: [18.5, 0.35, -27], scale: [7.2, 18, 1], rotation: -0.16 },
-    { position: [-9.5, 0.34, -55], scale: [7.5, 20, 1], rotation: 0.21 },
-    { position: [8.5, 0.33, -92], scale: [6, 17, 1], rotation: -0.12 },
-    { position: [-4.2, 0.32, -132], scale: [4.2, 12, 1], rotation: 0.18 },
+    { position: [18.5, getValleyRiverHeight(-27) + 0.05, -27], scale: [7.2, 18, 1], rotation: -0.16 },
+    { position: [-9.5, getValleyRiverHeight(-55) + 0.05, -55], scale: [7.5, 20, 1], rotation: 0.21 },
+    { position: [8.5, getValleyRiverHeight(-92) + 0.05, -92], scale: [6, 17, 1], rotation: -0.12 },
+    { position: [-4.2, getValleyRiverHeight(-132) + 0.05, -132], scale: [4.2, 12, 1], rotation: 0.18 },
   ], [])
   useEffect(() => {
     if (!meshRef.current) return undefined
@@ -2736,7 +2764,11 @@ function HeroRiverbankStones({ groupRef, materialRef }) {
       const perspective = THREE.MathUtils.lerp(1, 0.42, depth)
       const radius = THREE.MathUtils.lerp(0.09, 0.48, seededRandom(index + 15600)) * perspective
       result.push({
-        position: [centre + side * (riverWidth + bankOffset), 0.22 + radius * 0.24, z],
+        position: [
+          centre + side * (riverWidth + bankOffset),
+          getValleyRiverHeight(z) + 0.06 + radius * 0.24,
+          z,
+        ],
         rotation: [
           seededRandom(index + 15800) * 0.6,
           seededRandom(index + 16000) * Math.PI,
@@ -2780,6 +2812,518 @@ function HeroRiverbankStones({ groupRef, materialRef }) {
           fog
         />
       </instancedMesh>
+    </group>
+  )
+}
+
+// A narrower ribbon sits just above the wide source-water mesh. It preserves
+// V1's authored water for the cave and night sequence, while giving Day Clear a
+// continuous, readable flow line from foreground to the distant valley.
+function buildRiverContinuityGeometry() {
+  const course = [
+    { x: -2.4, z: 12, width: 6.1 },
+    { x: 9.4, z: -12, width: 5.55 },
+    { x: -8.6, z: -37, width: 4.7 },
+    { x: 7.4, z: -64, width: 3.85 },
+    { x: -4.8, z: -94, width: 3.05 },
+    { x: 4.4, z: -124, width: 2.45 },
+  ]
+  const positions = []
+  const uvs = []
+  const indices = []
+  course.forEach((point, index) => {
+    const waterHeight = getValleyRiverHeight(point.z) + 0.055
+    positions.push(
+      point.x - point.width, waterHeight, point.z,
+      point.x + point.width, waterHeight, point.z,
+    )
+    const v = index / (course.length - 1)
+    uvs.push(0, v, 1, v)
+    if (index < course.length - 1) {
+      const start = index * 2
+      indices.push(start, start + 2, start + 1, start + 1, start + 2, start + 3)
+    }
+  })
+  const geometry = new THREE.BufferGeometry()
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
+  geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2))
+  geometry.setIndex(indices)
+  geometry.computeBoundingSphere()
+  return geometry
+}
+
+function createRiverContinuityMaterial() {
+  const uniforms = {
+    uJourneyOpacity: { value: 0 },
+    uJourneyNight: { value: 0 },
+    uJourneySunset: { value: 0 },
+    uJourneyTime: { value: 0 },
+    uJourneyWind: { value: 0 },
+  }
+  const material = new THREE.ShaderMaterial({
+    name: 'MAT_JOURNEY_RIVER_CONTINUITY',
+    uniforms,
+    transparent: true,
+    depthWrite: false,
+    depthTest: true,
+    side: THREE.DoubleSide,
+    toneMapped: false,
+    vertexShader: [
+      'varying vec2 vJourneyUv;',
+      'varying vec3 vJourneyWorldPosition;',
+      'void main() {',
+      '  vJourneyUv = uv;',
+      '  vec4 worldPosition = modelMatrix * vec4(position, 1.0);',
+      '  vJourneyWorldPosition = worldPosition.xyz;',
+      '  gl_Position = projectionMatrix * viewMatrix * worldPosition;',
+      '}',
+    ].join('\n'),
+    fragmentShader: [
+      'uniform float uJourneyOpacity;',
+      'uniform float uJourneyNight;',
+      'uniform float uJourneySunset;',
+      'uniform float uJourneyTime;',
+      'uniform float uJourneyWind;',
+      'varying vec2 vJourneyUv;',
+      'varying vec3 vJourneyWorldPosition;',
+      'float journeyRiverHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123); }',
+      'float journeyRiverNoise(vec2 p) {',
+      '  vec2 i = floor(p); vec2 f = fract(p); f = f * f * (3.0 - 2.0 * f);',
+      '  return mix(mix(journeyRiverHash(i), journeyRiverHash(i + vec2(1.0, 0.0)), f.x), mix(journeyRiverHash(i + vec2(0.0, 1.0)), journeyRiverHash(i + vec2(1.0)), f.x), f.y);',
+      '}',
+      'void main() {',
+      '  float edge = smoothstep(0.0, 0.085, vJourneyUv.x) * (1.0 - smoothstep(0.915, 1.0, vJourneyUv.x));',
+      '  float centre = 1.0 - abs(vJourneyUv.x * 2.0 - 1.0);',
+      '  vec2 flowDomain = vec2(vJourneyWorldPosition.x * 0.14 + vJourneyWorldPosition.z * 0.028, vJourneyWorldPosition.z * 0.19 - uJourneyTime * (0.22 + uJourneyWind * 0.1));',
+      '  float broad = journeyRiverNoise(flowDomain * vec2(0.7, 1.0));',
+      '  float detail = journeyRiverNoise(flowDomain * vec2(2.8, 3.9) + 13.7);',
+      '  float ripple = smoothstep(0.56, 0.91, broad * 0.62 + detail * 0.38);',
+      '  float shallows = pow(1.0 - centre, 1.7) * (0.56 + detail * 0.44);',
+      '  vec3 deepWater = mix(vec3(0.025, 0.19, 0.24), vec3(0.07, 0.14, 0.18), uJourneySunset * 0.72);',
+      '  vec3 shallowWater = mix(vec3(0.10, 0.39, 0.37), vec3(0.20, 0.28, 0.27), uJourneySunset * 0.7);',
+      '  vec3 body = mix(deepWater, shallowWater, shallows * 0.72 + ripple * 0.12);',
+      '  float reflectionBreak = journeyRiverNoise(vec2(vJourneyWorldPosition.x * 0.07 - vJourneyWorldPosition.z * 0.018, vJourneyWorldPosition.z * 0.13 + uJourneyTime * 0.035));',
+      '  vec3 skyReflection = mix(vec3(0.30, 0.61, 0.67), vec3(0.66, 0.40, 0.34), uJourneySunset * 0.56);',
+      '  vec3 mountainReflection = vec3(0.09, 0.25, 0.18);',
+      '  body = mix(body, mix(skyReflection, mountainReflection, reflectionBreak * 0.82), (0.08 + centre * 0.15) * (0.42 + ripple * 0.32));',
+      '  float current = smoothstep(0.79, 0.97, 0.5 + 0.5 * sin(vJourneyWorldPosition.z * 0.58 - uJourneyTime * 1.05 + sin(vJourneyWorldPosition.x * 0.26) * 1.7));',
+      '  body += vec3(0.11, 0.30, 0.28) * current * (0.035 + shallows * 0.065);',
+      '  body = mix(body, vec3(0.015, 0.075, 0.15), uJourneyNight * 0.76);',
+      '  float fadeAlongRiver = smoothstep(0.0, 0.06, vJourneyUv.y) * (1.0 - smoothstep(0.92, 1.0, vJourneyUv.y));',
+      '  gl_FragColor = vec4(body, edge * fadeAlongRiver * uJourneyOpacity);',
+      '}',
+    ].join('\n'),
+  })
+  material.userData.journeyRiverContinuityUniforms = uniforms
+  return material
+}
+
+function RiverContinuity({ materialRef }) {
+  const geometry = useMemo(() => buildRiverContinuityGeometry(), [])
+  const material = useMemo(() => createRiverContinuityMaterial(), [])
+  useEffect(() => {
+    materialRef.current = material
+    return () => {
+      if (materialRef.current === material) materialRef.current = null
+      geometry.dispose()
+      material.dispose()
+    }
+  }, [geometry, material, materialRef])
+  return <mesh geometry={geometry} material={material} renderOrder={5} frustumCulled={false} />
+}
+
+function buildRidgeLayer({ z, baseY, heights, hueOffset }) {
+  // A denser summit profile avoids the single triangular peak that a coarse
+  // backdrop mesh creates when it is only visible through the central valley.
+  const segments = Math.max((heights.length - 1) * 4, 64)
+  const rows = 10
+  const positions = []
+  const colors = []
+  const indices = []
+  const color = new THREE.Color()
+  for (let xIndex = 0; xIndex <= segments; xIndex += 1) {
+    const x = THREE.MathUtils.lerp(-188, 188, xIndex / segments)
+    const profile = (xIndex / segments) * (heights.length - 1)
+    const profileIndex = Math.floor(profile)
+    const profileMix = profile - profileIndex
+    const peak = THREE.MathUtils.lerp(
+      heights[profileIndex],
+      heights[Math.min(profileIndex + 1, heights.length - 1)],
+      profileMix,
+    ) + Math.sin(x * 0.29 + hueOffset * 2.7) * 2.2 + Math.sin(x * 0.083 - hueOffset) * 3.4
+    for (let yIndex = 0; yIndex <= rows; yIndex += 1) {
+      const t = yIndex / rows
+      const shoulderNoise =
+        Math.sin(x * 0.074 + hueOffset * 1.9) * 3.1 * t +
+        Math.sin(x * 0.183 - yIndex * 0.7) * 1.25 * t
+      const y = THREE.MathUtils.lerp(baseY, peak, t) + shoulderNoise
+      const zDisplacement =
+        Math.sin(x * 0.057 + hueOffset) * (1.2 + t * 5.6) +
+        Math.sin(y * 0.12 + hueOffset * 3.3) * t * 2.1
+      positions.push(x, y, z + zDisplacement)
+      color
+        .set('#3b5948')
+        .lerp(new THREE.Color('#688065'), t * 0.72)
+        .lerp(new THREE.Color('#899779'), Math.max(0, Math.sin(x * 0.042 + hueOffset) * 0.5 + 0.5) * t * 0.16)
+      colors.push(color.r, color.g, color.b)
+    }
+  }
+  const rowStride = rows + 1
+  for (let xIndex = 0; xIndex < segments; xIndex += 1) {
+    for (let yIndex = 0; yIndex < rows; yIndex += 1) {
+      const a = xIndex * rowStride + yIndex
+      const b = (xIndex + 1) * rowStride + yIndex
+      indices.push(a, b, a + 1, b, b + 1, a + 1)
+    }
+  }
+  const geometry = new THREE.BufferGeometry()
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
+  geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3))
+  geometry.setIndex(indices)
+  geometry.computeVertexNormals()
+  geometry.computeBoundingSphere()
+  return geometry
+}
+
+function DistantRidgeChain({ materialRefs }) {
+  const farGeometry = useMemo(
+    () => buildRidgeLayer({
+      z: -412,
+      baseY: 18,
+      hueOffset: 2.4,
+      heights: [78, 85, 92, 88, 101, 96, 108, 101, 112, 106, 116, 109, 103, 108, 96, 102, 91, 85, 80],
+    }),
+    [],
+  )
+  const middleGeometry = useMemo(
+    () => buildRidgeLayer({
+      z: -286,
+      baseY: 14,
+      hueOffset: 7.1,
+      heights: [66, 74, 84, 79, 92, 86, 100, 92, 106, 98, 110, 101, 94, 100, 84, 80, 75, 70, 66],
+    }),
+    [],
+  )
+  useEffect(() => () => {
+    farGeometry.dispose()
+    middleGeometry.dispose()
+  }, [farGeometry, middleGeometry])
+  return (
+    <group renderOrder={-2}>
+      <mesh geometry={farGeometry} frustumCulled={false}>
+        <meshBasicMaterial
+          ref={(material) => { materialRefs.current[0] = material }}
+          color="#6f8675"
+          vertexColors
+          transparent
+          opacity={0}
+          depthWrite={false}
+          side={THREE.DoubleSide}
+          fog
+        />
+      </mesh>
+      <mesh geometry={middleGeometry} frustumCulled={false}>
+        <meshBasicMaterial
+          ref={(material) => { materialRefs.current[1] = material }}
+          color="#637b69"
+          vertexColors
+          transparent
+          opacity={0}
+          depthWrite={false}
+          side={THREE.DoubleSide}
+          fog
+        />
+      </mesh>
+    </group>
+  )
+}
+
+function createMeadowBillboardTexture(kind) {
+  const canvas = document.createElement('canvas')
+  canvas.width = 96
+  canvas.height = 160
+  const context = canvas.getContext('2d')
+  context.clearRect(0, 0, canvas.width, canvas.height)
+  if (kind === 'grass') {
+    for (let index = 0; index < 22; index += 1) {
+      const seed = seededRandom(index + 57501)
+      const x = 8 + seededRandom(index + 57537) * 80
+      const baseY = 154 - seededRandom(index + 57571) * 7
+      const tipY = 54 + seed * 52
+      const bend = (seededRandom(index + 57607) - 0.5) * 18
+      context.strokeStyle = `rgba(232,244,206,${0.18 + seed * 0.42})`
+      context.lineWidth = 0.55 + seededRandom(index + 57641) * 0.85
+      context.lineCap = 'round'
+      context.beginPath()
+      context.moveTo(x, baseY)
+      context.quadraticCurveTo(x + bend * 0.22, (baseY + tipY) * 0.54, x + bend, tipY)
+      context.stroke()
+    }
+  } else {
+    for (let index = 0; index < 9; index += 1) {
+      const seed = seededRandom(index + 57701)
+      const x = 16 + seededRandom(index + 57737) * 64
+      const baseY = 151 - seededRandom(index + 57771) * 8
+      const tipY = 43 + seed * 43
+      context.strokeStyle = `rgba(255,255,255,${0.26 + seed * 0.38})`
+      context.lineWidth = 1.0 + seededRandom(index + 57807) * 0.85
+      context.beginPath()
+      context.moveTo(x, baseY)
+      context.quadraticCurveTo(x + (seededRandom(index + 57841) - 0.5) * 8, (baseY + tipY) * 0.5, x, tipY)
+      context.stroke()
+      context.fillStyle = `rgba(255,255,255,${0.58 + seed * 0.34})`
+      context.beginPath()
+      context.arc(x, tipY, 2.2 + seededRandom(index + 57877) * 2.8, 0, Math.PI * 2)
+      context.fill()
+    }
+  }
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.colorSpace = THREE.SRGBColorSpace
+  texture.needsUpdate = true
+  return texture
+}
+
+function createMeadowMaterial(kind, map) {
+  const uniforms = {
+    uJourneyReveal: { value: 0 },
+    uJourneyNight: { value: 0 },
+    uJourneyTime: { value: 0 },
+    uJourneyAmbientWind: { value: 0 },
+    uJourneyPointer: { value: new THREE.Vector3(0, 0, -60) },
+    uJourneyPointerVelocity: { value: new THREE.Vector2() },
+    uJourneyPointerStrength: { value: 0 },
+  }
+  const material = new THREE.MeshBasicMaterial({
+    color: kind === 'flower' ? '#e6d8b1' : '#aacb78',
+    map,
+    vertexColors: false,
+    transparent: true,
+    opacity: kind === 'flower' ? 0.76 : 0.58,
+    alphaTest: 0.02,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  })
+  material.onBeforeCompile = (shader) => {
+    Object.assign(shader.uniforms, uniforms)
+    const bladeTip = kind === 'flower' ? '0.9' : 'clamp(transformed.y + 0.5, 0.0, 1.0)'
+    const pointerScale = kind === 'flower' ? '0.16' : '0.11'
+    const nightFade = kind === 'flower' ? '0.72' : '0.58'
+    const alphaMask = kind === 'flower'
+      ? 'smoothstep(0.02, 0.2, vJourneyMeadowTip)'
+      : 'smoothstep(0.0, 0.11, vJourneyMeadowTip)'
+    shader.vertexShader = shader.vertexShader
+      .replace(
+        '#include <common>',
+        [
+          '#include <common>',
+          'attribute float aJourneyMeadowPhase;',
+          'uniform float uJourneyTime;',
+          'uniform float uJourneyAmbientWind;',
+          'uniform vec3 uJourneyPointer;',
+          'uniform vec2 uJourneyPointerVelocity;',
+          'uniform float uJourneyPointerStrength;',
+          'varying float vJourneyMeadowTip;',
+        ].join('\n'),
+      )
+      .replace(
+        '#include <begin_vertex>',
+        [
+          '#include <begin_vertex>',
+          'float journeyBladeTip = ' + bladeTip + ';',
+          'vec4 journeyBladeBase = modelMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);',
+          'float journeyPointerDistance = distance(journeyBladeBase.xz, uJourneyPointer.xz);',
+          'float journeyPointerInfluence = 1.0 - smoothstep(1.3, 11.5, journeyPointerDistance);',
+          'float journeyGust = sin(uJourneyTime * 1.15 + aJourneyMeadowPhase * 11.0 + journeyBladeBase.z * 0.17) * 0.5 +',
+          '  sin(uJourneyTime * 0.48 + aJourneyMeadowPhase * 23.0 + journeyBladeBase.x * 0.11) * 0.5;',
+          'vec2 journeySway = vec2(0.62, 0.34) * (0.022 + uJourneyAmbientWind * 0.055 + journeyGust * 0.028);',
+          'journeySway += uJourneyPointerVelocity * journeyPointerInfluence * uJourneyPointerStrength * ' + pointerScale + ';',
+          'transformed.x += journeySway.x * journeyBladeTip * journeyBladeTip;',
+          'transformed.z += journeySway.y * journeyBladeTip * journeyBladeTip;',
+          'vJourneyMeadowTip = journeyBladeTip;',
+        ].join('\n'),
+      )
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        '#include <common>',
+        [
+          '#include <common>',
+          'uniform float uJourneyReveal;',
+          'uniform float uJourneyNight;',
+          'varying float vJourneyMeadowTip;',
+        ].join('\n'),
+      )
+      .replace(
+        '#include <color_fragment>',
+        [
+          '#include <color_fragment>',
+          'diffuseColor.a *= uJourneyReveal * (1.0 - uJourneyNight * ' + nightFade + ') * ' + alphaMask + ';',
+        ].join('\n'),
+      )
+  }
+  material.customProgramCacheKey = () => 'journey-meadow-' + kind + '-v1'
+  material.userData.journeyMeadowUniforms = uniforms
+  return material
+}
+
+function buildMeadowSeeds() {
+  const grass = []
+  const flowers = []
+  const riverCentre = (z) => {
+    const travel = THREE.MathUtils.clamp((12 - z) / 222, 0, 1)
+    return -Math.sin(z * 0.13) * THREE.MathUtils.lerp(9.2, 1.7, travel)
+  }
+  const riverWidth = (z) => {
+    const travel = THREE.MathUtils.clamp((12 - z) / 222, 0, 1)
+    return THREE.MathUtils.lerp(6.35, 1.2, travel)
+  }
+  for (let index = 0; index < 1450; index += 1) {
+    const depth = Math.pow(seededRandom(index + 47001), 0.76)
+    const z = THREE.MathUtils.lerp(-3, -132, depth)
+    const side = seededRandom(index + 47037) < 0.5 ? -1 : 1
+    const bank = THREE.MathUtils.lerp(1.3, 20.5, Math.pow(seededRandom(index + 47071), 0.66))
+    const x = riverCentre(z) + side * (riverWidth(z) + bank)
+    const height = THREE.MathUtils.lerp(0.46, 1.18, seededRandom(index + 47101)) *
+      THREE.MathUtils.lerp(1, 0.56, depth)
+    grass.push({
+      // The V1 valley floor rises gently away from the flow line. Lift only
+      // the rooted billboard origin, leaving the bank-side source geometry
+      // visible beneath a denser foreground grass layer.
+      position: [x, getValleyRiverHeight(z) + 0.56 + bank * 0.072, z],
+      width: THREE.MathUtils.lerp(0.22, 0.62, seededRandom(index + 47133)) *
+        THREE.MathUtils.lerp(1, 0.62, depth),
+      height,
+      phase: seededRandom(index + 47159),
+      color: new THREE.Color('#789955')
+        .lerp(new THREE.Color('#abc16d'), seededRandom(index + 47197) * 0.72)
+        .lerp(new THREE.Color('#c9ba76'), seededRandom(index + 47231) * 0.18),
+    })
+    if (bank > 4.6 && bank < 18 && seededRandom(index + 47269) > 0.62 && depth < 0.78) {
+      const colors = ['#c9bcdf', '#e7dfb4', '#d8a8c0', '#9dbce0']
+      const color = colors[Math.floor(seededRandom(index + 47293) * colors.length)]
+      flowers.push({
+        position: [
+          x + (seededRandom(index + 47321) - 0.5) * 0.86,
+          getValleyRiverHeight(z) + 0.62 + bank * 0.072 + height * THREE.MathUtils.lerp(0.64, 0.92, seededRandom(index + 47357)),
+          z + (seededRandom(index + 47389) - 0.5) * 0.8,
+        ],
+        scale: THREE.MathUtils.lerp(0.58, 1.08, seededRandom(index + 47417)) *
+          THREE.MathUtils.lerp(1, 0.58, depth),
+        phase: seededRandom(index + 47441),
+        color: new THREE.Color(color),
+      })
+    }
+  }
+  return { grass, flowers }
+}
+
+function ValleyMeadow({ progress, travelWindRef, qualityScale = 1 }) {
+  const grassRef = useRef(null)
+  const flowerRef = useRef(null)
+  const seeds = useMemo(() => buildMeadowSeeds(), [])
+  const grassGeometry = useMemo(() => {
+    const geometry = new THREE.PlaneGeometry(1, 1, 1, 4)
+    geometry.setAttribute(
+      'aJourneyMeadowPhase',
+      new THREE.InstancedBufferAttribute(new Float32Array(seeds.grass.map((item) => item.phase)), 1),
+    )
+    return geometry
+  }, [seeds])
+  const flowerGeometry = useMemo(() => {
+    const geometry = new THREE.PlaneGeometry(1, 1, 1, 4)
+    geometry.setAttribute(
+      'aJourneyMeadowPhase',
+      new THREE.InstancedBufferAttribute(new Float32Array(seeds.flowers.map((item) => item.phase)), 1),
+    )
+    return geometry
+  }, [seeds])
+  const grassTexture = useMemo(() => createMeadowBillboardTexture('grass'), [])
+  const flowerTexture = useMemo(() => createMeadowBillboardTexture('flower'), [])
+  const grassMaterial = useMemo(() => createMeadowMaterial('grass', grassTexture), [grassTexture])
+  const flowerMaterial = useMemo(() => createMeadowMaterial('flower', flowerTexture), [flowerTexture])
+  const pointerWorld = useMemo(() => new THREE.Vector3(0, 0.32, -60), [])
+  const previousPointer = useMemo(() => new THREE.Vector3(0, 0.32, -60), [])
+  const pointerVelocity = useMemo(() => new THREE.Vector2(), [])
+  const pointerPlane = useMemo(() => new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.32), [])
+  const meadowRaycaster = useMemo(() => new THREE.Raycaster(), [])
+  const reduceMotion = useMemo(
+    () => window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+    [],
+  )
+  const { camera } = useThree()
+  const grassCount = Math.max(1, Math.floor(seeds.grass.length * qualityScale))
+  const flowerCount = Math.max(1, Math.floor(seeds.flowers.length * qualityScale))
+
+  useEffect(() => {
+    const writeInstances = (mesh, items, flower = false) => {
+      if (!mesh) return
+      const matrix = new THREE.Matrix4()
+      const position = new THREE.Vector3()
+      const scale = new THREE.Vector3()
+      const color = new THREE.Color()
+      const rotation = new THREE.Quaternion()
+      items.forEach((item, index) => {
+        position.set(...item.position)
+        if (flower) {
+          scale.setScalar(item.scale)
+        } else {
+          position.y += item.height * 0.5
+          scale.set(item.width, item.height, 1)
+        }
+        matrix.compose(position, rotation, scale)
+        mesh.setMatrixAt(index, matrix)
+        color.copy(item.color)
+        mesh.setColorAt(index, color)
+      })
+      mesh.instanceMatrix.needsUpdate = true
+      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
+    }
+    writeInstances(grassRef.current, seeds.grass)
+    writeInstances(flowerRef.current, seeds.flowers, true)
+  }, [seeds])
+
+  useEffect(() => () => {
+    grassGeometry.dispose()
+    flowerGeometry.dispose()
+    grassTexture.dispose()
+    flowerTexture.dispose()
+    grassMaterial.dispose()
+    flowerMaterial.dispose()
+  }, [flowerGeometry, flowerMaterial, flowerTexture, grassGeometry, grassMaterial, grassTexture])
+
+  useFrame((state, delta) => {
+    const reveal = smoothstep(17.5, 24.5, progress)
+    meadowRaycaster.setFromCamera(state.pointer, camera)
+    if (meadowRaycaster.ray.intersectPlane(pointerPlane, pointerWorld)) {
+      const rawVelocity = new THREE.Vector2(
+        pointerWorld.x - previousPointer.x,
+        pointerWorld.z - previousPointer.z,
+      ).multiplyScalar(1 / Math.max(delta * 26, 0.001)).clampLength(0, 1.6)
+      pointerVelocity.lerp(rawVelocity, 0.24)
+      previousPointer.lerp(pointerWorld, 0.3)
+    }
+    const pointerStrength = reduceMotion
+      ? 0
+      : THREE.MathUtils.clamp(pointerVelocity.length() * 0.48, 0, 1)
+    ;[grassMaterial, flowerMaterial].forEach((material) => {
+      const uniforms = material.userData.journeyMeadowUniforms
+      uniforms.uJourneyReveal.value = reveal
+      uniforms.uJourneyNight.value = smoothstep(VISUAL_TIMING.nightStart, VISUAL_TIMING.nightEnd, progress)
+      uniforms.uJourneyTime.value = state.clock.elapsedTime
+      uniforms.uJourneyAmbientWind.value = reduceMotion ? 0 : travelWindRef.current * 0.7 + 0.18
+      uniforms.uJourneyPointer.value.copy(pointerWorld)
+      // The velocity is deliberately local and short-lived: at its peak it
+      // adds only a few centimetres of tip displacement over the ambient wind.
+      uniforms.uJourneyPointerVelocity.value.copy(pointerVelocity).multiplyScalar(0.72)
+      uniforms.uJourneyPointerStrength.value = pointerStrength
+    })
+    if (grassRef.current) grassRef.current.visible = reveal > 0.01
+    if (flowerRef.current) flowerRef.current.visible = reveal > 0.01
+  })
+
+  return (
+    <group renderOrder={3}>
+      <instancedMesh ref={grassRef} args={[grassGeometry, grassMaterial, grassCount]} frustumCulled={false} />
+      <instancedMesh ref={flowerRef} args={[flowerGeometry, flowerMaterial, flowerCount]} frustumCulled={false} />
     </group>
   )
 }
@@ -3061,6 +3605,8 @@ export default function JourneyScene({
   const heroRiverbankMaterialRef = useRef(null)
   const heroRiverbankStonesRef = useRef(null)
   const heroRiverbankStonesMaterialRef = useRef(null)
+  const riverContinuityMaterialRef = useRef(null)
+  const distantRidgeMaterialRefs = useRef([])
   const skyRigRef = useRef(null)
   const motesRef = useRef(null)
   const motesMaterialRef = useRef(null)
@@ -3454,7 +4000,7 @@ export default function JourneyScene({
 
     const daylightExposure = THREE.MathUtils.lerp(
       CAVE_LOOK.exposure,
-      1.08,
+      1.01,
       caveRelease,
     )
     state.gl.toneMappingExposure = THREE.MathUtils.lerp(
@@ -3485,7 +4031,7 @@ export default function JourneyScene({
     if (sunRef.current) {
       const dayIntensity = THREE.MathUtils.lerp(
         CAVE_LOOK.sunIntensity,
-        3.72,
+        2.78,
         caveRelease,
       )
       sunRef.current.intensity = THREE.MathUtils.lerp(dayIntensity, 0.52, night)
@@ -3499,7 +4045,7 @@ export default function JourneyScene({
     if (skyLightRef.current) {
       const dayIntensity = THREE.MathUtils.lerp(
         CAVE_LOOK.skyIntensity,
-        0.62,
+        0.82,
         caveRelease,
       )
       skyLightRef.current.intensity = THREE.MathUtils.lerp(dayIntensity, 1.08, night)
@@ -3516,7 +4062,7 @@ export default function JourneyScene({
     if (ambientRef.current) {
       const dayIntensity = THREE.MathUtils.lerp(
         CAVE_LOOK.ambientIntensity,
-        0.05,
+        0.11,
         caveRelease,
       )
       ambientRef.current.intensity = THREE.MathUtils.lerp(dayIntensity, 0.23, night)
@@ -3588,6 +4134,22 @@ export default function JourneyScene({
     }
 
     const openValley = smoothstep(16.5, 22, progress)
+    distantRidgeMaterialRefs.current.forEach((material, index) => {
+      if (!material) return
+      material.opacity = openValley * (index === 0 ? 0.24 : 0.34) * (1 - night * 0.36)
+      material.color
+        .set(index === 0 ? '#789084' : '#6d8973')
+        .lerp(new THREE.Color('#9f8174'), sunset * 0.4)
+        .lerp(new THREE.Color('#35536c'), night * 0.76)
+    })
+    if (riverContinuityMaterialRef.current) {
+      const uniforms = riverContinuityMaterialRef.current.userData.journeyRiverContinuityUniforms
+      uniforms.uJourneyOpacity.value = openValley * THREE.MathUtils.lerp(0.48, 0.32, night)
+      uniforms.uJourneyNight.value = night
+      uniforms.uJourneySunset.value = sunset
+      uniforms.uJourneyTime.value = state.clock.elapsedTime
+      uniforms.uJourneyWind.value = travelWindRef.current
+    }
     if (heroRiverbankRef.current && heroRiverbankMaterialRef.current) {
       heroRiverbankRef.current.visible = openValley > 0.02
       // Keep the authored alluvial detail subordinate to the meadow. At full
@@ -3829,6 +4391,13 @@ export default function JourneyScene({
     <>
       <primitive object={root} />
       <primitive object={phase2Root} />
+      <DistantRidgeChain materialRefs={distantRidgeMaterialRefs} />
+      <RiverContinuity materialRef={riverContinuityMaterialRef} />
+      <ValleyMeadow
+        progress={progress}
+        travelWindRef={travelWindRef}
+        qualityScale={quality.particles}
+      />
       <HeroRiverbankPatches
         groupRef={heroRiverbankRef}
         materialRef={heroRiverbankMaterialRef}

@@ -1,6 +1,5 @@
 import { Suspense, useEffect, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { useProgress } from '@react-three/drei'
 import * as THREE from 'three'
 import JourneyScene from './JourneyScene.jsx'
 
@@ -64,11 +63,21 @@ function AdaptiveQualityController({ tier, onTierChange }) {
 
 
 function JourneyLoadBridge({ onProgress }) {
-  const { active, progress } = useProgress()
+  const frameRef = useRef(null)
 
   useEffect(() => {
-    onProgress?.({ active, progress })
-  }, [active, onProgress, progress])
+    // This component only mounts once every GLTF/texture hook beneath the
+    // boundary has resolved. It therefore gives the loader an exact terminal
+    // signal without subscribing to drei's global progress store while the
+    // scene is suspending or being hot-reloaded.
+    frameRef.current = window.requestAnimationFrame(() => {
+      onProgress?.({ active: false, progress: 100 })
+      frameRef.current = null
+    })
+    return () => {
+      if (frameRef.current != null) window.cancelAnimationFrame(frameRef.current)
+    }
+  }, [onProgress])
 
   return null
 }

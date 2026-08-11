@@ -1336,7 +1336,7 @@ function LegacyApp() {
       }
     }
     const onKeyUp = (event) => {
-      if (event.code === 'Space') cancelHold()
+      if (event.code === 'Space' || event.code === 'Enter') cancelHold()
     }
 
     window.addEventListener('pointerdown', onPointerDown, { passive: false })
