@@ -178,6 +178,11 @@ const PORTFOLIO_IMAGE_URLS = [
 
 function useAmbientAudio(progress, fogCompleted) {
   const audioRef = useRef(null)
+  const listenerPoseRef = useRef({
+    time: 0,
+    position: [Infinity, Infinity, Infinity],
+    forward: [Infinity, Infinity, Infinity],
+  })
   const [audioReady, setAudioReady] = useState(false)
 
   const ensureAudio = useCallback(async () => {
@@ -267,23 +272,42 @@ function useAmbientAudio(progress, fogCompleted) {
     if (!audio || audio.context.state === 'closed' || !camera?.matrixWorld) return
     const listener = audio.context.listener
     const elements = camera.matrixWorld.elements
+    const pose = listenerPoseRef.current
+    const time = performance.now()
+    if (time - pose.time < 32) return
+    const positionChange =
+      Math.abs(elements[12] - pose.position[0]) +
+      Math.abs(elements[13] - pose.position[1]) +
+      Math.abs(elements[14] - pose.position[2])
+    const forwardChange =
+      Math.abs(-elements[8] - pose.forward[0]) +
+      Math.abs(-elements[9] - pose.forward[1]) +
+      Math.abs(-elements[10] - pose.forward[2])
+    if (positionChange < 0.0015 && forwardChange < 0.0005) return
+    pose.time = time
+    pose.position[0] = elements[12]
+    pose.position[1] = elements[13]
+    pose.position[2] = elements[14]
+    pose.forward[0] = -elements[8]
+    pose.forward[1] = -elements[9]
+    pose.forward[2] = -elements[10]
     const now = audio.context.currentTime
-    const position = [elements[12], elements[13], elements[14]]
-    const forward = [-elements[8], -elements[9], -elements[10]]
-    const up = [elements[4], elements[5], elements[6]]
     if (listener.positionX) {
-      listener.positionX.setTargetAtTime(position[0], now, 0.045)
-      listener.positionY.setTargetAtTime(position[1], now, 0.045)
-      listener.positionZ.setTargetAtTime(position[2], now, 0.045)
-      listener.forwardX.setTargetAtTime(forward[0], now, 0.045)
-      listener.forwardY.setTargetAtTime(forward[1], now, 0.045)
-      listener.forwardZ.setTargetAtTime(forward[2], now, 0.045)
-      listener.upX.setTargetAtTime(up[0], now, 0.045)
-      listener.upY.setTargetAtTime(up[1], now, 0.045)
-      listener.upZ.setTargetAtTime(up[2], now, 0.045)
+      listener.positionX.setTargetAtTime(elements[12], now, 0.045)
+      listener.positionY.setTargetAtTime(elements[13], now, 0.045)
+      listener.positionZ.setTargetAtTime(elements[14], now, 0.045)
+      listener.forwardX.setTargetAtTime(-elements[8], now, 0.045)
+      listener.forwardY.setTargetAtTime(-elements[9], now, 0.045)
+      listener.forwardZ.setTargetAtTime(-elements[10], now, 0.045)
+      listener.upX.setTargetAtTime(elements[4], now, 0.045)
+      listener.upY.setTargetAtTime(elements[5], now, 0.045)
+      listener.upZ.setTargetAtTime(elements[6], now, 0.045)
     } else {
-      listener.setPosition(...position)
-      listener.setOrientation(...forward, ...up)
+      listener.setPosition(elements[12], elements[13], elements[14])
+      listener.setOrientation(
+        -elements[8], -elements[9], -elements[10],
+        elements[4], elements[5], elements[6],
+      )
     }
   }, [])
 
@@ -936,7 +960,6 @@ function LegacyApp() {
   const [displayedMessage, setDisplayedMessage] = useState(null)
   const [messageVisible, setMessageVisible] = useState(false)
   const [journeyAssets, setJourneyAssets] = useState({ active: true, progress: 0 })
-  const [mobileLook, setMobileLook] = useState({ x: 0, y: 0 })
   const progressRef = useRef(PREVIEW_PROGRESS)
   const enteredRef = useRef(PREVIEW_ENTERED || INITIAL_VIEW === 'portfolio')
   const targetRef = useRef(PREVIEW_PROGRESS)
@@ -1190,30 +1213,20 @@ function LegacyApp() {
         const horizontal = Math.abs(totalX)
         const vertical = Math.abs(totalY)
         if (horizontal >= vertical * 1.22) {
-          touchRef.current.mode = 'look'
+          touchRef.current.mode = 'ignore'
         } else if (vertical >= horizontal * 1.08) {
           touchRef.current.mode = 'scroll'
         }
       }
       if (!touchRef.current.mode) return
+      if (touchRef.current.mode === 'ignore') return
       event.preventDefault()
-      const deltaX = touch.clientX - touchRef.current.x
       const deltaY = touch.clientY - touchRef.current.y
-      if (touchRef.current.mode === 'look') {
-        setMobileLook((current) => ({
-          x: clamp(current.x + deltaX / Math.max(window.innerWidth * 0.5, 1), -0.72, 0.72),
-          y: 0,
-        }))
-      } else {
-        advance(-deltaY * 1.8)
-      }
+      advance(-deltaY * 1.8)
       touchRef.current.x = touch.clientX
       touchRef.current.y = touch.clientY
     }
     const onTouchEnd = () => {
-      if (touchRef.current.mode === 'look') {
-        setMobileLook({ x: 0, y: 0 })
-      }
       touchRef.current.active = false
       touchRef.current.mode = null
     }
@@ -1525,7 +1538,6 @@ function LegacyApp() {
               fogCompleted={fogCompleted}
               presentationMode={showPortfolio}
               outroMode={showOutro && !showPortfolio}
-              mobileLook={mobileLook}
               onAssetsProgress={handleJourneyAssets}
               onListenerPose={updateListenerPose}
             />
