@@ -35,10 +35,16 @@ function AdaptiveQualityController({ tier, onTierChange }) {
 
   useFrame((_, delta) => {
     const sample = sampleRef.current
+    if (document.visibilityState !== 'visible') {
+      sample.elapsed = 0
+      sample.frames = 0
+      sample.strongSamples = 0
+      return
+    }
     sample.cooldown = Math.max(0, sample.cooldown - delta)
     sample.elapsed += Math.min(delta, 0.1)
     sample.frames += 1
-    if (sample.elapsed < 2.5 || sample.cooldown > 0 || document.visibilityState !== 'visible') return
+    if (sample.elapsed < 2.5 || sample.cooldown > 0) return
 
     const fps = sample.frames / sample.elapsed
     const index = QUALITY_ORDER.indexOf(tier)

@@ -3,6 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { useGLTF, useTexture } from '@react-three/drei'
 import * as THREE from 'three'
 import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader.js'
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 
 // Versioned query prevents a previously cached GLB from reviving removed assets.
 const MODEL_URL = '/journey/models/journey-v16-pbr-ktx2.glb?v=1-memory-pbr'
@@ -38,10 +39,10 @@ const LOOKDEV_V2_COMPOSITION = {
   // The source clip opens on a close valley floor. A more deliberate pullback
   // lets the S-curve, alluvial floor and the two mountain shoulders read as a
   // single landscape rather than as an isolated mountain cleft.
-  pullBack: 8.8,
-  cameraLift: 1.3,
-  targetLift: 0.18,
-  fov: 18,
+  pullBack: 8.0,
+  cameraLift: 1.02,
+  targetLift: 0.02,
+  fov: 15,
 }
 
 const CAVE_LOOK = {
@@ -66,126 +67,138 @@ const smoothstep = (edge0, edge1, value) => {
 // deceptively common failure mode where individually plausible layers drift
 // through each other as the river turns through the valley.
 const VALLEY_RIVER_PROFILE = [
-  { z: 8, x: 8.3, halfWidth: 22.8, y: -0.35, bankSlope: 0.035 },
-  { z: -12, x: 6.4, halfWidth: 20.2, y: -0.26, bankSlope: 0.042 },
-  { z: -28, x: -1.9, halfWidth: 17.3, y: -0.14, bankSlope: 0.05 },
-  { z: -45, x: -13.7, halfWidth: 14.8, y: 0.01, bankSlope: 0.062 },
-  { z: -64, x: -4.5, halfWidth: 12.8, y: 0.16, bankSlope: 0.085 },
-  { z: -80, x: 13.3, halfWidth: 11.1, y: 0.29, bankSlope: 0.12 },
-  { z: -94, x: 18.6, halfWidth: 9.6, y: 0.41, bankSlope: 0.17 },
-  { z: -110, x: 7.0, halfWidth: 8.6, y: 0.53, bankSlope: 0.25 },
-  { z: -124, x: -3.2, halfWidth: 7.6, y: 0.66, bankSlope: 0.39 },
-  { z: -140, x: -5.1, halfWidth: 6.7, y: 2.97, bankSlope: 0.63 },
-  { z: -150, x: -3.5, halfWidth: 6.1, y: 6.62, bankSlope: 0.76 },
-  { z: -166, x: -1.0, halfWidth: 5.5, y: 15.09, bankSlope: 0.82 },
-  { z: -190, x: -5.0, halfWidth: 4.9, y: 28.66, bankSlope: 0.88 },
-  { z: -210, x: -8.3, halfWidth: 4.3, y: 36.75, bankSlope: 0.9 },
+  { z: 8, x: 6.2, halfWidth: 11.8, y: -0.31 },
+  { z: -12, x: 7.8, halfWidth: 11.2, y: -0.23 },
+  { z: -30, x: -2.2, halfWidth: 10.2, y: -0.11 },
+  { z: -48, x: -12.4, halfWidth: 9.25, y: 0.02 },
+  { z: -65, x: -5.1, halfWidth: 8.45, y: 0.15 },
+  { z: -80, x: 11.1, halfWidth: 7.65, y: 0.28 },
+  { z: -94, x: 17.0, halfWidth: 6.65, y: 0.41 },
+  { z: -110, x: 7.1, halfWidth: 5.65, y: 0.56 },
+  { z: -124, x: -2.0, halfWidth: 4.65, y: 0.74 },
+  { z: -136, x: -3.1, halfWidth: 4.05, y: 0.91 },
+  // Beyond the visible bend this becomes a hidden alpine drainage instead of
+  // climbing the massif at an impossible 14–56% grade.
+  { z: -150, x: -2.2, halfWidth: 3.7, y: 1.12 },
+  { z: -166, x: 0.2, halfWidth: 3.25, y: 1.42 },
+  { z: -190, x: -2.4, halfWidth: 2.75, y: 1.82 },
+  { z: -210, x: -4.0, halfWidth: 2.35, y: 2.18 },
 ]
 
-const sampleValleyRiver = (z) => {
-  const first = VALLEY_RIVER_PROFILE[0]
-  if (z >= first.z) return { ...first, z }
-  const last = VALLEY_RIVER_PROFILE[VALLEY_RIVER_PROFILE.length - 1]
-  if (z <= last.z) return { ...last, z }
-  for (let index = 0; index < VALLEY_RIVER_PROFILE.length - 1; index += 1) {
-    const near = VALLEY_RIVER_PROFILE[index]
-    const far = VALLEY_RIVER_PROFILE[index + 1]
-    if (z <= near.z && z >= far.z) {
-      const mix = (z - near.z) / (far.z - near.z)
-      return {
-        z,
-        x: THREE.MathUtils.lerp(near.x, far.x, mix),
-        halfWidth: THREE.MathUtils.lerp(near.halfWidth, far.halfWidth, mix),
-        y: THREE.MathUtils.lerp(near.y, far.y, mix),
-        bankSlope: THREE.MathUtils.lerp(near.bankSlope, far.bankSlope, mix),
+const NATURAL_RIVER_KNOTS = VALLEY_RIVER_PROFILE
+const naturalRiverCurve = new THREE.CatmullRomCurve3(
+  NATURAL_RIVER_KNOTS.map(({ x, y, z }) => new THREE.Vector3(x, y, z)),
+  false,
+  'centripetal',
+  0.42,
+)
+
+const sampleNaturalRiverWidth = (t) => {
+  const position = clamp01(t) * (NATURAL_RIVER_KNOTS.length - 1)
+  const lower = Math.floor(position)
+  const mix = position - lower
+  return THREE.MathUtils.lerp(
+    NATURAL_RIVER_KNOTS[lower].halfWidth,
+    NATURAL_RIVER_KNOTS[Math.min(lower + 1, NATURAL_RIVER_KNOTS.length - 1)].halfWidth,
+    mix,
+  )
+}
+
+const getNaturalRiverStations = (count = 96) => Array.from({ length: count }, (_, index) => {
+  const t = index / (count - 1)
+  const point = naturalRiverCurve.getPoint(t)
+  const tangent = naturalRiverCurve.getTangent(t).normalize()
+  const normal = new THREE.Vector3(-tangent.z, 0, tangent.x).normalize()
+  return {
+    t,
+    point,
+    tangent,
+    normal,
+    halfWidth: sampleNaturalRiverWidth(t),
+  }
+})
+
+const NATURAL_RIVER_STATIONS = getNaturalRiverStations(129)
+
+const sampleNaturalRiverAtZ = (z) => {
+  const first = NATURAL_RIVER_STATIONS[0]
+  if (z >= first.point.z) return first
+  const last = NATURAL_RIVER_STATIONS[NATURAL_RIVER_STATIONS.length - 1]
+  if (z <= last.point.z) return last
+  let nearIndex = 0
+  let farIndex = NATURAL_RIVER_STATIONS.length - 1
+  while (farIndex - nearIndex > 1) {
+    const middle = Math.floor((nearIndex + farIndex) / 2)
+    if (NATURAL_RIVER_STATIONS[middle].point.z >= z) nearIndex = middle
+    else farIndex = middle
+  }
+  const near = NATURAL_RIVER_STATIONS[nearIndex]
+  const far = NATURAL_RIVER_STATIONS[farIndex]
+  const mix = (z - near.point.z) / (far.point.z - near.point.z)
+  return {
+    t: THREE.MathUtils.lerp(near.t, far.t, mix),
+    point: near.point.clone().lerp(far.point, mix),
+    tangent: near.tangent.clone().lerp(far.tangent, mix).normalize(),
+    normal: near.normal.clone().lerp(far.normal, mix).normalize(),
+    halfWidth: THREE.MathUtils.lerp(near.halfWidth, far.halfWidth, mix),
+  }
+}
+
+const sampleValleyMeadowHeight = (z, side, bankOffset) => {
+  const station = sampleNaturalRiverAtZ(z)
+  const depth = clamp01((-z - 2) / 138)
+  const slope = THREE.MathUtils.lerp(0.018, side < 0 ? 0.082 : 0.094, depth)
+  const distance = Math.max(0, bankOffset)
+  const terrace = Math.sin(z * 0.083 + side * 1.7) * 0.075 +
+    Math.sin(z * 0.031 - distance * 0.17) * 0.055
+  return station.point.y + 0.075 + distance * slope + terrace
+}
+
+function buildNaturalRiverGeometry({
+  count = 96,
+  widthScale = 1,
+  yOffset = 0,
+  reflectorSpace = false,
+} = {}) {
+  const stations = getNaturalRiverStations(count)
+  const columns = 8
+  const baseY = 0.08
+  const positions = []
+  const normals = []
+  const uvs = []
+  const across = []
+  const along = []
+  const indices = []
+  stations.forEach((station, stationIndex) => {
+    for (let column = 0; column <= columns; column += 1) {
+      const cross = THREE.MathUtils.lerp(-1, 1, column / columns)
+      const asymmetry = 1 + Math.sin(station.t * Math.PI * 5.3 + (cross < 0 ? 0.7 : 2.1)) * 0.035
+      const width = station.halfWidth * widthScale * asymmetry
+      const point = station.point.clone().addScaledVector(station.normal, cross * width)
+      point.y += yOffset + Math.sin(station.t * Math.PI * 12 + cross * 2.4) * 0.004
+      if (reflectorSpace) positions.push(point.x, -point.z, point.y - baseY)
+      else positions.push(point.x, point.y, point.z)
+      normals.push(...(reflectorSpace ? [0, 0, 1] : [0, 1, 0]))
+      uvs.push(column / columns, station.t * 7.4)
+      across.push(cross)
+      along.push(station.t)
+      if (stationIndex < stations.length - 1 && column < columns) {
+        const stride = columns + 1
+        const a = stationIndex * stride + column
+        const b = a + stride
+        indices.push(a, b, a + 1, b, b + 1, a + 1)
       }
     }
-  }
-  return { ...last, z }
-}
-
-// A modest, depth-aware rise lets the added alluvial strips sit on the source
-// terrain instead of disappearing beneath it or floating above it. We only
-// use this within a narrow 1–7m corridor from the real water edge.
-const getValleyBankSurfaceHeight = (z, bankOffset) => {
-  const river = sampleValleyRiver(z)
-  const distance = Math.max(0, bankOffset)
-  return river.y + 0.09 + distance * river.bankSlope + distance * distance * 0.003
-}
-
-const getValleyRiverBankPoint = (z, side, bankOffset) => {
-  const river = sampleValleyRiver(z)
-  const offset = river.halfWidth + bankOffset
-  return {
-    // The source riverbank was sampled as horizontal z cross-sections. Do not
-    // rotate this offset to the spline tangent: sharp S turns would move a
-    // supposedly grounded instance 10m+ along z and bury it in the massif.
-    x: river.x + offset * side,
-    z: river.z,
-    y: getValleyBankSurfaceHeight(z, bankOffset),
-  }
-}
-
-// Static bank probes sampled from the source terrain. The source is not a
-// simple slope: both banks rise differently around each bend. These anchors
-// keep the near ecology visibly rooted without needing a per-frame terrain
-// raycast against the 280k-triangle massif.
-const VALLEY_BANK_PROFILE = [
-  {
-    z: -10,
-    left: { grass: -0.27, flower: -0.05 },
-    right: { grass: -0.19, flower: -0.08 },
-  },
-  {
-    z: -30,
-    left: { grass: -0.13, flower: 0.06 },
-    right: { grass: -0.05, flower: 0.17 },
-  },
-  {
-    z: -50,
-    left: { grass: 0.09, flower: 0.33 },
-    right: { grass: 0.06, flower: 0.31 },
-  },
-  {
-    z: -70,
-    left: { grass: 0.25, flower: 0.55 },
-    right: { grass: 0.44, flower: 0.83 },
-  },
-  {
-    z: -90,
-    left: { grass: 0.69, flower: 1.24 },
-    right: { grass: 0.99, flower: 1.38 },
-  },
-  {
-    z: -100,
-    left: { grass: 1.57, flower: 2.01 },
-    right: { grass: 0.83, flower: 1.62 },
-  },
-  {
-    z: -110,
-    left: { grass: 1.82, flower: 2.45 },
-    right: { grass: 2.61, flower: 4.57 },
-  },
-]
-
-const sampleValleyBankHeight = (z, side, kind = 'grass') => {
-  const key = side < 0 ? 'left' : 'right'
-  const first = VALLEY_BANK_PROFILE[0]
-  const last = VALLEY_BANK_PROFILE[VALLEY_BANK_PROFILE.length - 1]
-  if (z >= first.z) return first[key][kind]
-  if (z <= last.z) {
-    const river = sampleValleyRiver(z)
-    return last[key][kind] + (river.y - sampleValleyRiver(last.z).y) * 0.56
-  }
-  for (let index = 0; index < VALLEY_BANK_PROFILE.length - 1; index += 1) {
-    const near = VALLEY_BANK_PROFILE[index]
-    const far = VALLEY_BANK_PROFILE[index + 1]
-    if (z <= near.z && z >= far.z) {
-      const mix = (z - near.z) / (far.z - near.z)
-      return THREE.MathUtils.lerp(near[key][kind], far[key][kind], mix)
-    }
-  }
-  return last[key][kind]
+  })
+  const geometry = new THREE.BufferGeometry()
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
+  geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3))
+  geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2))
+  geometry.setAttribute('aJourneyAcross', new THREE.Float32BufferAttribute(across, 1))
+  geometry.setAttribute('aJourneyAlong', new THREE.Float32BufferAttribute(along, 1))
+  geometry.setIndex(indices)
+  geometry.computeBoundingSphere()
+  return geometry
 }
 
 const storyProgressToClipProgress = (progress) => {
@@ -681,7 +694,7 @@ function createCloudbreakTexture() {
 function createSkyAtmosphereMaterial() {
   return new THREE.ShaderMaterial({
     uniforms: {
-      uJourneyTopColor: { value: new THREE.Color('#3e9ec5') },
+      uJourneyTopColor: { value: new THREE.Color('#4d9fba') },
       uJourneyHorizonColor: { value: new THREE.Color('#d8e7df') },
       uJourneySunColor: { value: new THREE.Color('#fff4cf') },
       uJourneySunDirection: {
@@ -714,6 +727,7 @@ function createSkyAtmosphereMaterial() {
         float sunHalo = pow(max(dot(direction, normalize(uJourneySunDirection)), 0.0), 7.5);
         color += uJourneySunColor * (sunAmount * 0.48 + sunHalo * 0.075) * (1.0 - uJourneyNight * 0.8);
         gl_FragColor = vec4(color, 1.0);
+        #include <colorspace_fragment>
       }
     `,
     side: THREE.BackSide,
@@ -807,6 +821,21 @@ const getAlpineForestSurfaceTexture = () => {
   return alpineForestSurfaceTexture
 }
 
+let alpineBiomeMacroTexture = null
+const getAlpineBiomeMacroTexture = () => {
+  if (alpineBiomeMacroTexture) return alpineBiomeMacroTexture
+  alpineBiomeMacroTexture = new THREE.TextureLoader().load(
+    '/journey/textures/surface/alpine-biome-macro-v1.jpg',
+  )
+  alpineBiomeMacroTexture.colorSpace = THREE.SRGBColorSpace
+  alpineBiomeMacroTexture.wrapS = THREE.RepeatWrapping
+  alpineBiomeMacroTexture.wrapT = THREE.RepeatWrapping
+  alpineBiomeMacroTexture.minFilter = THREE.LinearMipmapLinearFilter
+  alpineBiomeMacroTexture.magFilter = THREE.LinearFilter
+  alpineBiomeMacroTexture.anisotropy = 8
+  return alpineBiomeMacroTexture
+}
+
 function buildMysticMotes(count) {
   const positions = new Float32Array(count * 3)
   for (let index = 0; index < count; index += 1) {
@@ -870,6 +899,67 @@ function cloneMaterial(material) {
   return clone
 }
 
+function reshapeV1MassifGeometry(object) {
+  const geometry = object.geometry.clone()
+  const position = geometry.attributes.position
+  if (!position) return geometry
+  object.updateWorldMatrix(true, false)
+  const inverseWorld = object.matrixWorld.clone().invert()
+  const local = new THREE.Vector3()
+  const world = new THREE.Vector3()
+  const delta = new THREE.Vector3()
+
+  for (let index = 0; index < position.count; index += 1) {
+    local.fromBufferAttribute(position, index)
+    world.copy(local).applyMatrix4(object.matrixWorld)
+
+    // Build a broad alluvial terrace around the same river used by every
+    // supplemental layer. Only the low valley floor is affected; the cave,
+    // river path and high skyline remain separate authored systems.
+    if (world.z < 4 && world.z > -142) {
+      const station = sampleNaturalRiverAtZ(world.z)
+      delta.set(world.x - station.point.x, 0, world.z - station.point.z)
+      const signedAcross = delta.dot(station.normal)
+      const bankOffset = Math.abs(signedAcross) - station.halfWidth
+      const corridorDistance = Math.max(0, bankOffset)
+      const corridorMask = 1 - smoothstep(38, 62, corridorDistance)
+      const depthFade = smoothstep(1, 18, -world.z) * (1 - smoothstep(126, 142, -world.z))
+      const lowTerrain = 1 - smoothstep(34, 72, world.y)
+      const targetHeight = bankOffset < 0
+        ? station.point.y - 0.2
+        : sampleValleyMeadowHeight(world.z, signedAcross < 0 ? -1 : 1, corridorDistance)
+      const flatten = corridorMask * depthFade * lowTerrain * 0.9
+      world.y = THREE.MathUtils.lerp(world.y, targetHeight, flatten)
+    }
+
+    // The source massif is one continuous wall. Moving only elevated inner
+    // slopes outward and slightly back creates a legible near/mid/far valley
+    // without touching the camera, river or summit height hierarchy.
+    const mountainHeight = smoothstep(13, 48, world.y) * (1 - smoothstep(118, 194, world.y))
+    const mountainDepth = smoothstep(28, 122, -world.z) * (1 - smoothstep(330, 382, -world.z))
+    const innerSlope = 1 - smoothstep(112, 218, Math.abs(world.x))
+    const openMask = mountainHeight * mountainDepth * innerSlope
+    if (openMask > 0.0001) {
+      const side = Math.tanh(world.x / 30)
+      const depth = clamp01((-world.z - 34) / 245)
+      world.x += side * (18 + depth * 24) * openMask
+      const backShift = 9 + side * 2
+      world.z -= backShift * (0.74 + depth * 0.46) * openMask
+      const centralShoulder = 1 - smoothstep(72, 154, Math.abs(world.x))
+      world.y -= centralShoulder * (4.0 + depth * 3.0) * openMask
+    }
+
+    local.copy(world).applyMatrix4(inverseWorld)
+    position.setXYZ(index, local.x, local.y, local.z)
+  }
+  position.needsUpdate = true
+  geometry.computeVertexNormals()
+  geometry.computeBoundingBox()
+  geometry.computeBoundingSphere()
+  geometry.userData.journeyV1Overhaul = true
+  return geometry
+}
+
 function applyAlpineIllustration(material, isFarRidge) {
   if (!material.isMeshStandardMaterial && !material.isMeshPhysicalMaterial) return
   const hasAlpineMap = Boolean(material.map)
@@ -885,6 +975,7 @@ function applyAlpineIllustration(material, isFarRidge) {
     uJourneyTime: { value: 0 },
     uJourneyWatercolor: { value: getAlpineWatercolorTexture() },
     uJourneyForestSurface: { value: getAlpineForestSurfaceTexture() },
+    uJourneyBiomeMacro: { value: getAlpineBiomeMacroTexture() },
     uJourneyTriplanarNormal: { value: triplanarNormalMap },
     uJourneyTriplanarRoughness: { value: triplanarRoughnessMap },
   }
@@ -918,6 +1009,7 @@ uniform float uJourneyDiscovery;
 uniform float uJourneyTime;
 uniform sampler2D uJourneyWatercolor;
 uniform sampler2D uJourneyForestSurface;
+uniform sampler2D uJourneyBiomeMacro;
 uniform sampler2D uJourneyTriplanarNormal;
 uniform sampler2D uJourneyTriplanarRoughness;
 
@@ -1228,7 +1320,7 @@ float journeySurfaceFacing = dot(
   normalize(vJourneyWorldNormal),
   normalize(vec3(-0.55, 0.80, -0.24))
 ) * 0.5 + 0.5;
-float journeySurfaceValleyShade = smoothstep(0.62, 0.12, journeySurfaceFacing) *
+float journeySurfaceValleyShade = (1.0 - smoothstep(0.12, 0.62, journeySurfaceFacing)) *
   (0.46 + journeySteepness * 0.54);
 float journeyForestBiome = smoothstep(
   0.18,
@@ -1340,7 +1432,7 @@ journeyPaint *= mix(1.0, journeyValleyPigment, journeyLowerValley * 0.58);
 vec3 journeyLightDirection = normalize(vec3(-0.55, 0.80, -0.24));
 float journeyFacing = dot(normalize(vJourneyWorldNormal), journeyLightDirection) * 0.5 + 0.5;
 float journeyRidgeLight = smoothstep(0.40, 0.86, journeyFacing);
-float journeyValleyShade = smoothstep(0.62, 0.12, journeyFacing) * (0.46 + journeySteepness * 0.54);
+float journeyValleyShade = (1.0 - smoothstep(0.12, 0.62, journeyFacing)) * (0.46 + journeySteepness * 0.54);
 float journeyContour = journeyNoise(vec2(
   vJourneyWorldPosition.y * 0.16 + vJourneyWorldPosition.x * 0.027,
   vJourneyWorldPosition.z * 0.105 + journeyMacro * 2.2
@@ -1356,22 +1448,40 @@ float journeyFracture = journeyNoise(vec2(
 ));
 float journeyRockDetail = smoothstep(0.74, 0.96, journeyStrata * 0.58 + journeyFracture * 0.42);
 journeyRockDetail *= journeyRockMask * (0.38 + journeySteepness * 0.62);
+// A warped, oblique field avoids the repeated near-vertical sine grooves that
+// made the source relief read like melted wax. The secondary mask breaks the
+// gullies into drainage fragments rather than continuous painted stripes.
+vec2 journeyDrainageDomain = vec2(
+  vJourneyWorldPosition.x * 0.021 + vJourneyWorldPosition.z * 0.017,
+  vJourneyWorldPosition.y * 0.017 - vJourneyWorldPosition.z * 0.024 +
+    vJourneyWorldPosition.x * 0.006
+);
+float journeyDrainageWarp = journeyFbm(
+  journeyDrainageDomain * 0.72 + vec2(31.0, -17.0)
+);
+float journeyDrainageField = journeyFbm(
+  journeyDrainageDomain * 1.42 +
+    vec2(journeyDrainageWarp * 2.3, -journeyFine * 1.7) +
+    vec2(-12.0, 43.0)
+);
 float journeyDrainage = 1.0 - smoothstep(
   0.035,
-  0.16,
-  abs(sin(
-    vJourneyWorldPosition.x * 0.082 +
-    vJourneyWorldPosition.z * 0.019 +
-    journeyNoise(vec2(vJourneyWorldPosition.y * 0.035, vJourneyWorldPosition.z * 0.014)) * 5.2
-  ))
+  0.13,
+  abs(journeyDrainageField - 0.48)
 );
-journeyDrainage *= journeySteepness * (1.0 - smoothstep(0.78, 1.0, journeyAltitude));
+journeyDrainage *= journeySteepness *
+  (1.0 - smoothstep(0.78, 1.0, journeyAltitude)) *
+  smoothstep(0.3, 0.74, journeyMacro * 0.58 + journeyFine * 0.42);
 vec3 journeyShadow = mix(vec3(0.055, 0.13, 0.14), vec3(0.10, 0.16, 0.25), uJourneyNight);
-journeyPaint = mix(journeyPaint, journeyShadow, journeyValleyShade * 0.46);
+journeyPaint = mix(journeyPaint, journeyShadow, journeyValleyShade * 0.18);
 journeyPaint += vec3(0.10, 0.125, 0.095) * journeyRidgeLight * (0.052 + uJourneySunset * 0.065);
 journeyPaint -= vec3(0.032, 0.046, 0.041) * journeyContour * 0.22;
-journeyPaint -= vec3(0.034, 0.049, 0.052) * journeyRockDetail * (0.66 + uJourneyNight * 0.24);
-journeyPaint = mix(journeyPaint, vec3(0.032, 0.075, 0.067), journeyDrainage * 0.36);
+journeyPaint -= vec3(0.034, 0.049, 0.052) * journeyRockDetail * (0.42 + uJourneyNight * 0.2);
+journeyPaint = mix(
+  journeyPaint,
+  vec3(0.052, 0.092, 0.078),
+  journeyDrainage * ${isFarRidge ? '0.025' : '0.07'}
+);
 vec3 journeyDayHaze = vec3(0.48, 0.65, 0.66);
 vec3 journeySunsetHaze = vec3(0.72, 0.50, 0.43);
 vec3 journeyNightHaze = vec3(0.105, 0.17, 0.31);
@@ -1407,13 +1517,159 @@ float journeyDiscoveredSummit =
 vec3 journeyCloudbreakColor = mix(vec3(0.88, 0.96, 0.79), vec3(1.0, 0.66, 0.38), uJourneySunset);
 journeyPaint += journeyCloudbreakColor * journeyDiscoveredSummit * uJourneyDiscovery * 0.38;
 vec3 journeyAlbedoResponse = vec3(1.0);
-${hasAlpineMap ? 'journeyAlbedoResponse = mix(vec3(0.62), journeyTriplanar * 1.18, 0.68);' : ''}
-float journeyAlbedoWeight = mix(0.42, 0.63, clamp(journeyRockMask * 0.72 + journeyAltitude * 0.16, 0.0, 1.0));
+${hasAlpineMap ? 'journeyAlbedoResponse = mix(vec3(0.86), journeyTriplanar * 1.08, 0.40);' : ''}
+float journeyAlbedoWeight = mix(0.24, 0.43, clamp(journeyRockMask * 0.72 + journeyAltitude * 0.16, 0.0, 1.0));
 diffuseColor.rgb = mix(
   journeyPaint,
   journeyPaint * journeyAlbedoResponse,
   journeyAlbedoWeight
 ) * mix(0.96, 1.045, journeyWash);
+// Landscape-scale biome zoning replaces the previous single green wash.
+float journeyNaturalMacro = journeyFbm(vec2(
+  vJourneyWorldPosition.x * 0.0062 + vJourneyWorldPosition.z * 0.0018,
+  vJourneyWorldPosition.z * 0.0054 - vJourneyWorldPosition.y * 0.0035
+) + vec2(12.7, -31.4));
+float journeyNaturalSecondary = journeyFbm(vec2(
+  vJourneyWorldPosition.x * 0.011 - vJourneyWorldPosition.z * 0.0026,
+  vJourneyWorldPosition.y * 0.009 + vJourneyWorldPosition.z * 0.008
+) + vec2(-44.0, 18.0));
+vec2 journeyBiomeWarp = vec2(
+  (journeyNaturalMacro - 0.5) * 0.11,
+  (journeyNaturalSecondary - 0.5) * 0.1
+);
+float journeyBiomeScale = 0.0068;
+vec3 journeyBiomeX = texture2D(
+  uJourneyBiomeMacro,
+  vJourneyWorldPosition.zy * journeyBiomeScale + journeyBiomeWarp
+).rgb;
+vec3 journeyBiomeY = texture2D(
+  uJourneyBiomeMacro,
+  vJourneyWorldPosition.xz * journeyBiomeScale + journeyBiomeWarp.yx
+).rgb;
+vec3 journeyBiomeZ = texture2D(
+  uJourneyBiomeMacro,
+  vJourneyWorldPosition.xy * journeyBiomeScale - journeyBiomeWarp
+).rgb;
+vec3 journeyBiomeTexture =
+  journeyBiomeX * journeySurfaceBlend.x +
+  journeyBiomeY * journeySurfaceBlend.y +
+  journeyBiomeZ * journeySurfaceBlend.z;
+float journeyNaturalAltitude = smoothstep(28.0, 126.0, vJourneyWorldPosition.y);
+vec2 journeyNaturalDrainageDomain = vec2(
+  vJourneyWorldPosition.x * 0.018 + vJourneyWorldPosition.z * 0.014,
+  vJourneyWorldPosition.y * 0.014 - vJourneyWorldPosition.z * 0.022 +
+    vJourneyWorldPosition.x * 0.005
+);
+float journeyNaturalDrainageWarp = journeyFbm(
+  journeyNaturalDrainageDomain * 0.64 + vec2(-27.0, 38.0)
+);
+float journeyNaturalDrainageField = journeyFbm(
+  journeyNaturalDrainageDomain * 1.36 +
+    vec2(journeyNaturalDrainageWarp * 2.1, -journeyNaturalMacro * 1.8) +
+    vec2(53.0, -21.0)
+);
+float journeyNaturalDrainageLine = 1.0 - smoothstep(
+  0.03,
+  0.115,
+  abs(journeyNaturalDrainageField - 0.47)
+);
+float journeyNaturalDrainage = journeyNaturalDrainageLine * journeySteepness *
+  (1.0 - smoothstep(0.82, 1.0, journeyNaturalAltitude)) *
+  smoothstep(0.32, 0.72, journeyNaturalSecondary);
+float journeyNaturalRockMask = smoothstep(
+  0.30,
+  0.61,
+  journeySteepness * 0.82 + journeyNaturalAltitude * 0.52 +
+    (journeyNaturalSecondary - 0.5) * 0.42 - journeyNaturalMacro * 0.05
+);
+float journeyNaturalScree = smoothstep(
+  0.48,
+  0.76,
+  journeyNaturalAltitude * 0.52 + journeySteepness * 0.50 +
+    (1.0 - abs(journeyNaturalSecondary * 2.0 - 1.0)) * 0.24
+) * journeyNaturalRockMask;
+float journeyNaturalForestMask = (1.0 - smoothstep(0.58, 0.84, journeyNaturalAltitude)) *
+  (1.0 - journeyNaturalRockMask) * smoothstep(0.34, 0.68, journeyNaturalMacro);
+vec3 journeyNaturalGrass = mix(
+  vec3(0.21, 0.28, 0.14),
+  vec3(0.36, 0.39, 0.20),
+  journeyNaturalSecondary
+);
+vec3 journeyNaturalForest = mix(
+  vec3(0.055, 0.11, 0.07),
+  vec3(0.16, 0.235, 0.115),
+  journeyNaturalSecondary * 0.72 + journeySurfaceFacing * 0.28
+);
+vec3 journeyNaturalRock = mix(
+  vec3(0.22, 0.225, 0.215),
+  vec3(0.39, 0.365, 0.315),
+  journeyNaturalSecondary * 0.48 + journeySurfaceFacing * 0.52
+);
+vec3 journeyNaturalScreeColor = mix(
+  vec3(0.30, 0.295, 0.27),
+  vec3(0.47, 0.44, 0.37),
+  journeyNaturalMacro
+);
+vec3 journeyNaturalSurface = mix(journeyNaturalGrass, journeyNaturalForest, journeyNaturalForestMask);
+journeyNaturalSurface = mix(journeyNaturalSurface, journeyNaturalRock, journeyNaturalRockMask);
+journeyNaturalSurface = mix(journeyNaturalSurface, journeyNaturalScreeColor, journeyNaturalScree * 0.76);
+journeyNaturalSurface = mix(
+  journeyNaturalSurface,
+  vec3(0.075, 0.125, 0.112),
+  journeyNaturalDrainage * ${isFarRidge ? '0.018' : '0.08'}
+);
+${hasAlpineMap ? `float journeyNaturalTextureLuma = dot(journeyTriplanar, vec3(0.24, 0.58, 0.18));
+vec3 journeyNaturalTextureHue = clamp(
+  journeyTriplanar / max(journeyNaturalTextureLuma, 0.11),
+  vec3(0.58),
+  vec3(1.42)
+);
+journeyNaturalSurface *= mix(0.88, 1.10, journeyNaturalTextureLuma);
+journeyNaturalSurface = mix(
+  journeyNaturalSurface,
+  journeyNaturalSurface * journeyNaturalTextureHue,
+  0.20
+);
+vec3 journeyNaturalForestTexture = mix(
+  journeyNaturalForest,
+  journeyForestTexture * vec3(0.72, 0.82, 0.68),
+  0.62
+);
+journeyNaturalSurface = mix(
+  journeyNaturalSurface,
+  journeyNaturalForestTexture,
+  journeyNaturalForestMask * 0.72
+);` : ''}
+float journeyNaturalForestBelt =
+  (1.0 - smoothstep(38.0, 82.0, vJourneyWorldPosition.y)) *
+  (1.0 - journeyNaturalRockMask) *
+  smoothstep(0.27, 0.58, journeyNaturalMacro * 0.68 + journeyNaturalSecondary * 0.32);
+${hasAlpineMap ? `journeyNaturalSurface = mix(
+  journeyNaturalSurface,
+  journeyForestTexture * vec3(0.68, 0.82, 0.64),
+  journeyNaturalForestBelt * 0.58
+);` : ''}
+// Preserve a soft daylight key after the procedural biome pass. This is broad
+// enough to describe shoulders and saddles without re-etching the fine relief.
+journeyNaturalSurface *= mix(
+  ${isFarRidge ? '0.97' : '0.91'},
+  ${isFarRidge ? '1.035' : '1.10'},
+  smoothstep(0.14, 0.9, journeySurfaceFacing)
+);
+journeyNaturalSurface = mix(
+  journeyNaturalSurface,
+  journeyAtmosphere,
+  journeyDistanceHaze * ${isFarRidge ? '0.48' : '0.12'}
+);
+float journeyBiomeTextureLuma = dot(journeyBiomeTexture, vec3(0.24, 0.58, 0.18));
+vec3 journeyBiomeTextureBalanced = journeyBiomeTexture *
+  mix(0.86, 1.08, smoothstep(0.16, 0.78, journeyBiomeTextureLuma));
+journeyNaturalSurface = mix(
+  journeyNaturalSurface,
+  journeyBiomeTextureBalanced,
+  ${isFarRidge ? '0.34' : '0.45'}
+);
+diffuseColor.rgb = mix(diffuseColor.rgb, journeyNaturalSurface, ${isFarRidge ? '0.82' : '0.68'});
 float journeyMysticRidge = smoothstep(0.64, 0.97, journeyAltitude) * smoothstep(0.68, 0.96, journeyWash);
 vec3 journeyMysticColor = mix(vec3(0.24, 0.58, 0.46), vec3(0.96, 0.54, 0.28), uJourneySunset);
 journeyMysticColor = mix(journeyMysticColor, vec3(0.26, 0.45, 0.78), uJourneyNight);
@@ -1430,7 +1686,7 @@ vec3 journeyTexY = texture2D(map, vJourneyWorldPosition.xz * journeyTextureScale
 vec3 journeyTexZ = texture2D(map, vJourneyWorldPosition.xy * journeyTextureScale).rgb;
 vec3 journeyTriplanar = journeyTexX * journeyBlend.x + journeyTexY * journeyBlend.y + journeyTexZ * journeyBlend.z;
 journeyTriplanar = pow(max(journeyTriplanar, vec3(0.04)), vec3(0.91));
-vec3 journeyTextureValue = mix(vec3(1.0), journeyTriplanar * 1.08, 0.30);
+vec3 journeyTextureValue = mix(vec3(1.0), journeyTriplanar * 1.06, 0.18);
 diffuseColor.rgb *= journeyTextureValue;`,
       )
     }
@@ -1449,8 +1705,10 @@ float journeyForestNormalMask = journeySurfaceForestMask;
 float journeyCanopyNormalX = journeyNoise(vJourneyWorldPosition.xz * vec2(0.62, 0.84) + 19.0) - 0.5;
 float journeyCanopyNormalZ = journeyNoise(vJourneyWorldPosition.zx * vec2(0.73, 0.57) - 31.0) - 0.5;
 vec3 journeyCanopyNormal = vec3(journeyCanopyNormalX, 0.0, journeyCanopyNormalZ);
+vec3 journeyViewDetail = mat3(viewMatrix) * journeyWorldDetail;
+vec3 journeyViewCanopy = mat3(viewMatrix) * journeyCanopyNormal;
 normal = normalize(
-  normal + journeyWorldDetail * 0.14 + journeyCanopyNormal * journeyForestNormalMask * 0.08
+  normal + journeyViewDetail * 0.036 + journeyViewCanopy * journeyForestNormalMask * 0.015
 );
 float journeyCanopyRelief = max(
   journeyCanopyCells(vec2(
@@ -1464,21 +1722,21 @@ float journeyCanopyRelief = max(
 );
 vec3 journeyReliefPosition = vJourneyWorldPosition +
   normalize(vJourneyWorldNormal) * (journeyCanopyRelief - 0.28) * 0.22;
-vec3 journeyReliefNormal = normalize(cross(
+vec3 journeyReliefNormal = normalize(mat3(viewMatrix) * cross(
   dFdx(journeyReliefPosition),
   dFdy(journeyReliefPosition)
 ));
 journeyReliefNormal *= sign(dot(journeyReliefNormal, normal));
-normal = normalize(mix(normal, journeyReliefNormal, journeyForestNormalMask * 0.08));
+normal = normalize(mix(normal, journeyReliefNormal, journeyForestNormalMask * 0.02));
 vec3 journeySurfaceResponsePosition = vJourneyWorldPosition +
   normalize(vJourneyWorldNormal) *
   (journeySurfaceMedium * 0.32 + journeySurfaceFine * 0.1 - 0.2) * journeyForestNormalMask;
-vec3 journeySurfaceResponseNormal = normalize(cross(
+vec3 journeySurfaceResponseNormal = normalize(mat3(viewMatrix) * cross(
   dFdx(journeySurfaceResponsePosition),
   dFdy(journeySurfaceResponsePosition)
 ));
 journeySurfaceResponseNormal *= sign(dot(journeySurfaceResponseNormal, normal));
-normal = normalize(mix(normal, journeySurfaceResponseNormal, journeyForestNormalMask * 0.07));`,
+normal = normalize(mix(normal, journeySurfaceResponseNormal, journeyForestNormalMask * 0.018));`,
       )
     }
     if (!triplanarNormalMap) {
@@ -1488,12 +1746,12 @@ normal = normalize(mix(normal, journeySurfaceResponseNormal, journeyForestNormal
 vec3 journeySurfaceResponsePosition = vJourneyWorldPosition +
   normalize(vJourneyWorldNormal) *
   (journeySurfaceMedium * 0.72 + journeySurfaceFine * 0.2 - 0.46) * journeySurfaceForestMask;
-vec3 journeySurfaceResponseNormal = normalize(cross(
+vec3 journeySurfaceResponseNormal = normalize(mat3(viewMatrix) * cross(
   dFdx(journeySurfaceResponsePosition),
   dFdy(journeySurfaceResponsePosition)
 ));
 journeySurfaceResponseNormal *= sign(dot(journeySurfaceResponseNormal, normal));
-normal = normalize(mix(normal, journeySurfaceResponseNormal, journeySurfaceForestMask * 0.1));`,
+normal = normalize(mix(normal, journeySurfaceResponseNormal, journeySurfaceForestMask * 0.028));`,
       )
     }
     if (triplanarRoughnessMap) {
@@ -1511,6 +1769,11 @@ roughnessFactor = clamp(
   roughnessFactor + (journeyCanopyRoughness - 0.5) * journeyForestRoughnessMask * 0.12,
   0.52,
   0.94
+);
+roughnessFactor = mix(
+  roughnessFactor,
+  mix(0.58, 0.72, journeyNaturalSecondary),
+  journeyNaturalRockMask * 0.64
 );`,
       )
     }
@@ -1524,6 +1787,11 @@ roughnessFactor = clamp(
     journeyBrokenRock * 0.16,
   0.52,
   0.94
+);
+roughnessFactor = mix(
+  roughnessFactor,
+  mix(0.58, 0.72, journeyNaturalSecondary),
+  journeyNaturalRockMask * 0.64
 );`,
       )
     }
@@ -1534,13 +1802,14 @@ totalEmissiveRadiance += journeyPaint * uJourneyNight * 0.034;
 totalEmissiveRadiance += vec3(0.01, 0.024, 0.055) * uJourneyNight;`,
     )
   }
-  material.customProgramCacheKey = () => `journey-alpine-${isFarRidge ? 'far' : 'near'}-v26-pbr-surface`
+  material.customProgramCacheKey = () => `journey-alpine-${isFarRidge ? 'far' : 'near'}-v31-macro-biome-texture`
 }
 
 function applyWetGravelDetail(material, variant = 'bed') {
   if (!material.isMeshStandardMaterial && !material.isMeshPhysicalMaterial) return
   const isSubmergedBed = variant === 'submerged-bed'
   const isRiverBar = variant === 'bar-pale' || variant === 'bar-granite'
+  const isWetMargin = variant.includes('wet')
   material.onBeforeCompile = (shader) => {
     shader.vertexShader = shader.vertexShader
       .replace(
@@ -1594,8 +1863,8 @@ float journeyGravelStone = 1.0 - smoothstep(
 float journeyGravelFine = journeyGravelHash(floor(vJourneyGravelPosition.xz * 2.35) + 73.0);
 float journeyGravelMacro = journeyGravelNoise(vJourneyGravelPosition.xz * 0.11 + 9.0);
 float journeyGravelMeso = journeyGravelNoise(vJourneyGravelPosition.xz * 0.54 - 17.0);
-vec3 journeyGravelDark = ${isSubmergedBed ? 'vec3(0.055, 0.18, 0.15)' : isRiverBar ? 'vec3(0.19, 0.215, 0.20)' : 'vec3(0.31, 0.34, 0.31)'};
-vec3 journeyGravelLight = ${isSubmergedBed ? 'vec3(0.20, 0.38, 0.31)' : isRiverBar ? 'vec3(0.56, 0.535, 0.46)' : 'vec3(0.62, 0.59, 0.50)'};
+vec3 journeyGravelDark = ${isSubmergedBed ? 'vec3(0.055, 0.18, 0.15)' : isRiverBar ? 'vec3(0.12, 0.145, 0.14)' : isWetMargin ? 'vec3(0.075, 0.105, 0.10)' : 'vec3(0.18, 0.21, 0.20)'};
+vec3 journeyGravelLight = ${isSubmergedBed ? 'vec3(0.20, 0.38, 0.31)' : isRiverBar ? 'vec3(0.29, 0.31, 0.29)' : isWetMargin ? 'vec3(0.19, 0.225, 0.205)' : 'vec3(0.36, 0.37, 0.34)'};
 vec3 journeyGravelColor = mix(
   journeyGravelDark,
   journeyGravelLight,
@@ -1639,14 +1908,20 @@ function applyWaterReflection(material) {
       .replace(
         '#include <common>',
         `#include <common>
+attribute float aJourneyAcross;
+attribute float aJourneyAlong;
 varying vec3 vJourneyWaterPosition;
-varying vec3 vJourneyWaterNormal;`,
+varying vec3 vJourneyWaterNormal;
+varying float vJourneyWaterAcross;
+varying float vJourneyWaterAlong;`,
       )
       .replace(
         '#include <worldpos_vertex>',
         `#include <worldpos_vertex>
 vJourneyWaterPosition = (modelMatrix * vec4(transformed, 1.0)).xyz;
-vJourneyWaterNormal = normalize(mat3(modelMatrix) * objectNormal);`,
+vJourneyWaterNormal = normalize(mat3(modelMatrix) * objectNormal);
+vJourneyWaterAcross = aJourneyAcross;
+vJourneyWaterAlong = aJourneyAlong;`,
       )
     shader.fragmentShader = shader.fragmentShader
       .replace(
@@ -1654,6 +1929,8 @@ vJourneyWaterNormal = normalize(mat3(modelMatrix) * objectNormal);`,
         `#include <common>
 varying vec3 vJourneyWaterPosition;
 varying vec3 vJourneyWaterNormal;
+varying float vJourneyWaterAcross;
+varying float vJourneyWaterAlong;
 uniform float uJourneyNight;
 uniform float uJourneySunset;
 uniform float uJourneyRiverGlow;
@@ -1757,9 +2034,7 @@ vec3 journeyWaterView = normalize(cameraPosition - vJourneyWaterPosition);
 vec3 journeyWaterNormal = normalize(cross(dFdx(vJourneyWaterPosition), dFdy(vJourneyWaterPosition)));
 float journeyWaterFresnel = pow(1.0 - clamp(abs(dot(journeyWaterNormal, journeyWaterView)), 0.0, 1.0), 4.8);
 float journeyDepthVariation = journeyWaterNoise(vJourneyWaterPosition.xz * vec2(0.025, 0.075) + 4.7);
-float journeyChannelDistance = abs(
-  vJourneyWaterPosition.x - journeyRiverCenter(vJourneyWaterPosition.z)
-) / max(journeyRiverHalfWidth(vJourneyWaterPosition.z), 0.1);
+float journeyChannelDistance = abs(vJourneyWaterAcross);
 float journeyBankShallow = smoothstep(0.5, 0.97, journeyChannelDistance);
 float journeyCenterDepth = 1.0 - smoothstep(0.06, 0.78, journeyChannelDistance);
 float journeyShoalNoise = journeyWaterNoise(
@@ -1802,7 +2077,7 @@ float journeyBedPebble = 1.0 - smoothstep(
 float journeyRiverbedCell = journeyWaterHash(journeyBedCellId);
 float journeyRiverbedFine = journeyWaterHash(floor(vJourneyWaterPosition.xz * vec2(1.58, 1.92)) + 19.0);
 float journeyRiverbedVariation = clamp(journeyRiverbedCell * 0.68 + journeyRiverbedFine * 0.32, 0.0, 1.0);
-float journeyRiverPath = clamp((8.0 - vJourneyWaterPosition.z) / 227.0, 0.0, 1.0);
+float journeyRiverPath = clamp(vJourneyWaterAlong, 0.0, 1.0);
 float journeyRiverHead = 1.0 - smoothstep(uJourneyRiverGlow - 0.045, uJourneyRiverGlow + 0.035, journeyRiverPath);
 float journeyGroundRiver = 1.0 - smoothstep(16.0, 32.0, vJourneyWaterPosition.y);
 float journeyRiverMask = journeyRiverHead * smoothstep(0.01, 0.075, uJourneyRiverGlow) * journeyGroundRiver;
@@ -1945,38 +2220,38 @@ totalEmissiveRadiance += vec3(0.32, 0.82, 1.0) * journeyConnectionPulse * uJourn
         `#include <opaque_fragment>
 // Keep the physical highlights, but prevent the low-angle daylight reflection
 // from washing the emerald body into a flat white strip.
-float journeyPigmentStrength = mix(0.975, 0.32, uJourneyNight);
+float journeyPigmentStrength = mix(0.68, 0.32, uJourneyNight);
 gl_FragColor.rgb = mix(gl_FragColor.rgb, diffuseColor.rgb, journeyPigmentStrength);
 gl_FragColor.rgb += vec3(0.16, 0.72, 0.68) * journeyFineCurrent * (1.0 - uJourneyNight) * 0.045;`,
       )
   }
-  material.customProgramCacheKey = () => 'journey-water-reflection-v25-channel-mask'
+  material.customProgramCacheKey = () => 'journey-water-reflection-v30-natural-corridor'
 }
 
 function createClearRiverMaterial() {
   const material = new THREE.MeshPhysicalMaterial({
     name: 'MAT_JOURNEY_CLEAR_RIVER',
-    color: '#38b9a4',
-    emissive: '#082f32',
-    emissiveIntensity: 0.025,
+    color: '#5f998e',
+    emissive: '#102e2d',
+    emissiveIntensity: 0.012,
     transparent: true,
-    opacity: 0.98,
+    opacity: 0.18,
     depthWrite: false,
     depthTest: true,
     side: THREE.FrontSide,
-    roughness: 0.085,
+    roughness: 0.18,
     metalness: 0,
     ior: 1.333,
     transmission: 0,
     thickness: 0.34,
     clearcoat: 1,
-    clearcoatRoughness: 0.09,
-    attenuationColor: new THREE.Color('#42bda7'),
+    clearcoatRoughness: 0.14,
+    attenuationColor: new THREE.Color('#6aa99c'),
     attenuationDistance: 12,
   })
   // The foreground water stays optically clear while distant terrain retains fog.
   // Its own depth tint and Fresnel fade keep it integrated with the valley.
-  material.fog = false
+  material.fog = true
   applyWaterReflection(material)
   return material
 }
@@ -2059,39 +2334,12 @@ function createRiverGlowMaterial() {
 }
 
 function buildRiverAuroraGeometry() {
-  const course = Array.from({ length: 29 }, (_, index) => {
-    const z = THREE.MathUtils.lerp(8, -210, index / 28)
-    const river = sampleValleyRiver(z)
-    return { x: river.x, z, width: river.halfWidth * 0.48, y: river.y + 0.065 }
-  })
-  const positions = []
-  const normals = []
-  const uvs = []
-  const indices = []
-  course.forEach((point, index) => {
-    positions.push(
-      point.x - point.width, point.y, point.z,
-      point.x + point.width, point.y, point.z,
-    )
-    normals.push(0, 1, 0, 0, 1, 0)
-    const v = index / (course.length - 1)
-    uvs.push(0, v, 1, v)
-    if (index < course.length - 1) {
-      const start = index * 2
-      indices.push(start, start + 2, start + 1, start + 1, start + 2, start + 3)
-    }
-  })
-  const geometry = new THREE.BufferGeometry()
-  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
-  geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3))
-  geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2))
-  geometry.setIndex(indices)
-  geometry.computeBoundingSphere()
-  return geometry
+  return buildNaturalRiverGeometry({ count: 96, widthScale: 0.72, yOffset: 0.055 })
 }
 
 function prepareWorld(source) {
   const root = source.clone(true)
+  root.updateMatrixWorld(true)
   const groups = {
     cave: [],
     meadow: [],
@@ -2124,6 +2372,10 @@ function prepareWorld(source) {
     const materials = Array.isArray(object.material)
       ? object.material
       : [object.material]
+
+    if (identity.includes('FICTIONAL_NAGANO_MASSIF')) {
+      object.geometry = reshapeV1MassifGeometry(object)
+    }
 
     materials.forEach((material) => {
       material.dithering = true
@@ -2234,6 +2486,13 @@ function prepareWorld(source) {
       groups.water.push(object)
       object.receiveShadow = false
       if (isMainRiver) {
+        object.geometry = buildNaturalRiverGeometry({ count: 104 })
+        object.position.set(0, 0, 0)
+        object.rotation.set(0, 0, 0)
+        object.scale.set(1, 1, 1)
+        object.updateMatrix()
+        object.updateMatrixWorld(true)
+        object.userData.journeyMainRiver = true
         materials.forEach((material) => material.dispose())
         object.material = createClearRiverMaterial()
         object.renderOrder = 3
@@ -2291,6 +2550,11 @@ function prepareWorld(source) {
         material.opacity = 1
         material.depthWrite = true
         material.depthTest = true
+        // The reshaped massif was audited for winding inversions, so its
+        // physically correct front faces are safer than double-sided shading.
+        material.side = identity.includes('FICTIONAL_NAGANO_MASSIF')
+          ? THREE.FrontSide
+          : THREE.DoubleSide
         if (material.map) {
           material.map.wrapS = THREE.RepeatWrapping
           material.map.wrapT = THREE.RepeatWrapping
@@ -2300,7 +2564,9 @@ function prepareWorld(source) {
         if ('emissive' in material) {
           material.emissiveMap = null
           material.emissive.set(isFarRidge ? '#33474c' : '#2c4b2c')
-          material.emissiveIntensity = 0.06
+          // Keep the daylight fill subordinate to the physical key light so
+          // broad shoulders retain form instead of collapsing into one green.
+          material.emissiveIntensity = 0.026
         }
         applyAlpineIllustration(material, isFarRidge)
       })
@@ -2376,6 +2642,9 @@ function preparePhase2Environment(source) {
         material.emissive.set(far ? '#31494c' : '#243d39')
         material.emissiveIntensity = 0.04
       }
+      // Both authored phase-2 ridge sheets sit behind the massif. Treat them
+      // as distant terrain so their intersections haze away instead of
+      // cutting dark, near-material seams across the V1 mountain surface.
       applyAlpineIllustration(material, true)
       object.renderOrder = -1
       groups.ridges.push(object)
@@ -2791,15 +3060,15 @@ function createHeroGravelTexture() {
   canvas.width = 256
   canvas.height = 256
   const context = canvas.getContext('2d')
-  context.fillStyle = '#c4c5bd'
+  context.fillStyle = '#666d68'
   context.fillRect(0, 0, 256, 256)
   for (let index = 0; index < 680; index += 1) {
     const seed = seededRandom(index + 7800)
     const x = seededRandom(index + 8200) * 256
     const y = seededRandom(index + 9100) * 256
     const radius = 0.7 + seed * 3.1
-    const light = 104 + Math.round(seededRandom(index + 9500) * 104)
-    context.fillStyle = `rgb(${light + 10}, ${light + 9}, ${light + 5})`
+    const light = 54 + Math.round(seededRandom(index + 9500) * 56)
+    context.fillStyle = `rgb(${light + 7}, ${light + 8}, ${light + 5})`
     context.beginPath()
     context.ellipse(x, y, radius * 1.28, radius * 0.72, seed * Math.PI, 0, Math.PI * 2)
     context.fill()
@@ -2808,173 +3077,40 @@ function createHeroGravelTexture() {
   texture.colorSpace = THREE.SRGBColorSpace
   texture.wrapS = THREE.RepeatWrapping
   texture.wrapT = THREE.RepeatWrapping
-  texture.repeat.set(4, 4)
+  texture.repeat.set(7, 7)
   texture.needsUpdate = true
   return texture
 }
 
-function HeroRiverbankPatches({ groupRef, materialRef }) {
-  const meshRef = useRef(null)
-  const texture = useMemo(() => createHeroGravelTexture(), [])
-  const geometry = useMemo(() => {
-    const result = new THREE.CircleGeometry(1, 38)
-    const position = result.attributes.position
-    for (let index = 1; index < position.count; index += 1) {
-      const angle = Math.atan2(position.getY(index), position.getX(index))
-      const irregular = 0.8 + Math.sin(angle * 5.0 + 1.2) * 0.09 + Math.sin(angle * 11.0 - 0.8) * 0.06
-      position.setX(index, position.getX(index) * irregular)
-      position.setY(index, position.getY(index) * irregular)
-    }
-    position.needsUpdate = true
-    result.computeVertexNormals()
-    return result
-  }, [])
-  const patches = useMemo(() => [
-    { z: -17, side: -1, bank: 1.25, scale: [3.5, 12.5, 1], rotation: -0.19 },
-    { z: -43, side: 1, bank: 1.6, scale: [3.9, 15.5, 1], rotation: 0.14 },
-    { z: -72, side: -1, bank: 1.9, scale: [3.2, 13.5, 1], rotation: -0.16 },
-    { z: -98, side: 1, bank: 1.45, scale: [2.7, 10.5, 1], rotation: 0.18 },
-    { z: -98, side: -1, bank: 1.2, scale: [2.1, 8.2, 1], rotation: -0.1 },
-  ].map((patch) => ({
-    ...patch,
-    position: (() => {
-      const point = getValleyRiverBankPoint(patch.z, patch.side, patch.bank)
-      return [point.x, sampleValleyBankHeight(patch.z, patch.side, 'grass') + 0.022, point.z]
-    })(),
-  })), [])
-  useEffect(() => {
-    if (!meshRef.current) return undefined
-    const matrix = new THREE.Matrix4()
-    const quaternion = new THREE.Quaternion()
-    const position = new THREE.Vector3()
-    const scale = new THREE.Vector3()
-    patches.forEach((patch, index) => {
-      position.set(...patch.position)
-      quaternion.setFromEuler(new THREE.Euler(-Math.PI / 2, 0, patch.rotation))
-      scale.set(...patch.scale)
-      matrix.compose(position, quaternion, scale)
-      meshRef.current.setMatrixAt(index, matrix)
-    })
-    meshRef.current.instanceMatrix.needsUpdate = true
-    return undefined
-  }, [patches])
-  useEffect(() => () => {
-    geometry.dispose()
-    texture.dispose()
-  }, [geometry, texture])
-  return (
-    <group ref={groupRef}>
-      <instancedMesh ref={meshRef} args={[geometry, null, patches.length]} receiveShadow>
-        <meshStandardMaterial
-          ref={materialRef}
-          map={texture}
-          color="#ffffff"
-          roughness={0.98}
-          metalness={0}
-          transparent
-          opacity={0}
-          depthWrite
-          polygonOffset
-          polygonOffsetFactor={-1}
-        />
-      </instancedMesh>
-    </group>
-  )
-}
-
-function HeroRiverbankStones({ groupRef, materialRef }) {
-  const meshRef = useRef(null)
-  const geometry = useMemo(() => new THREE.DodecahedronGeometry(1, 0), [])
-  const stones = useMemo(() => {
-    const result = []
-    for (let index = 0; index < 156; index += 1) {
-      const depth = seededRandom(index + 15000)
-      const z = THREE.MathUtils.lerp(-10, -102, Math.pow(depth, 0.83))
-      const side = seededRandom(index + 15200) < 0.5 ? -1 : 1
-      const bankOffset = THREE.MathUtils.lerp(0.45, 5.6, Math.pow(seededRandom(index + 15400), 0.72))
-      const point = getValleyRiverBankPoint(z, side, bankOffset)
-      const perspective = THREE.MathUtils.lerp(1, 0.42, depth)
-      const radius = THREE.MathUtils.lerp(0.06, 0.32, seededRandom(index + 15600)) * perspective
-      result.push({
-        position: [
-          point.x,
-          sampleValleyBankHeight(z, side, bankOffset > 3.4 ? 'flower' : 'grass') + radius * 0.24,
-          point.z,
-        ],
-        rotation: [
-          seededRandom(index + 15800) * 0.6,
-          seededRandom(index + 16000) * Math.PI,
-          seededRandom(index + 16200) * 0.42,
-        ],
-        scale: [radius * (1.1 + seededRandom(index + 16400) * 0.72), radius * 0.52, radius],
-        tone: seededRandom(index + 16600),
-      })
-    }
-    return result
-  }, [])
-
-  useEffect(() => {
-    if (!meshRef.current) return undefined
-    const matrix = new THREE.Matrix4()
-    const quaternion = new THREE.Quaternion()
-    const position = new THREE.Vector3()
-    const scale = new THREE.Vector3()
-    stones.forEach((stone, index) => {
-      position.set(...stone.position)
-      quaternion.setFromEuler(new THREE.Euler(...stone.rotation))
-      scale.set(...stone.scale)
-      matrix.compose(position, quaternion, scale)
-      meshRef.current.setMatrixAt(index, matrix)
-    })
-    meshRef.current.instanceMatrix.needsUpdate = true
-    return undefined
-  }, [stones])
-
-  useEffect(() => () => geometry.dispose(), [geometry])
-
-  return (
-    <group ref={groupRef}>
-      <instancedMesh ref={meshRef} args={[geometry, null, stones.length]}>
-        <meshBasicMaterial
-          ref={materialRef}
-          color="#ffffff"
-          transparent
-          opacity={0}
-          depthWrite
-          fog
-        />
-      </instancedMesh>
-    </group>
-  )
-}
-
-// A narrower ribbon sits just above the wide source-water mesh. It preserves
-// V1's authored water for the cave and night sequence, while giving Day Clear a
-// continuous, readable flow line from foreground to the distant valley.
-function buildRiverContinuityGeometry() {
-  // Use enough samples to follow the source river's S turns. The previous
-  // six-quad overlay was a separate river that visibly left the channel.
-  const course = Array.from({ length: 31 }, (_, index) => {
-    const z = THREE.MathUtils.lerp(8, -176, index / 30)
-    const river = sampleValleyRiver(z)
-    return {
-      x: river.x,
-      z,
-      width: Math.max(0.72, river.halfWidth * 0.52),
-      y: river.y + 0.07,
-    }
-  })
+function buildNaturalRiverBankGeometry(side, kind) {
+  const stations = getNaturalRiverStations(92)
   const positions = []
   const uvs = []
   const indices = []
-  course.forEach((point, index) => {
-    positions.push(
-      point.x - point.width, point.y, point.z,
-      point.x + point.width, point.y, point.z,
+  stations.forEach((station, index) => {
+    const bendBar = Math.exp(-Math.pow((station.t - (side < 0 ? 0.42 : 0.68)) / 0.13, 2))
+    const secondaryBar = Math.exp(-Math.pow((station.t - (side < 0 ? 0.79 : 0.27)) / 0.09, 2))
+    const edgeNoise = Math.sin(station.t * Math.PI * 17 + side * 1.7) * 0.28 +
+      Math.sin(station.t * Math.PI * 39 - side * 0.8) * 0.11
+    const innerOffset = kind === 'wet'
+      ? -0.15 + edgeNoise * 0.15
+      : 0.38 - bendBar * 0.22 - secondaryBar * 0.12 + edgeNoise * 0.3
+    const outerOffset = kind === 'wet'
+      ? 0.86 + edgeNoise * 0.25
+      : 1.02 + bendBar * (side < 0 ? 0.34 : 0.5) + secondaryBar * 0.18 + edgeNoise * 0.34
+    const inner = station.point.clone().addScaledVector(
+      station.normal,
+      side * (station.halfWidth + innerOffset),
     )
-    const v = index / (course.length - 1)
-    uvs.push(0, v, 1, v)
-    if (index < course.length - 1) {
+    const outer = station.point.clone().addScaledVector(
+      station.normal,
+      side * (station.halfWidth + outerOffset),
+    )
+    inner.y = sampleValleyMeadowHeight(inner.z, side, Math.max(0, innerOffset)) + (kind === 'wet' ? -0.045 : 0.015)
+    outer.y = sampleValleyMeadowHeight(outer.z, side, outerOffset) + (kind === 'wet' ? -0.015 : 0.025)
+    positions.push(inner.x, inner.y, inner.z, outer.x, outer.y, outer.z)
+    uvs.push(0, station.t * 7.5, 1, station.t * 7.5)
+    if (index < stations.length - 1) {
       const start = index * 2
       indices.push(start, start + 2, start + 1, start + 1, start + 2, start + 3)
     }
@@ -2983,88 +3119,491 @@ function buildRiverContinuityGeometry() {
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
   geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2))
   geometry.setIndex(indices)
+  geometry.computeVertexNormals()
   geometry.computeBoundingSphere()
   return geometry
 }
 
-function createRiverContinuityMaterial() {
+function applyNaturalRiverBankEdge(material, wet) {
+  if (wet) return
+  const applyGravel = material.onBeforeCompile
+  material.onBeforeCompile = (shader) => {
+    applyGravel(shader)
+    shader.vertexShader = shader.vertexShader
+      .replace(
+        '#include <common>',
+        '#include <common>\nvarying vec2 vJourneyNaturalBankUv;',
+      )
+      .replace(
+        '#include <begin_vertex>',
+        '#include <begin_vertex>\nvJourneyNaturalBankUv = uv;',
+      )
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        '#include <common>',
+        '#include <common>\nvarying vec2 vJourneyNaturalBankUv;',
+      )
+      .replace(
+        '#include <map_fragment>',
+        `#include <map_fragment>
+float journeyNaturalBankBreak = journeyGravelNoise(vJourneyGravelPosition.xz * 0.052 + 281.0);
+float journeyNaturalBankMottle = journeyGravelNoise(vJourneyGravelPosition.xz * 0.19 - 73.0);
+float journeyNaturalBankReach = 0.36 + journeyNaturalBankBreak * 0.34 + journeyNaturalBankMottle * 0.1;
+float journeyNaturalBankOuter = 1.0 - smoothstep(
+  journeyNaturalBankReach,
+  journeyNaturalBankReach + 0.075,
+  vJourneyNaturalBankUv.x
+);
+diffuseColor.a *= journeyNaturalBankOuter;`,
+      )
+  }
+  material.alphaTest = 0.08
+  material.customProgramCacheKey = () => 'journey-natural-bank-edge-v1-organic-breaks'
+  material.needsUpdate = true
+}
+
+function createNaturalRiverReflectionMaterial(reflectionTexture) {
   const uniforms = {
+    uJourneyReflection: { value: reflectionTexture },
+    uJourneyReflectionMatrix: { value: new THREE.Matrix4() },
+    uJourneyTime: { value: 0 },
     uJourneyOpacity: { value: 0 },
     uJourneyNight: { value: 0 },
-    uJourneySunset: { value: 0 },
-    uJourneyTime: { value: 0 },
-    uJourneyWind: { value: 0 },
+    uJourneyReflectionReady: { value: 0 },
   }
   const material = new THREE.ShaderMaterial({
-    name: 'MAT_JOURNEY_RIVER_CONTINUITY',
+    name: 'MAT_JOURNEY_V1_PLANAR_RIVER_REFLECTION',
     uniforms,
     transparent: true,
     depthWrite: false,
     depthTest: true,
     side: THREE.DoubleSide,
+    fog: false,
     toneMapped: false,
-    vertexShader: [
-      'varying vec2 vJourneyUv;',
-      'varying vec3 vJourneyWorldPosition;',
-      'void main() {',
-      '  vJourneyUv = uv;',
-      '  vec4 worldPosition = modelMatrix * vec4(position, 1.0);',
-      '  vJourneyWorldPosition = worldPosition.xyz;',
-      '  gl_Position = projectionMatrix * viewMatrix * worldPosition;',
-      '}',
-    ].join('\n'),
-    fragmentShader: [
-      'uniform float uJourneyOpacity;',
-      'uniform float uJourneyNight;',
-      'uniform float uJourneySunset;',
-      'uniform float uJourneyTime;',
-      'uniform float uJourneyWind;',
-      'varying vec2 vJourneyUv;',
-      'varying vec3 vJourneyWorldPosition;',
-      'float journeyRiverHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123); }',
-      'float journeyRiverNoise(vec2 p) {',
-      '  vec2 i = floor(p); vec2 f = fract(p); f = f * f * (3.0 - 2.0 * f);',
-      '  return mix(mix(journeyRiverHash(i), journeyRiverHash(i + vec2(1.0, 0.0)), f.x), mix(journeyRiverHash(i + vec2(0.0, 1.0)), journeyRiverHash(i + vec2(1.0)), f.x), f.y);',
-      '}',
-      'void main() {',
-      '  float edge = smoothstep(0.0, 0.085, vJourneyUv.x) * (1.0 - smoothstep(0.915, 1.0, vJourneyUv.x));',
-      '  float centre = 1.0 - abs(vJourneyUv.x * 2.0 - 1.0);',
-      '  vec2 flowDomain = vec2(vJourneyWorldPosition.x * 0.14 + vJourneyWorldPosition.z * 0.028, vJourneyWorldPosition.z * 0.19 - uJourneyTime * (0.22 + uJourneyWind * 0.1));',
-      '  float broad = journeyRiverNoise(flowDomain * vec2(0.7, 1.0));',
-      '  float detail = journeyRiverNoise(flowDomain * vec2(2.8, 3.9) + 13.7);',
-      '  float ripple = smoothstep(0.56, 0.91, broad * 0.62 + detail * 0.38);',
-      '  float shallows = pow(1.0 - centre, 1.7) * (0.56 + detail * 0.44);',
-      '  vec3 deepWater = mix(vec3(0.018, 0.14, 0.19), vec3(0.07, 0.14, 0.18), uJourneySunset * 0.72);',
-      '  vec3 shallowWater = mix(vec3(0.11, 0.34, 0.34), vec3(0.20, 0.28, 0.27), uJourneySunset * 0.7);',
-      '  vec3 body = mix(deepWater, shallowWater, shallows * 0.72 + ripple * 0.12);',
-      '  float reflectionBreak = journeyRiverNoise(vec2(vJourneyWorldPosition.x * 0.07 - vJourneyWorldPosition.z * 0.018, vJourneyWorldPosition.z * 0.13 + uJourneyTime * 0.035));',
-      '  vec3 skyReflection = mix(vec3(0.30, 0.51, 0.56), vec3(0.66, 0.40, 0.34), uJourneySunset * 0.56);',
-      '  vec3 mountainReflection = vec3(0.055, 0.17, 0.12);',
-      '  body = mix(body, mix(skyReflection, mountainReflection, reflectionBreak * 0.82), (0.12 + centre * 0.18) * (0.48 + ripple * 0.28));',
-      '  float current = smoothstep(0.79, 0.97, 0.5 + 0.5 * sin(vJourneyWorldPosition.z * 0.58 - uJourneyTime * 1.05 + sin(vJourneyWorldPosition.x * 0.26) * 1.7));',
-      '  body += vec3(0.11, 0.30, 0.28) * current * (0.035 + shallows * 0.065);',
-      '  body = mix(body, vec3(0.015, 0.075, 0.15), uJourneyNight * 0.76);',
-      '  float fadeAlongRiver = smoothstep(0.0, 0.06, vJourneyUv.y) * (1.0 - smoothstep(0.92, 1.0, vJourneyUv.y));',
-      '  gl_FragColor = vec4(body, edge * fadeAlongRiver * uJourneyOpacity);',
-      '}',
-    ].join('\n'),
+    vertexShader: `
+      attribute float aJourneyAcross;
+      attribute float aJourneyAlong;
+      uniform mat4 uJourneyReflectionMatrix;
+      varying vec4 vJourneyReflectionUv;
+      varying vec3 vJourneyReflectionWorld;
+      varying float vJourneyReflectionAcross;
+      varying float vJourneyReflectionAlong;
+      void main() {
+        vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+        vJourneyReflectionWorld = worldPosition.xyz;
+        vJourneyReflectionAcross = aJourneyAcross;
+        vJourneyReflectionAlong = aJourneyAlong;
+        vJourneyReflectionUv = uJourneyReflectionMatrix * worldPosition;
+        gl_Position = projectionMatrix * viewMatrix * worldPosition;
+      }
+    `,
+    fragmentShader: `
+      uniform sampler2D uJourneyReflection;
+      uniform float uJourneyTime;
+      uniform float uJourneyOpacity;
+      uniform float uJourneyNight;
+      uniform float uJourneyReflectionReady;
+      varying vec4 vJourneyReflectionUv;
+      varying vec3 vJourneyReflectionWorld;
+      varying float vJourneyReflectionAcross;
+      varying float vJourneyReflectionAlong;
+
+      float journeyReflectHash(vec2 point) {
+        return fract(sin(dot(point, vec2(127.1, 311.7))) * 43758.5453123);
+      }
+      float journeyReflectNoise(vec2 point) {
+        vec2 cell = floor(point);
+        vec2 local = fract(point);
+        local = local * local * (3.0 - 2.0 * local);
+        float a = journeyReflectHash(cell);
+        float b = journeyReflectHash(cell + vec2(1.0, 0.0));
+        float c = journeyReflectHash(cell + vec2(0.0, 1.0));
+        float d = journeyReflectHash(cell + vec2(1.0));
+        return mix(mix(a, b, local.x), mix(c, d, local.x), local.y);
+      }
+      void main() {
+        vec2 projected = vJourneyReflectionUv.xy / max(vJourneyReflectionUv.w, 0.0001);
+        float broadFlow = journeyReflectNoise(
+          vec2(vJourneyReflectionAlong * 24.0 - uJourneyTime * 0.16, vJourneyReflectionAcross * 3.4)
+        );
+        float fineFlow = journeyReflectNoise(
+          vJourneyReflectionWorld.xz * vec2(0.18, 0.42) + vec2(uJourneyTime * 0.035, -uJourneyTime * 0.12)
+        );
+        vec2 distortion = vec2(
+          (broadFlow - 0.5) * 0.011 + (fineFlow - 0.5) * 0.004,
+          (fineFlow - 0.5) * 0.007
+        );
+        vec2 directUv = clamp(projected + distortion, vec2(0.003), vec2(0.997));
+        vec3 directReflection = texture2D(uJourneyReflection, directUv).rgb;
+
+        // The physically projected mountain band occupies only a few pixels at
+        // this low valley camera angle. Sample a compressed copy of the real
+        // planar target as well, then ease back to the direct projection toward
+        // the upstream horizon. This keeps the reflection recognisably tied to
+        // the rendered massif without turning the whole river into a mirror.
+        float reflectedBandY = mix(
+          0.055,
+          0.19,
+          pow(clamp(vJourneyReflectionAlong, 0.0, 1.0), 0.72)
+        );
+        vec2 expandedUv = vec2(
+          directUv.x,
+          clamp(mix(reflectedBandY, directUv.y, 0.12), 0.003, 0.997)
+        );
+        vec3 expandedReflection = texture2D(uJourneyReflection, expandedUv).rgb;
+        expandedReflection += texture2D(
+          uJourneyReflection,
+          clamp(expandedUv + vec2(0.006 + fineFlow * 0.002, 0.0), vec2(0.003), vec2(0.997))
+        ).rgb;
+        expandedReflection += texture2D(
+          uJourneyReflection,
+          clamp(expandedUv - vec2(0.005 + broadFlow * 0.002, 0.0), vec2(0.003), vec2(0.997))
+        ).rgb;
+        expandedReflection /= 3.0;
+        vec3 verticalNeighbourhood = 0.5 * (
+          texture2D(uJourneyReflection, clamp(expandedUv + vec2(0.0, 0.022), vec2(0.003), vec2(0.997))).rgb +
+          texture2D(uJourneyReflection, clamp(expandedUv - vec2(0.0, 0.022), vec2(0.003), vec2(0.997))).rgb
+        );
+        expandedReflection = clamp(
+          expandedReflection + (expandedReflection - verticalNeighbourhood) * 0.42,
+          0.0,
+          1.0
+        );
+        float projectionRemap = mix(
+          0.62,
+          0.25,
+          smoothstep(0.48, 0.96, vJourneyReflectionAlong)
+        );
+        projectionRemap *= 1.0 - smoothstep(0.82, 1.0, abs(vJourneyReflectionAcross)) * 0.28;
+        vec3 reflected = mix(directReflection, expandedReflection, projectionRemap);
+        vec3 fallbackSky = mix(vec3(0.32, 0.53, 0.58), vec3(0.05, 0.1, 0.22), uJourneyNight);
+        vec3 fallbackMountain = mix(vec3(0.105, 0.235, 0.17), vec3(0.025, 0.07, 0.14), uJourneyNight);
+        float fallbackRelief = smoothstep(0.38, 0.7, broadFlow) * (1.0 - smoothstep(0.78, 0.98, broadFlow));
+        vec3 fallbackReflection = mix(fallbackSky, fallbackMountain, 0.3 + fallbackRelief * 0.48);
+        reflected = mix(fallbackReflection, reflected, uJourneyReflectionReady);
+        float across = abs(vJourneyReflectionAcross);
+        float shallow = smoothstep(0.48, 0.98, across);
+        float depthGrain = journeyReflectNoise(vJourneyReflectionWorld.xz * vec2(0.055, 0.1) + 17.0);
+        vec3 deepBody = mix(vec3(0.04, 0.39, 0.46), vec3(0.025, 0.075, 0.16), uJourneyNight);
+        vec3 shallowBody = mix(vec3(0.18, 0.49, 0.44), vec3(0.06, 0.16, 0.24), uJourneyNight);
+        vec3 body = mix(deepBody, shallowBody, shallow * (0.62 + depthGrain * 0.18));
+        float viewFresnel = smoothstep(0.08, 0.92, vJourneyReflectionAlong);
+        float reflectionWeight = mix(0.50, 0.68, viewFresnel) * (1.0 - shallow * 0.22);
+        vec3 color = mix(body, reflected, reflectionWeight);
+        // Two reflected massif shoulders stay attached to the upstream
+        // waterline. A high central front preserves the valley saddle; the
+        // taller right shoulder reaches farther toward the viewer.
+        float leftShoulderCoordinate = (vJourneyReflectionAcross + 0.47) / 0.30;
+        float rightShoulderCoordinate = (vJourneyReflectionAcross - 0.45) / 0.34;
+        float saddleCoordinate = vJourneyReflectionAcross / 0.22;
+        float leftShoulder = exp(-leftShoulderCoordinate * leftShoulderCoordinate);
+        float rightShoulder = exp(-rightShoulderCoordinate * rightShoulderCoordinate);
+        float centralSaddle = exp(-saddleCoordinate * saddleCoordinate);
+        float reflectedShoulderFront = clamp(
+          0.58 - leftShoulder * 0.36 - rightShoulder * 0.42 +
+            centralSaddle * 0.04 + (broadFlow - 0.5) * 0.026,
+          0.12,
+          0.62
+        );
+        float reflectedShoulders = smoothstep(
+          reflectedShoulderFront - 0.035,
+          reflectedShoulderFront + 0.06,
+          vJourneyReflectionAlong
+        );
+        reflectedShoulders *= 1.0 - smoothstep(0.72, 0.98, across);
+        float reflectedShoulderPresence = clamp(
+          leftShoulder * 0.82 + rightShoulder,
+          0.0,
+          1.0
+        );
+        reflectedShoulders *= smoothstep(0.08, 0.46, reflectedShoulderPresence);
+        reflectedShoulders *= mix(0.78, 1.0, fineFlow);
+        vec3 leftShoulderTint = mix(
+          vec3(0.052, 0.135, 0.105),
+          vec3(0.024, 0.06, 0.115),
+          uJourneyNight
+        );
+        vec3 rightShoulderTint = mix(
+          vec3(0.082, 0.175, 0.13),
+          vec3(0.032, 0.075, 0.13),
+          uJourneyNight
+        );
+        vec3 reflectedShoulderTint = mix(
+          leftShoulderTint,
+          rightShoulderTint,
+          smoothstep(-0.18, 0.54, vJourneyReflectionAcross)
+        );
+        vec3 reflectedShoulderColor = mix(reflected, reflectedShoulderTint, 0.93);
+        color = mix(
+          color,
+          reflectedShoulderColor,
+          reflectedShoulders * (0.76 + broadFlow * 0.08)
+        );
+        float nearMirrorReach = clamp(
+          0.16 + leftShoulder * 0.28 + rightShoulder * 0.38 -
+            centralSaddle * 0.055 + (broadFlow - 0.5) * 0.045,
+          0.09,
+          0.56
+        );
+        float nearMirror = smoothstep(0.012, 0.045, vJourneyReflectionAlong) *
+          (1.0 - smoothstep(
+            nearMirrorReach - 0.035,
+            nearMirrorReach + 0.07,
+            vJourneyReflectionAlong
+          ));
+        nearMirror *= (1.0 - smoothstep(0.78, 0.98, across)) *
+          mix(0.74, 1.0, fineFlow) *
+          smoothstep(0.06, 0.42, reflectedShoulderPresence);
+        color = mix(
+          color,
+          reflectedShoulderColor,
+          nearMirror * (0.68 + broadFlow * 0.08)
+        );
+        float currentRibbon = pow(
+          0.5 + 0.5 * sin(
+            vJourneyReflectionAlong * 176.0 +
+            vJourneyReflectionAcross * 8.5 -
+            uJourneyTime * 0.72 +
+            broadFlow * 2.4
+          ),
+          14.0
+        );
+        color += vec3(0.2, 0.38, 0.31) * currentRibbon * (1.0 - shallow * 0.62) * 0.11;
+        color += vec3(0.22, 0.42, 0.34) * smoothstep(0.76, 0.96, fineFlow) * 0.086;
+        float edge = 1.0 - smoothstep(0.92, 1.0, across);
+        gl_FragColor = vec4(color, uJourneyOpacity * edge);
+        #include <colorspace_fragment>
+      }
+    `,
   })
-  material.userData.journeyRiverContinuityUniforms = uniforms
+  material.userData.journeyReflectionUniforms = uniforms
   return material
 }
 
-function RiverContinuity({ materialRef }) {
-  const geometry = useMemo(() => buildRiverContinuityGeometry(), [])
-  const material = useMemo(() => createRiverContinuityMaterial(), [])
+function NaturalRiverCorridor({ progress, qualityScale = 1 }) {
+  const corridorRef = useRef(null)
+  const reflectionMeshRef = useRef(null)
+  const bedMaterialRef = useRef(null)
+  const bankMaterialRefs = useRef([])
+  const reflectionFrameRef = useRef(0)
+  const { gl, scene, camera } = useThree()
+  const reflectionResolution = qualityScale >= 0.9 ? 384 : qualityScale >= 0.65 ? 256 : 160
+  const bedGeometry = useMemo(
+    () => buildNaturalRiverGeometry({ count: 100, widthScale: 1.025, yOffset: -0.24 }),
+    [],
+  )
+  const reflectionGeometry = useMemo(
+    () => buildNaturalRiverGeometry({ count: 100, widthScale: 0.985, yOffset: 0.035 }),
+    [],
+  )
+  const reflectionTarget = useMemo(() => new THREE.WebGLRenderTarget(
+    reflectionResolution,
+    Math.max(64, Math.round(reflectionResolution * 0.625)),
+    {
+      minFilter: THREE.LinearFilter,
+      magFilter: THREE.LinearFilter,
+      format: THREE.RGBAFormat,
+      type: THREE.UnsignedByteType,
+      depthBuffer: true,
+    },
+  ), [reflectionResolution])
+  const reflectionMaterial = useMemo(
+    () => createNaturalRiverReflectionMaterial(reflectionTarget.texture),
+    [reflectionTarget],
+  )
+  const reflectionCamera = useMemo(() => new THREE.PerspectiveCamera(), [])
+  const reflectionMatrix = useMemo(() => new THREE.Matrix4(), [])
+  const reflectionBias = useMemo(() => new THREE.Matrix4().set(
+    0.5, 0, 0, 0.5,
+    0, 0.5, 0, 0.5,
+    0, 0, 0.5, 0.5,
+    0, 0, 0, 1,
+  ), [])
+  const reflectionForward = useMemo(() => new THREE.Vector3(), [])
+  const reflectionTargetPoint = useMemo(() => new THREE.Vector3(), [])
+  const reflectionPlane = useMemo(() => new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.14), [])
+  const reflectionClipPlane = useMemo(() => new THREE.Plane(), [])
+  const reflectionClipVector = useMemo(() => new THREE.Vector4(), [])
+  const reflectionProjectionQ = useMemo(() => new THREE.Vector4(), [])
+  const bankGeometries = useMemo(
+    () => [
+      buildNaturalRiverBankGeometry(-1, 'wet'),
+      buildNaturalRiverBankGeometry(1, 'wet'),
+      buildNaturalRiverBankGeometry(-1, 'dry'),
+      buildNaturalRiverBankGeometry(1, 'dry'),
+    ],
+    [],
+  )
+  const gravelTexture = useMemo(() => createHeroGravelTexture(), [])
+  const gravelBumpTexture = useMemo(() => {
+    const texture = gravelTexture.clone()
+    texture.colorSpace = THREE.NoColorSpace
+    texture.needsUpdate = true
+    return texture
+  }, [gravelTexture])
+
   useEffect(() => {
-    materialRef.current = material
-    return () => {
-      if (materialRef.current === material) materialRef.current = null
-      geometry.dispose()
-      material.dispose()
+    reflectionFrameRef.current = 0
+    reflectionMaterial.userData.journeyReflectionUniforms.uJourneyReflectionReady.value = 0
+  }, [reflectionMaterial, reflectionTarget])
+
+  useEffect(() => () => {
+    bedGeometry.dispose()
+    reflectionGeometry.dispose()
+    bankGeometries.forEach((geometry) => geometry.dispose())
+    gravelTexture.dispose()
+    gravelBumpTexture.dispose()
+    reflectionMaterial.dispose()
+    reflectionTarget.dispose()
+  }, [bankGeometries, bedGeometry, gravelBumpTexture, gravelTexture, reflectionGeometry, reflectionMaterial, reflectionTarget])
+
+  useFrame((state) => {
+    const reveal = smoothstep(16.5, 23.5, progress)
+    const night = smoothstep(VISUAL_TIMING.nightStart, VISUAL_TIMING.nightEnd, progress)
+    if (corridorRef.current) corridorRef.current.visible = reveal > 0.01
+    if (reflectionMeshRef.current) reflectionMeshRef.current.visible = reveal > 0.01
+    const reflectionUniforms = reflectionMaterial.userData.journeyReflectionUniforms
+    reflectionUniforms.uJourneyOpacity.value = reveal * THREE.MathUtils.lerp(0.84, 0.52, night)
+    reflectionUniforms.uJourneyNight.value = night
+    reflectionUniforms.uJourneyTime.value = state.clock.elapsedTime
+
+    reflectionFrameRef.current += 1
+    const updateInterval = qualityScale >= 0.9 ? 30 : qualityScale >= 0.65 ? 45 : 60
+    if (
+      reveal > 0.01 &&
+      reflectionFrameRef.current % updateInterval === 1
+    ) {
+      const planeY = 0.14
+      camera.getWorldDirection(reflectionForward)
+      reflectionTargetPoint.copy(camera.position).add(reflectionForward)
+      reflectionCamera.copy(camera, false)
+      reflectionCamera.position.copy(camera.position)
+      reflectionCamera.position.y = planeY * 2 - camera.position.y
+      reflectionTargetPoint.y = planeY * 2 - reflectionTargetPoint.y
+      reflectionCamera.up.copy(camera.up)
+      reflectionCamera.up.y *= -1
+      reflectionCamera.lookAt(reflectionTargetPoint)
+      reflectionCamera.projectionMatrix.copy(camera.projectionMatrix)
+      reflectionCamera.updateMatrixWorld()
+      reflectionClipPlane.copy(reflectionPlane).applyMatrix4(reflectionCamera.matrixWorldInverse)
+      reflectionClipVector.set(
+        reflectionClipPlane.normal.x,
+        reflectionClipPlane.normal.y,
+        reflectionClipPlane.normal.z,
+        reflectionClipPlane.constant,
+      )
+      const projection = reflectionCamera.projectionMatrix.elements
+      reflectionProjectionQ.set(
+        (Math.sign(reflectionClipVector.x) + projection[8]) / projection[0],
+        (Math.sign(reflectionClipVector.y) + projection[9]) / projection[5],
+        -1,
+        (1 + projection[10]) / projection[14],
+      )
+      reflectionClipVector.multiplyScalar(2 / reflectionClipVector.dot(reflectionProjectionQ))
+      projection[2] = reflectionClipVector.x
+      projection[6] = reflectionClipVector.y
+      projection[10] = reflectionClipVector.z + 0.9995
+      projection[14] = reflectionClipVector.w
+      reflectionCamera.projectionMatrixInverse.copy(reflectionCamera.projectionMatrix).invert()
+      reflectionMatrix
+        .copy(reflectionBias)
+        .multiply(reflectionCamera.projectionMatrix)
+        .multiply(reflectionCamera.matrixWorldInverse)
+      reflectionUniforms.uJourneyReflectionMatrix.value.copy(reflectionMatrix)
+
+      const mainRiver = scene.getObjectByName('RIV_V13_EMERALD_S_WATER.001')
+      const mainRiverVisible = mainRiver?.visible
+      const reflectorVisible = reflectionMeshRef.current?.visible
+      const corridorVisible = corridorRef.current?.visible
+      if (corridorRef.current) corridorRef.current.visible = false
+      if (mainRiver) mainRiver.visible = false
+      const previousTarget = gl.getRenderTarget()
+      const previousXr = gl.xr.enabled
+      const previousShadowUpdate = gl.shadowMap.autoUpdate
+      gl.xr.enabled = false
+      gl.shadowMap.autoUpdate = false
+      gl.setRenderTarget(reflectionTarget)
+      gl.clear()
+      gl.render(scene, reflectionCamera)
+      gl.setRenderTarget(previousTarget)
+      gl.xr.enabled = previousXr
+      gl.shadowMap.autoUpdate = previousShadowUpdate
+      if (mainRiver) mainRiver.visible = mainRiverVisible
+      if (corridorRef.current) corridorRef.current.visible = corridorVisible
+      if (reflectionMeshRef.current) reflectionMeshRef.current.visible = reflectorVisible
+      reflectionUniforms.uJourneyReflectionReady.value = 1
     }
-  }, [geometry, material, materialRef])
-  return <mesh geometry={geometry} material={material} renderOrder={5} frustumCulled={false} />
+    if (bedMaterialRef.current) {
+      bedMaterialRef.current.depthWrite = reveal > 0.98
+      bedMaterialRef.current.opacity = reveal * THREE.MathUtils.lerp(0.76, 0.34, night)
+      bedMaterialRef.current.color
+        .set('#777b72')
+        .lerp(new THREE.Color('#38505a'), night)
+    }
+    bankMaterialRefs.current.forEach((material, index) => {
+      if (!material) return
+      const wet = index < 2
+      material.depthWrite = wet && reveal > 0.98
+      material.opacity = reveal * THREE.MathUtils.lerp(wet ? 0.62 : 0.4, wet ? 0.34 : 0.28, night)
+      material.color
+        .set(wet ? '#46544f' : '#4c544f')
+        .lerp(new THREE.Color(wet ? '#354b50' : '#4b5960'), night)
+    })
+  })
+
+  return (
+    <group ref={corridorRef} name="JOURNEY_V1_NATURAL_RIVER_CORRIDOR">
+      <mesh geometry={bedGeometry} renderOrder={1} frustumCulled={false}>
+        <meshStandardMaterial
+          ref={bedMaterialRef}
+          map={gravelTexture}
+          bumpMap={gravelBumpTexture}
+          bumpScale={0.045}
+          color="#777b72"
+          roughness={0.92}
+          metalness={0}
+          transparent
+          opacity={0}
+          depthWrite
+          fog
+        />
+      </mesh>
+      {bankGeometries.map((geometry, index) => (
+        <mesh key={index} geometry={geometry} renderOrder={2} frustumCulled={false} receiveShadow>
+          <meshStandardMaterial
+            ref={(material) => {
+              bankMaterialRefs.current[index] = material
+              if (material && !material.userData.journeyBankDetailApplied) {
+                applyWetGravelDetail(material, index < 2 ? 'phase2-wet' : 'bar-granite')
+                applyNaturalRiverBankEdge(material, index < 2)
+                material.userData.journeyBankDetailApplied = true
+              }
+            }}
+            map={gravelTexture}
+            bumpMap={gravelBumpTexture}
+            bumpScale={index < 2 ? 0.035 : 0.085}
+            color={index < 2 ? '#46544f' : '#4c544f'}
+            roughness={index < 2 ? 0.82 : 0.96}
+            metalness={0}
+            transparent
+            opacity={0}
+            depthWrite
+            fog
+            polygonOffset
+            polygonOffsetFactor={-1}
+          />
+        </mesh>
+      ))}
+      <mesh
+        ref={reflectionMeshRef}
+        geometry={reflectionGeometry}
+        renderOrder={4}
+        frustumCulled={false}
+      >
+        <primitive object={reflectionMaterial} attach="material" />
+      </mesh>
+    </group>
+  )
 }
 
 function buildDistantRidgeVolume({ frontZ, backZ, baseY, width, heights, hueOffset, far }) {
@@ -3092,7 +3631,7 @@ function buildDistantRidgeVolume({ frontZ, backZ, baseY, width, heights, hueOffs
       const t = zIndex / rows
       const z = THREE.MathUtils.lerp(frontZ, backZ, t)
       const ridgeCrossSection = Math.pow(Math.sin(t * Math.PI), 0.72)
-      const edgeFalloff = 0.74 + Math.sin((x / width) * Math.PI * 0.5) * 0.26
+      const edgeFalloff = 0.82 + Math.cos((x / width) * Math.PI * 0.5) * 0.18
       const shoulderNoise =
         Math.sin(x * 0.042 + z * 0.078 + hueOffset * 1.9) * 2.4 * ridgeCrossSection +
         Math.sin(x * 0.139 - z * 0.051) * 1.1 * ridgeCrossSection
@@ -3101,9 +3640,9 @@ function buildDistantRidgeVolume({ frontZ, backZ, baseY, width, heights, hueOffs
       const altitude = THREE.MathUtils.clamp((y - baseY) / Math.max(peak - baseY, 1), 0, 1)
       const lightFacing = 0.46 + Math.sin(x * 0.025 - z * 0.012 + hueOffset) * 0.15
       color
-        .set(far ? '#567065' : '#3f604e')
-        .lerp(new THREE.Color(far ? '#91a49b' : '#77856e'), altitude * 0.72)
-        .lerp(new THREE.Color(far ? '#b6c4bc' : '#9c9f87'), Math.max(0, altitude - 0.55) * (0.3 + lightFacing * 0.25))
+        .set(far ? '#708b89' : '#3f604e')
+        .lerp(new THREE.Color(far ? '#a8bdb7' : '#77856e'), altitude * 0.72)
+        .lerp(new THREE.Color(far ? '#c5d4ce' : '#9c9f87'), Math.max(0, altitude - 0.55) * (0.3 + lightFacing * 0.25))
       colors.push(color.r, color.g, color.b)
     }
   }
@@ -3124,150 +3663,61 @@ function buildDistantRidgeVolume({ frontZ, backZ, baseY, width, heights, hueOffs
   return geometry
 }
 
-function buildDistantRidgeSilhouette({ z, baseY, width, heights }) {
-  const segments = (heights.length - 1) * 8
-  const positions = []
-  const colors = []
-  const indices = []
-  for (let index = 0; index <= segments; index += 1) {
-    const t = index / segments
-    const profile = t * (heights.length - 1)
-    const lower = Math.floor(profile)
-    const mix = profile - lower
-    const height = THREE.MathUtils.lerp(
-      heights[lower],
-      heights[Math.min(lower + 1, heights.length - 1)],
-      mix,
-    ) + Math.sin(t * Math.PI * 13.0) * 2.1 + Math.sin(t * Math.PI * 31.0) * 0.7
-    positions.push(THREE.MathUtils.lerp(-width, width, t), height, z)
-    const relief = Math.sin(t * Math.PI * 7.0 + 0.6) * 0.5 +
-      Math.sin(t * Math.PI * 19.0 - 0.8) * 0.5
-    const altitude = THREE.MathUtils.clamp((height - baseY) / 142, 0, 1)
-    const colour = new THREE.Color('#607c74')
-      .lerp(new THREE.Color('#91a89c'), altitude * 0.5 + relief * 0.08)
-      .lerp(new THREE.Color('#c1cec3'), altitude * 0.2)
-    colors.push(colour.r, colour.g, colour.b)
-  }
-  // Create a true filled strip down to a continuous base. Sequential position
-  // triples would form arbitrary triangles rather than a visible skyline.
-  const baseStart = positions.length / 3
-  for (let index = 0; index <= segments; index += 1) {
-    const t = index / segments
-    positions.push(THREE.MathUtils.lerp(-width, width, t), baseY, z)
-    const colour = new THREE.Color('#a9bbb1')
-    colors.push(colour.r, colour.g, colour.b)
-  }
-  for (let index = 0; index < segments; index += 1) {
-    const topLeft = index
-    const topRight = index + 1
-    const bottomLeft = baseStart + index
-    const bottomRight = baseStart + index + 1
-    indices.push(topLeft, bottomLeft, topRight, topRight, bottomLeft, bottomRight)
-  }
-  const geometry = new THREE.BufferGeometry()
-  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
-  geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3))
-  geometry.setIndex(indices)
-  geometry.computeVertexNormals()
-  geometry.computeBoundingSphere()
-  return geometry
-}
-
-function DistantRidgeChain({ materialRefs }) {
-  const farGeometry = useMemo(
-    () => buildDistantRidgeVolume({
-      frontZ: -452,
-      backZ: -530,
-      baseY: 74,
-      width: 292,
-      hueOffset: 2.4,
-      far: true,
-      heights: [132, 143, 150, 142, 156, 150, 164, 157, 169, 160, 165, 154, 159, 148, 153, 143, 149, 138, 132],
-    }),
-    [],
-  )
-  const middleGeometry = useMemo(
-    () => buildDistantRidgeVolume({
-      frontZ: -425,
-      backZ: -490,
-      baseY: 68,
-      width: 262,
-      hueOffset: 7.1,
-      far: false,
-      // Connected shoulders deliberately avoid one dominant summit in the
-      // exact centre of the V1 pass.
-      heights: [154, 164, 176, 165, 184, 172, 190, 177, 186, 174, 193, 180, 187, 172, 179, 165, 173, 160, 154],
-    }),
-    [],
-  )
-  const silhouetteGeometry = useMemo(
-    () => buildDistantRidgeSilhouette({
-      z: -402,
-      baseY: 92,
-      width: 246,
-      // An intentionally irregular sequence of comparable shoulders. It sits
-      // just behind the V1 pass, where its outline can actually be seen above
-      // the source terrain instead of becoming a hidden decoration at -500.
-      heights: [194, 207, 199, 216, 205, 223, 211, 219, 204, 226, 214, 222, 207, 217, 201, 210, 196],
-    }),
-    [],
-  )
+function FarRidgeCrown({ progress }) {
+  const geometry = useMemo(() => buildDistantRidgeVolume({
+    frontZ: -426,
+    backZ: -510,
+    baseY: 70,
+    width: 302,
+    hueOffset: 4.7,
+    far: true,
+    // Repeated shoulders and saddles support the existing left/right massif;
+    // none of these values creates a single dominant central pyramid.
+    heights: [184, 198, 191, 207, 195, 212, 202, 218, 188, 205, 194, 214, 199, 210, 193, 202, 184],
+  }), [])
+  const material = useMemo(() => {
+    const result = new THREE.MeshStandardMaterial({
+      color: '#d6e4dd',
+      vertexColors: true,
+      transparent: true,
+      opacity: 0,
+      depthWrite: false,
+      depthTest: true,
+      side: THREE.FrontSide,
+      fog: false,
+      roughness: 0.94,
+      metalness: 0,
+      emissive: '#263d35',
+      emissiveIntensity: 0.015,
+    })
+    applyAlpineIllustration(result, true)
+    return result
+  }, [])
   useEffect(() => () => {
-    farGeometry.dispose()
-    middleGeometry.dispose()
-    silhouetteGeometry.dispose()
-  }, [farGeometry, middleGeometry, silhouetteGeometry])
+    geometry.dispose()
+    material.dispose()
+  }, [geometry, material])
+  useFrame(() => {
+    const reveal = smoothstep(17.5, 24.5, progress)
+    const sunset = smoothstep(VISUAL_TIMING.sunsetStart, VISUAL_TIMING.sunsetEnd, progress)
+    const night = smoothstep(VISUAL_TIMING.nightStart, VISUAL_TIMING.nightEnd, progress)
+    material.opacity = reveal * THREE.MathUtils.lerp(0.44, 0.26, night)
+    material.color
+      .set('#d6e4dd')
+      .lerp(new THREE.Color('#c5a293'), sunset * 0.34)
+      .lerp(new THREE.Color('#48647a'), night * 0.78)
+    const uniforms = material.userData.journeyAlpineUniforms
+    if (uniforms) {
+      uniforms.uJourneySunset.value = sunset
+      uniforms.uJourneyNight.value = night
+      uniforms.uJourneyDiscovery.value = 0
+      uniforms.uJourneyTime.value = 0
+    }
+  })
   return (
-    <group renderOrder={-2}>
-      <mesh geometry={farGeometry} frustumCulled={false}>
-        <meshStandardMaterial
-          ref={(material) => { materialRefs.current[0] = material }}
-          color="#ffffff"
-          vertexColors
-          transparent
-          opacity={0}
-          depthWrite={false}
-          roughness={0.94}
-          metalness={0}
-          side={THREE.DoubleSide}
-          // Scene fog is intentionally dense near the cave, but it would
-          // erase a ridge at z=-500 entirely. Its muted palette supplies the
-          // aerial perspective instead.
-          fog={false}
-          emissive="#263b39"
-          emissiveIntensity={0.16}
-        />
-      </mesh>
-      <mesh geometry={middleGeometry} frustumCulled={false}>
-        <meshStandardMaterial
-          ref={(material) => { materialRefs.current[1] = material }}
-          color="#ffffff"
-          vertexColors
-          transparent
-          opacity={0}
-          depthWrite={false}
-          roughness={0.9}
-          metalness={0}
-          side={THREE.DoubleSide}
-          fog={false}
-          emissive="#28392f"
-          emissiveIntensity={0.12}
-        />
-      </mesh>
-      <mesh geometry={silhouetteGeometry} frustumCulled={false} renderOrder={-1}>
-        <meshBasicMaterial
-          ref={(material) => { materialRefs.current[2] = material }}
-          color="#ffffff"
-          vertexColors
-          transparent
-          opacity={0}
-          depthWrite={false}
-          depthTest
-          side={THREE.DoubleSide}
-          fog={false}
-        />
-      </mesh>
-    </group>
+    <mesh geometry={geometry} renderOrder={-3} frustumCulled={false}>
+      <primitive object={material} attach="material" />
+    </mesh>
   )
 }
 
@@ -3275,26 +3725,44 @@ function createMeadowBladeGeometry(kind) {
   const positions = []
   const triangle = (a, b, c) => {
     positions.push(...a, ...b, ...c)
-    positions.push(...c, ...b, ...a)
   }
   if (kind === 'grass') {
-    [
-      { root: -0.28, tip: -0.14, height: 0.82, width: 0.105, z: -0.05 },
-      { root: -0.04, tip: 0.08, height: 1.0, width: 0.12, z: 0.02 },
-      { root: 0.25, tip: 0.14, height: 0.73, width: 0.09, z: 0.06 },
-    ].forEach(({ root, tip, height, width, z }) => {
-      const dark = Math.max(0, z - 0.045)
-      triangle([root - width, 0, z], [root + width, 0, z], [tip, height, dark])
+    [0, Math.PI / 3, Math.PI * 2 / 3].forEach((angle, tuftIndex) => {
+      const root = tuftIndex === 0 ? -0.08 : tuftIndex === 1 ? 0.02 : 0.1
+      const tip = tuftIndex === 0 ? -0.12 : tuftIndex === 1 ? 0.1 : -0.02
+      const height = tuftIndex === 0 ? 0.82 : tuftIndex === 1 ? 1.0 : 0.72
+      const width = tuftIndex === 1 ? 0.1 : 0.085
+      const rightX = Math.cos(angle) * width
+      const rightZ = Math.sin(angle) * width
+      const rootX = Math.cos(angle) * root
+      const rootZ = Math.sin(angle) * root
+      const tipX = Math.cos(angle) * tip
+      const tipZ = Math.sin(angle) * tip
+      triangle(
+        [rootX - rightX, 0, rootZ - rightZ],
+        [rootX + rightX, 0, rootZ + rightZ],
+        [tipX, height, tipZ],
+      )
     })
   } else {
-    triangle([-0.035, 0, 0], [0.035, 0, 0], [0, 0.74, 0.008])
-    const centre = [0, 0.76, 0.012]
-    ;[
-      [[-0.2, 0.76, 0.012], [-0.055, 0.93, 0.012]],
-      [[0.2, 0.76, 0.012], [0.055, 0.93, 0.012]],
-      [[0, 0.56, 0.012], [-0.13, 0.77, 0.012]],
-      [[0, 0.98, 0.012], [0.13, 0.77, 0.012]],
-    ].forEach(([edge, tip]) => triangle(centre, edge, tip))
+    const rotateY = ([x, y, z], angle) => [
+      x * Math.cos(angle) + z * Math.sin(angle),
+      y,
+      -x * Math.sin(angle) + z * Math.cos(angle),
+    ]
+    ;[0, Math.PI / 2].forEach((angle) => {
+      const flowerTriangle = (a, b, c) => triangle(rotateY(a, angle), rotateY(b, angle), rotateY(c, angle))
+      // Keep the stem subordinate to the separate petal sprite. At valley
+      // scale a broad cross-card collapses into a black fence post.
+      flowerTriangle([-0.018, 0, 0], [0.018, 0, 0], [0, 0.57, 0.006])
+      const centre = [0, 0.59, 0.01]
+      ;[
+        [[-0.16, 0.59, 0.01], [-0.04, 0.74, 0.01]],
+        [[0.16, 0.59, 0.01], [0.04, 0.74, 0.01]],
+        [[0, 0.45, 0.01], [-0.1, 0.61, 0.01]],
+        [[0, 0.77, 0.01], [0.1, 0.61, 0.01]],
+      ].forEach(([edge, tip]) => flowerTriangle(centre, edge, tip))
+    })
   }
   const geometry = new THREE.BufferGeometry()
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
@@ -3308,7 +3776,7 @@ function createMeadowGroundTexture() {
   canvas.width = 512
   canvas.height = 512
   const context = canvas.getContext('2d')
-  context.fillStyle = '#697d45'
+  context.fillStyle = '#687b50'
   context.fillRect(0, 0, canvas.width, canvas.height)
 
   // A low-contrast botanical layer prevents the flat source meadow from
@@ -3320,10 +3788,10 @@ function createMeadowGroundTexture() {
     const y = seededRandom(index + 61271) * canvas.height
     const radius = 0.45 + seededRandom(index + 61307) * 2.1
     const tone = seed < 0.18
-      ? `rgba(48, 79, 43, ${0.12 + seededRandom(index + 61343) * 0.14})`
+      ? `rgba(58, 84, 50, ${0.11 + seededRandom(index + 61343) * 0.13})`
       : seed > 0.82
-        ? `rgba(184, 177, 103, ${0.07 + seededRandom(index + 61379) * 0.12})`
-        : `rgba(139, 163, 80, ${0.09 + seededRandom(index + 61417) * 0.15})`
+        ? `rgba(190, 174, 112, ${0.065 + seededRandom(index + 61379) * 0.1})`
+        : `rgba(142, 156, 91, ${0.08 + seededRandom(index + 61417) * 0.12})`
     context.fillStyle = tone
     context.beginPath()
     context.ellipse(x, y, radius * (1.2 + seed), radius, seed * Math.PI, 0, Math.PI * 2)
@@ -3350,30 +3818,32 @@ function createMeadowGroundTexture() {
 }
 
 function buildMeadowGroundGeometry() {
-  const rows = 42
-  const columns = 3
+  const rows = 58
+  const bankOffsets = [6.5, 9.5, 13, 17.5, 23, 30, 38, 47, 57]
+  const columns = bankOffsets.length - 1
   const positions = []
   const uvs = []
   const indices = []
-  const bankOffsets = [1.2, 2.2, 3.5, 4.8]
-  // Two narrow, source-conforming strips add botanical micro-variation to the
-  // alluvial floor. They intentionally stop before the rising far terrain so
-  // this layer cannot become a rectangular green carpet over the V1 valley.
+  // Broad, irregular alpine terraces replace the former two 3.6m bank ribbons.
+  // The same centreline and exclusion distance feed water, gravel and ecology.
   for (let sideIndex = 0; sideIndex < 2; sideIndex += 1) {
     const side = sideIndex === 0 ? -1 : 1
     const baseIndex = positions.length / 3
     for (let zIndex = 0; zIndex <= rows; zIndex += 1) {
       const depth = zIndex / rows
-      const z = THREE.MathUtils.lerp(-8, -104, depth)
+      const z = THREE.MathUtils.lerp(-4, -118, depth)
+      const station = sampleNaturalRiverAtZ(z)
       for (let offsetIndex = 0; offsetIndex <= columns; offsetIndex += 1) {
         const bankOffset = bankOffsets[offsetIndex] +
-          Math.sin(z * 0.17 + side * 1.9 + offsetIndex * 2.1) * 0.1
-        const point = getValleyRiverBankPoint(z, side, bankOffset)
-        const undulation = Math.sin(point.x * 0.37 + z * 0.11) * 0.024 +
-          Math.sin(point.x * 0.12 - z * 0.19) * 0.018
-        const sampleKind = bankOffset > 3.4 ? 'flower' : 'grass'
-        positions.push(point.x, sampleValleyBankHeight(z, side, sampleKind) + 0.018 + undulation, point.z)
-        uvs.push(offsetIndex / columns * 2.3, depth * 3.4)
+          Math.sin(z * 0.071 + side * 1.9 + offsetIndex * 1.37) * (0.32 + offsetIndex * 0.06)
+        const point = station.point.clone().addScaledVector(
+          station.normal,
+          side * (station.halfWidth + bankOffset),
+        )
+        const undulation = Math.sin(point.x * 0.095 + z * 0.058) * 0.085 +
+          Math.sin(point.x * 0.036 - z * 0.091) * 0.052
+        positions.push(point.x, sampleValleyMeadowHeight(point.z, side, bankOffset) + 0.035 + undulation, point.z)
+        uvs.push(offsetIndex / columns * 5.2, depth * 5.8)
       }
     }
     const stride = columns + 1
@@ -3402,9 +3872,9 @@ function createMeadowGroundMaterial(map) {
   }
   const material = new THREE.MeshStandardMaterial({
     map,
-    color: '#c7d095',
+    color: '#aebd82',
     transparent: true,
-    opacity: 0.54,
+    opacity: 0.72,
     roughness: 0.96,
     metalness: 0,
     depthWrite: false,
@@ -3423,28 +3893,40 @@ function createMeadowGroundMaterial(map) {
           'uniform float uJourneyNight;',
           'uniform float uJourneySunset;',
           'varying vec3 vJourneyMeadowGroundPosition;',
+          'varying vec2 vJourneyMeadowGroundUv;',
         ].join('\n'),
       )
       .replace(
         '#include <map_fragment>',
         [
           '#include <map_fragment>',
-          'float journeyGroundPath = clamp((-8.0 - vJourneyMeadowGroundPosition.z) / 104.0, 0.0, 1.0);',
+          'float journeyGroundPath = clamp((-4.0 - vJourneyMeadowGroundPosition.z) / 114.0, 0.0, 1.0);',
           'float journeyGroundPatch = fract(sin(dot(floor(vJourneyMeadowGroundPosition.xz * 1.3), vec2(37.7, 91.3))) * 43758.5453);',
-          'float journeyGroundDepthFade = 1.0 - smoothstep(0.78, 1.0, journeyGroundPath);',
-          'diffuseColor.a *= journeyGroundDepthFade * uJourneyReveal * (1.0 - uJourneyNight * 0.6);',
-          'diffuseColor.rgb *= mix(0.82, 1.08, journeyGroundPatch);',
+          'float journeyGroundBroad = clamp(0.5 +',
+          '  sin(vJourneyMeadowGroundPosition.x * 0.071 + vJourneyMeadowGroundPosition.z * 0.043) * 0.27 +',
+          '  sin(vJourneyMeadowGroundPosition.x * 0.029 - vJourneyMeadowGroundPosition.z * 0.081 + 1.7) * 0.23,',
+          '  0.0, 1.0);',
+          'float journeyGroundDepthFade = 1.0 - smoothstep(0.9, 1.0, journeyGroundPath);',
+          'float journeyGroundCrossFade = smoothstep(0.0, 0.48, vJourneyMeadowGroundUv.x) *',
+          '  (1.0 - smoothstep(4.5, 5.2, vJourneyMeadowGroundUv.x));',
+          'diffuseColor.a *= journeyGroundDepthFade * journeyGroundCrossFade * uJourneyReveal * (1.0 - uJourneyNight * 0.6);',
+          'diffuseColor.rgb *= mix(0.91, 1.055, journeyGroundPatch);',
+          'diffuseColor.rgb = mix(',
+          '  diffuseColor.rgb * vec3(0.83, 0.94, 0.82),',
+          '  diffuseColor.rgb * vec3(1.08, 1.04, 0.84),',
+          '  journeyGroundBroad',
+          ');',
           'diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(0.98, 0.82, 0.68), uJourneySunset * 0.24);',
         ].join('\n'),
       )
     shader.vertexShader = shader.vertexShader
       .replace(
         '#include <common>',
-        '#include <common>\nvarying vec3 vJourneyMeadowGroundPosition;',
+        '#include <common>\nvarying vec3 vJourneyMeadowGroundPosition;\nvarying vec2 vJourneyMeadowGroundUv;',
       )
       .replace(
         '#include <worldpos_vertex>',
-        '#include <worldpos_vertex>\nvJourneyMeadowGroundPosition = (modelMatrix * vec4(transformed, 1.0)).xyz;',
+        '#include <worldpos_vertex>\nvJourneyMeadowGroundPosition = (modelMatrix * vec4(transformed, 1.0)).xyz;\nvJourneyMeadowGroundUv = uv;',
       )
   }
   material.customProgramCacheKey = () => 'journey-meadow-ground-v1'
@@ -3463,21 +3945,24 @@ function createMeadowMaterial(kind) {
     uJourneyPointerStrength: { value: 0 },
   }
   const material = new THREE.MeshBasicMaterial({
-    // A single botanical palette stays legible at this camera distance. Per
-    // instance colour is intentionally avoided here: thin transparent cards
-    // can otherwise resolve to near-black on some mobile WebGL paths.
-    color: kind === 'flower' ? '#e8dab9' : '#9fbd70',
-    vertexColors: false,
+    // Instance colours are already authored in final display hues. A white
+    // base avoids multiplying them back into the dark stake-like result.
+    color: kind === 'flower' ? '#ffffff' : '#a8b97b',
+    vertexColors: kind === 'flower',
     transparent: true,
-    opacity: kind === 'flower' ? 0.82 : 0.62,
-    alphaTest: 0.035,
-    depthWrite: true,
+    opacity: kind === 'flower' ? 0.72 : 0.56,
+    alphaTest: 0.02,
+    depthWrite: false,
     side: THREE.DoubleSide,
+    fog: true,
+    toneMapped: false,
   })
   material.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, uniforms)
-    const bladeTip = kind === 'flower' ? '0.9' : 'clamp(transformed.y, 0.0, 1.0)'
-    const pointerScale = kind === 'flower' ? '0.24' : '0.17'
+    const bladeTip = kind === 'flower'
+      ? 'clamp(transformed.y / 0.77, 0.0, 1.0)'
+      : 'clamp(transformed.y, 0.0, 1.0)'
+    const pointerScale = kind === 'flower' ? '0.27' : '0.2'
     const nightFade = kind === 'flower' ? '0.72' : '0.58'
     const alphaMask = kind === 'flower'
       ? 'smoothstep(0.02, 0.2, vJourneyMeadowTip)'
@@ -3507,7 +3992,13 @@ function createMeadowMaterial(kind) {
           'float journeyGust = sin(uJourneyTime * 1.15 + aJourneyMeadowPhase * 11.0 + journeyBladeBase.z * 0.17) * 0.5 +',
           '  sin(uJourneyTime * 0.48 + aJourneyMeadowPhase * 23.0 + journeyBladeBase.x * 0.11) * 0.5;',
           'vec2 journeySway = vec2(0.62, 0.34) * (0.028 + uJourneyAmbientWind * 0.072 + journeyGust * 0.034);',
-          'journeySway += uJourneyPointerVelocity * journeyPointerInfluence * uJourneyPointerStrength * ' + pointerScale + ';',
+          'vec2 journeyInstanceX = normalize(vec2(instanceMatrix[0].x, instanceMatrix[0].z));',
+          'vec2 journeyInstanceZ = normalize(vec2(instanceMatrix[2].x, instanceMatrix[2].z));',
+          'vec2 journeyLocalPointerVelocity = vec2(',
+          '  dot(uJourneyPointerVelocity, journeyInstanceX),',
+          '  dot(uJourneyPointerVelocity, journeyInstanceZ)',
+          ');',
+          'journeySway += journeyLocalPointerVelocity * journeyPointerInfluence * uJourneyPointerStrength * ' + pointerScale + ';',
           'transformed.x += journeySway.x * journeyBladeTip * journeyBladeTip;',
           'transformed.z += journeySway.y * journeyBladeTip * journeyBladeTip * 0.38;',
           'vJourneyMeadowTip = journeyBladeTip;',
@@ -3527,11 +4018,14 @@ function createMeadowMaterial(kind) {
         '#include <color_fragment>',
         [
           '#include <color_fragment>',
+          kind === 'flower'
+            ? 'diffuseColor.rgb = mix(vec3(0.22, 0.34, 0.16), diffuseColor.rgb, smoothstep(0.7, 0.84, vJourneyMeadowTip));'
+            : 'diffuseColor.rgb = mix(diffuseColor.rgb * vec3(0.88, 0.98, 0.78), diffuseColor.rgb, vJourneyMeadowTip);',
           'diffuseColor.a *= uJourneyReveal * (1.0 - uJourneyNight * ' + nightFade + ') * ' + alphaMask + ';',
         ].join('\n'),
       )
   }
-  material.customProgramCacheKey = () => 'journey-meadow-' + kind + '-v2-riverbank'
+  material.customProgramCacheKey = () => 'journey-meadow-' + kind + '-v3-open-alpine'
   material.userData.journeyMeadowUniforms = uniforms
   return material
 }
@@ -3570,86 +4064,157 @@ function createMeadowPetalTexture() {
   return texture
 }
 
-function MeadowWildflowers({ progress, qualityScale = 1 }) {
-  const points = useMemo(() => {
-    const positions = []
-    for (let index = 0; index < 112; index += 1) {
-      const depth = Math.pow(seededRandom(index + 48501), 1.9)
-      if (depth > 0.62) continue
-      const z = THREE.MathUtils.lerp(-12, -86, depth)
-      const side = seededRandom(index + 48537) < 0.52 ? -1 : 1
-      const bank = THREE.MathUtils.lerp(2.1, 4.4, seededRandom(index + 48571))
-      const point = getValleyRiverBankPoint(z, side, bank)
-      positions.push(
-        point.x,
-        sampleValleyBankHeight(z, side, 'flower') + 0.15,
-        point.z,
-      )
-    }
-    return new Float32Array(positions)
-  }, [])
-  const texture = useMemo(() => createMeadowPetalTexture(), [])
-  const material = useMemo(() => new THREE.PointsMaterial({
+function createMeadowPetalMaterial(texture, windUniforms) {
+  const material = new THREE.PointsMaterial({
     map: texture,
-    color: '#f0e5c1',
+    color: '#ffffff',
+    vertexColors: true,
     transparent: true,
-    opacity: 0,
-    alphaTest: 0.18,
-    size: 0.27,
+    opacity: 0.8,
+    alphaTest: 0.055,
+    size: 0.78,
     sizeAttenuation: true,
     depthWrite: false,
+    depthTest: true,
     fog: true,
-  }), [texture])
-  const geometry = useMemo(() => {
-    const result = new THREE.BufferGeometry()
-    result.setAttribute('position', new THREE.BufferAttribute(points, 3))
-    return result
-  }, [points])
-  useEffect(() => () => {
-    geometry.dispose()
-    texture.dispose()
-    material.dispose()
-  }, [geometry, material, texture])
-  useFrame(() => {
-    material.opacity = smoothstep(18, 25, progress) * Math.min(1, qualityScale / 0.7) * 0.56
+    toneMapped: false,
   })
-  return <points geometry={geometry} material={material} renderOrder={9} frustumCulled={false} />
+  material.onBeforeCompile = (shader) => {
+    Object.assign(shader.uniforms, windUniforms)
+    shader.vertexShader = shader.vertexShader
+      .replace(
+        '#include <common>',
+        `#include <common>
+attribute float aJourneyMeadowPhase;
+uniform float uJourneyTime;
+uniform float uJourneyAmbientWind;
+uniform vec3 uJourneyPointer;
+uniform vec2 uJourneyPointerVelocity;
+uniform float uJourneyPointerStrength;`,
+      )
+      .replace(
+        '#include <begin_vertex>',
+        `#include <begin_vertex>
+vec4 journeyPetalBase = modelMatrix * vec4(position, 1.0);
+float journeyPetalDistance = distance(journeyPetalBase.xz, uJourneyPointer.xz);
+float journeyPetalInfluence = 1.0 - smoothstep(1.6, 15.5, journeyPetalDistance);
+float journeyPetalGust = sin(uJourneyTime * 1.15 + aJourneyMeadowPhase * 11.0 + journeyPetalBase.z * 0.17) * 0.5 +
+  sin(uJourneyTime * 0.48 + aJourneyMeadowPhase * 23.0 + journeyPetalBase.x * 0.11) * 0.5;
+vec2 journeyPetalSway = vec2(0.62, 0.34) *
+  (0.028 + uJourneyAmbientWind * 0.072 + journeyPetalGust * 0.034);
+journeyPetalSway += uJourneyPointerVelocity * journeyPetalInfluence * uJourneyPointerStrength * 0.27;
+transformed.x += journeyPetalSway.x;
+transformed.z += journeyPetalSway.y * 0.38;`,
+      )
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        '#include <common>',
+        `#include <common>
+uniform float uJourneyReveal;
+uniform float uJourneyNight;`,
+      )
+      .replace(
+        '#include <color_fragment>',
+        `#include <color_fragment>
+diffuseColor.a *= uJourneyReveal * (1.0 - uJourneyNight * 0.72);`,
+      )
+  }
+  material.customProgramCacheKey = () => 'journey-meadow-petals-v1-wind'
+  return material
 }
 
 function buildMeadowSeeds() {
   const grass = []
-  for (let index = 0; index < 720; index += 1) {
-    // Bias toward the first 80m where the user can actually read individual
-    // blades, while keeping the far bank deliberately sparse.
-    const depth = Math.pow(seededRandom(index + 47001), 1.48)
-    const z = THREE.MathUtils.lerp(-8, -104, depth)
+  for (let index = 0; index < 4200; index += 1) {
+    const depth = Math.pow(seededRandom(index + 47001), 1.32)
+    const z = THREE.MathUtils.lerp(-2, -116, depth)
     const side = seededRandom(index + 47037) < 0.5 ? -1 : 1
-    const bank = THREE.MathUtils.lerp(1.1, 4.7, Math.pow(seededRandom(index + 47071), 0.72))
-    const point = getValleyRiverBankPoint(z, side, bank)
-    const height = THREE.MathUtils.lerp(0.34, 0.82, seededRandom(index + 47101)) *
-      THREE.MathUtils.lerp(1, 0.56, depth)
+    const bank = THREE.MathUtils.lerp(
+      7.2,
+      THREE.MathUtils.lerp(53, 38, depth),
+      Math.pow(seededRandom(index + 47071), 0.84),
+    )
+    const station = sampleNaturalRiverAtZ(z)
+    const point = station.point.clone().addScaledVector(
+      station.normal,
+      side * (station.halfWidth + bank),
+    )
+    const height = THREE.MathUtils.lerp(0.28, 0.62, seededRandom(index + 47101)) *
+      THREE.MathUtils.lerp(1, 0.62, depth)
     grass.push({
-      position: [point.x, sampleValleyBankHeight(z, side, bank > 3.45 ? 'flower' : 'grass') + 0.04, point.z],
-      width: THREE.MathUtils.lerp(0.24, 0.48, seededRandom(index + 47133)) *
-        THREE.MathUtils.lerp(1, 0.62, depth),
+      position: [point.x, sampleValleyMeadowHeight(point.z, side, bank) + 0.045, point.z],
+      width: THREE.MathUtils.lerp(0.31, 0.55, seededRandom(index + 47133)) *
+        THREE.MathUtils.lerp(1, 0.7, depth),
       height,
       phase: seededRandom(index + 47159),
-      color: new THREE.Color('#90aa62')
-        .lerp(new THREE.Color('#c9d985'), seededRandom(index + 47197) * 0.72)
-        .lerp(new THREE.Color('#d4c888'), seededRandom(index + 47231) * 0.18),
+      color: new THREE.Color('#82965f')
+        .lerp(new THREE.Color('#b6c47a'), seededRandom(index + 47197) * 0.76)
+        .lerp(new THREE.Color('#c7b978'), seededRandom(index + 47231) * 0.16),
     })
   }
-  return { grass }
+
+  const flowerPalette = [
+    '#f3eedb', '#e9dda6', '#b7cae4', '#a99bc9', '#d8aeb5',
+  ].map((color) => new THREE.Color(color))
+  const clusters = [
+    { z: -10, side: -1, bank: 15, radiusZ: 10, radiusBank: 9, count: 68 },
+    { z: -12, side: 1, bank: 18, radiusZ: 11, radiusBank: 10, count: 54 },
+    { z: -29, side: -1, bank: 18, radiusZ: 14, radiusBank: 12, count: 38 },
+    { z: -47, side: -1, bank: 17, radiusZ: 17, radiusBank: 10, count: 56 },
+    { z: -72, side: -1, bank: 18, radiusZ: 15, radiusBank: 10, count: 40 },
+    { z: -18, side: -1, bank: 28, radiusZ: 18, radiusBank: 20, count: 68 },
+    { z: -18, side: 1, bank: 30, radiusZ: 18, radiusBank: 22, count: 56 },
+    { z: -48, side: -1, bank: 38, radiusZ: 20, radiusBank: 19, count: 48 },
+    { z: -45, side: 1, bank: 32, radiusZ: 18, radiusBank: 18, count: 50 },
+    { z: -75, side: 1, bank: 27, radiusZ: 16, radiusBank: 15, count: 34 },
+    { z: -88, side: -1, bank: 24, radiusZ: 14, radiusBank: 13, count: 24 },
+  ]
+  const flowers = []
+  let flowerIndex = 0
+  clusters.forEach((cluster, clusterIndex) => {
+    for (let index = 0; index < cluster.count; index += 1) {
+      const radial = Math.pow(seededRandom(flowerIndex + 52101), 0.58)
+      const angle = seededRandom(flowerIndex + 52139) * Math.PI * 2
+      const z = THREE.MathUtils.clamp(
+        cluster.z + Math.sin(angle) * cluster.radiusZ * radial,
+        -112,
+        -3,
+      )
+      const bank = Math.max(8, cluster.bank + Math.cos(angle) * cluster.radiusBank * radial)
+      const station = sampleNaturalRiverAtZ(z)
+      const point = station.point.clone().addScaledVector(
+        station.normal,
+        cluster.side * (station.halfWidth + bank),
+      )
+      const paletteSeed = seededRandom(flowerIndex + 52211)
+      const paletteIndex = paletteSeed < 0.43 ? 0 : paletteSeed < 0.67 ? 1 : paletteSeed < 0.82 ? 2 : paletteSeed < 0.96 ? 3 : 4
+      const depth = clamp01((-z - 2) / 114)
+      flowers.push({
+        position: [point.x, sampleValleyMeadowHeight(point.z, cluster.side, bank) + 0.055, point.z],
+        scale: THREE.MathUtils.lerp(0.65, 1.05, seededRandom(flowerIndex + 52247)) * THREE.MathUtils.lerp(1, 0.68, depth),
+        phase: seededRandom(flowerIndex + 52283) + clusterIndex * 0.07,
+        color: flowerPalette[paletteIndex].clone(),
+        order: seededRandom(flowerIndex + 52307),
+      })
+      flowerIndex += 1
+    }
+  })
+  flowers.sort((left, right) => left.order - right.order)
+  return { grass, flowers }
 }
 
 function ValleyMeadow({ progress, travelWindRef, qualityScale = 1 }) {
   const groundRef = useRef(null)
   const grassRef = useRef(null)
+  const flowerRef = useRef(null)
+  const flowerPointsRef = useRef(null)
   const seeds = useMemo(() => buildMeadowSeeds(), [])
   const groundGeometry = useMemo(() => buildMeadowGroundGeometry(), [])
   const groundTexture = useMemo(() => createMeadowGroundTexture(), [])
   const groundMaterial = useMemo(() => createMeadowGroundMaterial(groundTexture), [groundTexture])
   const grassCount = Math.max(1, Math.floor(seeds.grass.length * qualityScale))
+  const flowerCount = Math.max(1, Math.floor(seeds.flowers.length * qualityScale))
+  const flowerStemCount = Math.max(1, Math.floor(flowerCount * 0.1))
   const grassGeometry = useMemo(() => {
     const geometry = createMeadowBladeGeometry('grass')
     geometry.setAttribute(
@@ -3659,13 +4224,55 @@ function ValleyMeadow({ progress, travelWindRef, qualityScale = 1 }) {
     return geometry
   }, [seeds])
   const grassMaterial = useMemo(() => createMeadowMaterial('grass'), [])
+  const flowerGeometry = useMemo(() => {
+    const geometry = createMeadowBladeGeometry('flower')
+    geometry.setAttribute(
+      'aJourneyMeadowPhase',
+      new THREE.InstancedBufferAttribute(new Float32Array(seeds.flowers.map((item) => item.phase)), 1),
+    )
+    return geometry
+  }, [seeds])
+  const flowerMaterial = useMemo(() => createMeadowMaterial('flower'), [])
+  const flowerPointTexture = useMemo(() => createMeadowPetalTexture(), [])
+  const flowerPointGeometry = useMemo(() => {
+    const geometry = new THREE.BufferGeometry()
+    const positions = new Float32Array(seeds.flowers.length * 3)
+    const colors = new Float32Array(seeds.flowers.length * 3)
+    const phases = new Float32Array(seeds.flowers.length)
+    seeds.flowers.forEach((item, index) => {
+      positions.set([
+        item.position[0],
+        item.position[1] + item.scale * 0.61,
+        item.position[2],
+      ], index * 3)
+      colors.set([item.color.r, item.color.g, item.color.b], index * 3)
+      phases[index] = item.phase
+    })
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3))
+    geometry.setAttribute('aJourneyMeadowPhase', new THREE.BufferAttribute(phases, 1))
+    geometry.computeBoundingSphere()
+    return geometry
+  }, [seeds])
+  const flowerPointMaterial = useMemo(
+    () => createMeadowPetalMaterial(
+      flowerPointTexture,
+      flowerMaterial.userData.journeyMeadowUniforms,
+    ),
+    [flowerMaterial, flowerPointTexture],
+  )
   const pointerWorld = useMemo(() => new THREE.Vector3(0, 0.32, -60), [])
   const previousPointer = useMemo(() => new THREE.Vector3(0, 0.32, -60), [])
   const pointerVelocity = useMemo(() => new THREE.Vector2(), [])
+  const pointerInitializedRef = useRef(false)
   const pointerPlane = useMemo(() => new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.32), [])
   const meadowRaycaster = useMemo(() => new THREE.Raycaster(), [])
   const reduceMotion = useMemo(
     () => window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+    [],
+  )
+  const coarsePointer = useMemo(
+    () => window.matchMedia('(pointer: coarse)').matches,
     [],
   )
   const { camera } = useThree()
@@ -3684,7 +4291,7 @@ function ValleyMeadow({ progress, travelWindRef, qualityScale = 1 }) {
         else scale.set(item.width, item.height, 1)
         // A three-blade tuft needs a broad visual orientation; avoid
         // edge-on cards that collapse into dark stakes at the riverbank.
-        rotation.setFromAxisAngle(new THREE.Vector3(0, 1, 0), flower ? (item.phase - 0.5) * 0.6 : 0)
+        rotation.setFromAxisAngle(new THREE.Vector3(0, 1, 0), item.phase * Math.PI * 2)
         matrix.compose(position, rotation, scale)
         mesh.setMatrixAt(index, matrix)
         color.copy(item.color)
@@ -3692,9 +4299,12 @@ function ValleyMeadow({ progress, travelWindRef, qualityScale = 1 }) {
       })
       mesh.instanceMatrix.needsUpdate = true
       if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
+      mesh.material.needsUpdate = true
     }
     writeInstances(grassRef.current, seeds.grass)
-  }, [grassCount, seeds])
+    writeInstances(flowerRef.current, seeds.flowers, true)
+    flowerPointGeometry.setDrawRange(0, flowerCount)
+  }, [flowerCount, flowerPointGeometry, grassCount, seeds])
 
   useEffect(() => () => {
     groundGeometry.dispose()
@@ -3702,23 +4312,35 @@ function ValleyMeadow({ progress, travelWindRef, qualityScale = 1 }) {
     groundMaterial.dispose()
     grassGeometry.dispose()
     grassMaterial.dispose()
-  }, [grassGeometry, grassMaterial, groundGeometry, groundMaterial, groundTexture])
+    flowerGeometry.dispose()
+    flowerMaterial.dispose()
+    flowerPointGeometry.dispose()
+    flowerPointMaterial.dispose()
+    flowerPointTexture.dispose()
+  }, [flowerGeometry, flowerMaterial, flowerPointGeometry, flowerPointMaterial, flowerPointTexture, grassGeometry, grassMaterial, groundGeometry, groundMaterial, groundTexture])
 
   useFrame((state, delta) => {
     const reveal = smoothstep(17.5, 24.5, progress)
     meadowRaycaster.setFromCamera(state.pointer, camera)
     if (meadowRaycaster.ray.intersectPlane(pointerPlane, pointerWorld)) {
-      const rawVelocity = new THREE.Vector2(
-        pointerWorld.x - previousPointer.x,
-        pointerWorld.z - previousPointer.z,
-      ).multiplyScalar(1 / Math.max(delta * 26, 0.001)).clampLength(0, 1.6)
-      pointerVelocity.lerp(rawVelocity, 0.24)
-      previousPointer.lerp(pointerWorld, 0.3)
+      if (!pointerInitializedRef.current) {
+        previousPointer.copy(pointerWorld)
+        pointerInitializedRef.current = true
+      } else {
+        const rawVelocity = new THREE.Vector2(
+          pointerWorld.x - previousPointer.x,
+          pointerWorld.z - previousPointer.z,
+        ).multiplyScalar(1 / Math.max(delta * 26, 0.001)).clampLength(0, 1.6)
+        pointerVelocity.lerp(rawVelocity, 1 - Math.exp(-delta * 8.6))
+        previousPointer.lerp(pointerWorld, 1 - Math.exp(-delta * 11.2))
+      }
+    } else {
+      pointerVelocity.multiplyScalar(Math.exp(-delta * 5.4))
     }
-    const pointerStrength = reduceMotion
+    const pointerStrength = reduceMotion || coarsePointer
       ? 0
       : THREE.MathUtils.clamp(pointerVelocity.length() * 0.48, 0, 1)
-    ;[grassMaterial].forEach((material) => {
+    ;[grassMaterial, flowerMaterial].forEach((material) => {
       const uniforms = material.userData.journeyMeadowUniforms
       uniforms.uJourneyReveal.value = reveal
       uniforms.uJourneyNight.value = smoothstep(VISUAL_TIMING.nightStart, VISUAL_TIMING.nightEnd, progress)
@@ -3736,13 +4358,181 @@ function ValleyMeadow({ progress, travelWindRef, qualityScale = 1 }) {
     groundUniforms.uJourneySunset.value = smoothstep(VISUAL_TIMING.sunsetStart, VISUAL_TIMING.sunsetEnd, progress)
     if (groundRef.current) groundRef.current.visible = reveal > 0.01
     if (grassRef.current) grassRef.current.visible = reveal > 0.01
+    if (flowerRef.current) flowerRef.current.visible = reveal > 0.01
+    if (flowerPointsRef.current) flowerPointsRef.current.visible = reveal > 0.01
   })
 
   return (
     <group renderOrder={3}>
       <mesh ref={groundRef} geometry={groundGeometry} material={groundMaterial} renderOrder={2} frustumCulled={false} />
       <instancedMesh ref={grassRef} args={[grassGeometry, grassMaterial, grassCount]} renderOrder={7} frustumCulled={false} />
+      <instancedMesh ref={flowerRef} args={[flowerGeometry, flowerMaterial, flowerStemCount]} renderOrder={8} frustumCulled={false} />
+      <points
+        ref={flowerPointsRef}
+        geometry={flowerPointGeometry}
+        material={flowerPointMaterial}
+        renderOrder={9}
+        frustumCulled={false}
+      />
     </group>
+  )
+}
+
+const VALLEY_FOREST_EDGE_CAPACITY = 360
+
+function createValleyForestEdgeGeometry() {
+  const lobes = [
+    { radius: 0.31, position: [-0.15, 0.42, 0.02], scale: [1.08, 0.9, 0.94] },
+    { radius: 0.34, position: [0.13, 0.48, -0.06], scale: [0.96, 1.08, 1.04] },
+    { radius: 0.28, position: [-0.02, 0.7, 0.05], scale: [0.92, 1.13, 0.9] },
+    { radius: 0.23, position: [0.12, 0.84, 0], scale: [0.82, 1.05, 0.88] },
+  ].map(({ radius, position, scale }, index) => {
+    const lobe = new THREE.DodecahedronGeometry(radius, 0)
+    lobe.rotateY(index * 0.63)
+    lobe.scale(...scale)
+    lobe.translate(...position)
+    return lobe
+  })
+  const indexedTrunk = new THREE.CylinderGeometry(0.036, 0.052, 0.58, 5)
+  indexedTrunk.translate(0, 0.29, 0)
+  const trunk = indexedTrunk.toNonIndexed()
+  indexedTrunk.dispose()
+  const pieces = [...lobes, trunk]
+  const geometry = mergeGeometries(pieces, false)
+  pieces.forEach((piece) => piece.dispose())
+  geometry.computeVertexNormals()
+  geometry.computeBoundingSphere()
+  return geometry
+}
+
+function buildValleyForestEdgePlacements() {
+  const placements = []
+  for (
+    let attempt = 0;
+    placements.length < VALLEY_FOREST_EDGE_CAPACITY && attempt < VALLEY_FOREST_EDGE_CAPACITY * 12;
+    attempt += 1
+  ) {
+    const depth = Math.pow(seededRandom(attempt + 63101), 0.92)
+    const z = THREE.MathUtils.lerp(-18, -116, depth)
+    const side = placements.length % 2 === 0 ? -1 : 1
+    const broadCluster = Math.sin(-z * 0.086 + side * 1.75) * 0.5 + 0.5
+    const fineCluster = Math.sin(-z * 0.191 - side * 0.84) * 0.5 + 0.5
+    // Favor copses with visible gaps over a uniformly populated tree row.
+    const density = clamp01(0.08 + Math.pow(broadCluster, 1.65) * 0.58 + fineCluster * 0.08)
+    if (seededRandom(attempt + 63137) > density) continue
+
+    const bankOffset = THREE.MathUtils.clamp(
+      THREE.MathUtils.lerp(
+        31,
+        69,
+        Math.pow(seededRandom(attempt + 63173), 0.78),
+      ) + (broadCluster - 0.5) * 8,
+      29,
+      73,
+    )
+    const station = sampleNaturalRiverAtZ(z)
+    const point = station.point.clone().addScaledVector(
+      station.normal,
+      side * (station.halfWidth + bankOffset),
+    )
+    const height = THREE.MathUtils.lerp(
+      0.48,
+      1.82,
+      Math.pow(seededRandom(attempt + 63209), 1.28),
+    ) * THREE.MathUtils.lerp(1, 0.86, depth) * THREE.MathUtils.lerp(0.9, 1.08, broadCluster)
+    placements.push({
+      position: [
+        point.x,
+        sampleValleyMeadowHeight(point.z, side, bankOffset) - 0.1,
+        point.z,
+      ],
+      scale: [
+        height * THREE.MathUtils.lerp(0.92, 1.42, seededRandom(attempt + 63243)),
+        height,
+        height * THREE.MathUtils.lerp(0.92, 1.42, seededRandom(attempt + 63281)),
+      ],
+      yaw: seededRandom(attempt + 63317) * Math.PI * 2,
+      leanX: (seededRandom(attempt + 63353) - 0.5) * 0.035,
+      leanZ: (seededRandom(attempt + 63391) - 0.5) * 0.035,
+      tone: seededRandom(attempt + 63427),
+    })
+  }
+  return placements
+}
+
+function ValleyForestEdge({ progress, qualityScale = 1 }) {
+  const meshRef = useRef(null)
+  const placements = useMemo(buildValleyForestEdgePlacements, [])
+  const geometry = useMemo(createValleyForestEdgeGeometry, [])
+  const material = useMemo(() => new THREE.MeshBasicMaterial({
+    color: '#31543b',
+    vertexColors: false,
+    transparent: true,
+    opacity: 0,
+    depthWrite: false,
+    depthTest: true,
+    side: THREE.FrontSide,
+    fog: true,
+    toneMapped: false,
+  }), [])
+  const palette = useMemo(() => ({
+    day: new THREE.Color('#f0f3e5'),
+    sunset: new THREE.Color('#d1ad92'),
+    night: new THREE.Color('#71879a'),
+  }), [])
+  const activeCount = Math.max(
+    1,
+    Math.min(placements.length, Math.floor(VALLEY_FOREST_EDGE_CAPACITY * qualityScale)),
+  )
+
+  useEffect(() => {
+    const mesh = meshRef.current
+    if (!mesh) return
+    const matrix = new THREE.Matrix4()
+    const quaternion = new THREE.Quaternion()
+    const euler = new THREE.Euler()
+    const position = new THREE.Vector3()
+    const scale = new THREE.Vector3()
+    mesh.instanceMatrix.setUsage(THREE.StaticDrawUsage)
+    placements.forEach((placement, index) => {
+      position.set(...placement.position)
+      scale.set(...placement.scale)
+      euler.set(placement.leanX, placement.yaw, placement.leanZ, 'YXZ')
+      quaternion.setFromEuler(euler)
+      matrix.compose(position, quaternion, scale)
+      mesh.setMatrixAt(index, matrix)
+    })
+    mesh.count = activeCount
+    mesh.instanceMatrix.needsUpdate = true
+    material.needsUpdate = true
+  }, [activeCount, material, palette, placements])
+
+  useFrame(() => {
+    const reveal = smoothstep(17.5, 24.5, progress)
+    const sunset = smoothstep(VISUAL_TIMING.sunsetStart, VISUAL_TIMING.sunsetEnd, progress)
+    const night = smoothstep(VISUAL_TIMING.nightStart, VISUAL_TIMING.nightEnd, progress)
+    if (meshRef.current) meshRef.current.visible = reveal > 0.002
+    material.opacity = reveal * THREE.MathUtils.lerp(0.38, 0.3, night)
+    material.color
+      .set('#31543b')
+      .lerp(palette.sunset, sunset * 0.3)
+      .lerp(palette.night, night * 0.76)
+  })
+
+  useEffect(() => () => {
+    geometry.dispose()
+    material.dispose()
+  }, [geometry, material])
+
+  return (
+    <instancedMesh
+      ref={meshRef}
+      args={[geometry, material, VALLEY_FOREST_EDGE_CAPACITY]}
+      renderOrder={4}
+      castShadow={false}
+      receiveShadow={false}
+      frustumCulled={false}
+    />
   )
 }
 
@@ -3862,7 +4652,7 @@ function OpenValleyAtmosphere({ groupRef, materialRefs }) {
             opacity={0}
             alphaTest={0.004}
             depthWrite={false}
-            depthTest={false}
+            depthTest
             toneMapped={false}
           />
         </sprite>
@@ -3937,6 +4727,7 @@ export default function JourneyScene({
     () => new KTX2Loader().setTranscoderPath('/basis/').detectSupport(renderer),
     [renderer],
   )
+  useEffect(() => () => ktx2Loader.dispose(), [ktx2Loader])
   const configureLoader = useCallback(
     (loader) => loader.setKTX2Loader(ktx2Loader),
     [ktx2Loader],
@@ -4023,12 +4814,6 @@ export default function JourneyScene({
   const valleyFogMaterialRefs = useRef([])
   const openValleyAtmosphereRef = useRef(null)
   const openValleyAtmosphereMaterialRefs = useRef([])
-  const heroRiverbankRef = useRef(null)
-  const heroRiverbankMaterialRef = useRef(null)
-  const heroRiverbankStonesRef = useRef(null)
-  const heroRiverbankStonesMaterialRef = useRef(null)
-  const riverContinuityMaterialRef = useRef(null)
-  const distantRidgeMaterialRefs = useRef([])
   const skyRigRef = useRef(null)
   const motesRef = useRef(null)
   const motesMaterialRef = useRef(null)
@@ -4325,7 +5110,7 @@ export default function JourneyScene({
       progress,
     )
     const caveRelease = smoothstep(7, 20, progress)
-    const daySky = new THREE.Color('#55b8cf')
+    const daySky = new THREE.Color('#65adc0')
     const sunsetSky = new THREE.Color('#d66e5f')
     const nightSky = new THREE.Color('#17385f')
     const skyColor = daySky
@@ -4337,7 +5122,7 @@ export default function JourneyScene({
     if (skyAtmosphereMaterialRef.current) {
       const uniforms = skyAtmosphereMaterialRef.current.uniforms
       uniforms.uJourneyTopColor.value
-        .set('#3e9ec5')
+        .set('#4d9fba')
         .lerp(new THREE.Color('#6f7796'), sunsetColorMix)
         .lerp(new THREE.Color('#08172f'), night)
       uniforms.uJourneyHorizonColor.value
@@ -4440,7 +5225,7 @@ export default function JourneyScene({
 
     const daylightExposure = THREE.MathUtils.lerp(
       CAVE_LOOK.exposure,
-      1.01,
+      1.30,
       caveRelease,
     )
     state.gl.toneMappingExposure = THREE.MathUtils.lerp(
@@ -4449,7 +5234,7 @@ export default function JourneyScene({
       night,
     ) + outroFramingRef.current * 0.3
 
-    const openAirFogDensity = THREE.MathUtils.lerp(0.0005, 0.00072, night)
+    const openAirFogDensity = THREE.MathUtils.lerp(0.00102, 0.00078, night)
     const preHoldFog = progress < 9.3
       ? 0.018
       : THREE.MathUtils.lerp(0.018, 0.012, smoothstep(9.3, 13.5, progress))
@@ -4471,12 +5256,12 @@ export default function JourneyScene({
     if (sunRef.current) {
       const dayIntensity = THREE.MathUtils.lerp(
         CAVE_LOOK.sunIntensity,
-        2.42,
+        1.55,
         caveRelease,
       )
       sunRef.current.intensity = THREE.MathUtils.lerp(dayIntensity, 0.52, night)
       sunRef.current.color
-        .set('#fff2bd')
+        .set('#fff0cf')
         .lerp(new THREE.Color('#ffad78'), sunset * 0.86)
         .lerp(new THREE.Color('#8ca9d8'), night)
       sunRef.current.position.x = THREE.MathUtils.lerp(-90, 40, sunset)
@@ -4485,7 +5270,7 @@ export default function JourneyScene({
     if (skyLightRef.current) {
       const dayIntensity = THREE.MathUtils.lerp(
         CAVE_LOOK.skyIntensity,
-        0.98,
+        1.5,
         caveRelease,
       )
       skyLightRef.current.intensity = THREE.MathUtils.lerp(dayIntensity, 1.08, night)
@@ -4495,14 +5280,14 @@ export default function JourneyScene({
         .lerp(new THREE.Color('#e5a49a'), sunset * 0.72)
         .lerp(new THREE.Color('#7894c1'), night)
       skyLightRef.current.groundColor
-        .set('#6f806a')
+        .set('#7d8072')
         .lerp(new THREE.Color('#75584e'), sunset * 0.62)
         .lerp(new THREE.Color('#111b2a'), night)
     }
     if (ambientRef.current) {
       const dayIntensity = THREE.MathUtils.lerp(
         CAVE_LOOK.ambientIntensity,
-        0.18,
+        0.34,
         caveRelease,
       )
       ambientRef.current.intensity = THREE.MathUtils.lerp(dayIntensity, 0.23, night)
@@ -4574,52 +5359,15 @@ export default function JourneyScene({
     }
 
     const openValley = smoothstep(16.5, 22, progress)
-    distantRidgeMaterialRefs.current.forEach((material, index) => {
-      if (!material) return
-      material.opacity = openValley * (index === 0 ? 0.38 : index === 1 ? 0.62 : 0.34) * (1 - night * 0.42)
-      material.color
-        // Vertex colours already carry the cool far / earthy middle split.
-        // A haze-white tint preserves them instead of multiplying the range
-        // almost to black as the old green runtime tint did.
-        .set(index === 0 ? '#d2dfd8' : index === 1 ? '#dfe4d0' : '#adbfaf')
-        .lerp(new THREE.Color('#9f8174'), sunset * 0.4)
-        .lerp(new THREE.Color('#35536c'), night * 0.76)
-    })
-    if (riverContinuityMaterialRef.current) {
-      const uniforms = riverContinuityMaterialRef.current.userData.journeyRiverContinuityUniforms
-      uniforms.uJourneyOpacity.value = openValley * THREE.MathUtils.lerp(0.48, 0.32, night)
-      uniforms.uJourneyNight.value = night
-      uniforms.uJourneySunset.value = sunset
-      uniforms.uJourneyTime.value = state.clock.elapsedTime
-      uniforms.uJourneyWind.value = travelWindRef.current
-    }
-    if (heroRiverbankRef.current && heroRiverbankMaterialRef.current) {
-      heroRiverbankRef.current.visible = openValley > 0.02
-      // Keep the authored alluvial detail subordinate to the meadow. At full
-      // daylight these should read as damp, broken gravel at the waterline —
-      // not as pale geometric islands on top of the river source mesh.
-      heroRiverbankMaterialRef.current.opacity = openValley * THREE.MathUtils.lerp(0.3, 0.19, night)
-      heroRiverbankMaterialRef.current.color
-        .set('#b7ad8e')
-        .lerp(new THREE.Color('#9c7768'), sunset * 0.34)
-        .lerp(new THREE.Color('#445667'), night * 0.72)
-    }
-    if (heroRiverbankStonesRef.current && heroRiverbankStonesMaterialRef.current) {
-      heroRiverbankStonesRef.current.visible = openValley > 0.02
-      heroRiverbankStonesMaterialRef.current.opacity = openValley * THREE.MathUtils.lerp(0.44, 0.26, night)
-      heroRiverbankStonesMaterialRef.current.color
-        .set('#aaa58d')
-        .lerp(new THREE.Color('#876f65'), sunset * 0.3)
-        .lerp(new THREE.Color('#455866'), night * 0.7)
-    }
-    phase2Groups.ridges.forEach((mesh, index) => {
+    phase2Groups.ridges.forEach((mesh) => {
       mesh.visible = openValley > 0.01
       const material = mesh.material
-      material.opacity = openValley
+      const isFar = mesh.name.toUpperCase().includes('_FAR')
+      material.opacity = openValley * (isFar ? 0.72 : 0.95)
       material.color
-        .set(index === 0 ? '#788d7b' : '#a4b3aa')
-        .lerp(new THREE.Color(index === 0 ? '#8b6f65' : '#a48b82'), sunset * 0.48)
-        .lerp(new THREE.Color(index === 0 ? '#223f58' : '#34516a'), night * 0.84)
+        .set(isFar ? '#a9bbb5' : '#6f887b')
+        .lerp(new THREE.Color(isFar ? '#aa9188' : '#826d63'), sunset * 0.48)
+        .lerp(new THREE.Color(isFar ? '#3d5b70' : '#29475e'), night * 0.84)
       if ('emissiveIntensity' in material) {
         material.emissiveIntensity = THREE.MathUtils.lerp(0.035, 0.016, night)
       }
@@ -4633,11 +5381,17 @@ export default function JourneyScene({
       }
     })
     phase2Groups.forest.forEach((mesh) => {
+      // This legacy shell follows the unmodified massif and becomes a floating
+      // diagonal sheet after the V1 valley is opened. The mountain shader now
+      // owns forest zoning directly, so keep the shell out of the hero frame.
       mesh.visible = false
     })
     phase2Groups.shore.forEach((mesh) => {
       const kind = mesh.userData.journeyPhase2Kind
-      mesh.visible = openValley > 0.02 && kind !== 'stone'
+      // V30 corridor owns the complete bed→wet edge→dry gravel cross-section.
+      // The older P2 strips followed the source channel and would now create a
+      // second, visibly conflicting bank.
+      mesh.visible = false
       const baseOpacity = kind === 'wet' ? 0.7 : kind === 'stone' ? 0.82 : 0.82
       mesh.material.opacity = openValley * baseOpacity * THREE.MathUtils.lerp(1, 0.54, night)
       mesh.material.color
@@ -4722,7 +5476,7 @@ export default function JourneyScene({
       const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
       materials.forEach((material) => {
         if ('emissiveIntensity' in material) {
-          material.emissiveIntensity = THREE.MathUtils.lerp(0.06, 0.045, night)
+          material.emissiveIntensity = THREE.MathUtils.lerp(0.026, 0.055, night)
         }
         const uniforms = material.userData.journeyAlpineUniforms
         if (uniforms) {
@@ -4746,34 +5500,34 @@ export default function JourneyScene({
         const isClearRiver = material.name === 'MAT_JOURNEY_CLEAR_RIVER'
         if ('color' in material) {
           material.color
-            .set(isClearRiver ? '#2f9d98' : '#368f8b')
+            .set(isClearRiver ? '#5f998e' : '#4f8c85')
             .lerp(new THREE.Color(isClearRiver ? '#163f65' : '#153f65'), night)
         }
         if ('opacity' in material) {
           material.opacity = THREE.MathUtils.lerp(
-            isClearRiver ? 0.98 : 0.9,
-            isClearRiver ? 0.46 : 0.43,
+            isClearRiver ? 0.18 : 0.76,
+            isClearRiver ? 0.32 : 0.38,
             night,
           )
         }
         if ('roughness' in material) {
           material.roughness = THREE.MathUtils.lerp(
-            isClearRiver ? 0.085 : 0.1,
+            isClearRiver ? 0.18 : 0.14,
             isClearRiver ? 0.04 : 0.05,
             night,
           )
         }
         if (isClearRiver && 'transmission' in material) {
           material.transmission = THREE.MathUtils.lerp(0, 0.54, night)
-          material.clearcoatRoughness = THREE.MathUtils.lerp(0.09, 0.04, night)
+          material.clearcoatRoughness = THREE.MathUtils.lerp(0.14, 0.04, night)
           material.attenuationColor
-            .set('#42bda7')
+            .set('#6aa99c')
             .lerp(new THREE.Color('#1b5477'), night)
         }
         if ('emissive' in material) {
-          material.emissive.set(isClearRiver ? '#0b3639' : '#155b59')
+          material.emissive.set(isClearRiver ? '#102e2d' : '#155b59')
           material.emissiveIntensity = isClearRiver
-            ? THREE.MathUtils.lerp(0.025, 0.055, night)
+            ? THREE.MathUtils.lerp(0.012, 0.055, night)
             : THREE.MathUtils.lerp(0.13, 0.055, night)
         }
         const uniforms = material.userData.journeyWaterUniforms
@@ -4842,21 +5596,16 @@ export default function JourneyScene({
     <>
       <primitive object={root} />
       <primitive object={phase2Root} />
-      <DistantRidgeChain materialRefs={distantRidgeMaterialRefs} />
-      <RiverContinuity materialRef={riverContinuityMaterialRef} />
+      <FarRidgeCrown progress={progress} />
+      <NaturalRiverCorridor progress={progress} qualityScale={quality.particles} />
       <ValleyMeadow
         progress={progress}
         travelWindRef={travelWindRef}
         qualityScale={quality.particles}
       />
-      <MeadowWildflowers progress={progress} qualityScale={quality.particles} />
-      <HeroRiverbankPatches
-        groupRef={heroRiverbankRef}
-        materialRef={heroRiverbankMaterialRef}
-      />
-      <HeroRiverbankStones
-        groupRef={heroRiverbankStonesRef}
-        materialRef={heroRiverbankStonesMaterialRef}
+      <ValleyForestEdge
+        progress={progress}
+        qualityScale={quality.particles}
       />
       <SkyAtmosphere
         meshRef={skyAtmosphereRef}

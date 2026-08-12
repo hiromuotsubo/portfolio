@@ -2903,6 +2903,11 @@ textarea,
   pointer-events: none;
 }
 
+.journey-3d.is-showcase .journey-ui__operation,
+.journey-3d.is-showcase .journey-ui__sound {
+  display: none;
+}
+
 .portfolio-site {
   height: 100%;
   touch-action: pan-y;
