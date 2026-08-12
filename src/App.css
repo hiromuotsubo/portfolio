@@ -18,9 +18,10 @@
   --outro-screen-width: clamp(176px, 19vw, 304px);
   --outro-screen-height: calc(var(--outro-screen-width) * 0.5625);
   --outro-letter-height: clamp(37px, 5.9vw, 88px);
-  --outro-letter-width: calc(var(--outro-letter-height) * 0.64);
-  --outro-glyph-width: calc(var(--outro-letter-height) * 1.02);
-  --outro-glyph-height: calc(var(--outro-letter-height) * 0.66);
+  --outro-glyph-center-x: 50vw;
+  --outro-glyph-center-y: 50dvh;
+  --outro-glyph-width: calc(var(--outro-letter-height) * 0.74);
+  --outro-glyph-height: calc(var(--outro-letter-height) * 1.12);
   --portfolio-card-width: min(54vw, 960px);
   --portfolio-card-height: calc(var(--portfolio-card-width) * 0.5625);
   --portfolio-start-scale: 0.32;
@@ -92,7 +93,7 @@
   padding: 0 clamp(18px, 3vw, 58px);
   margin: 0;
   font-family: Baskerville, Georgia, serif;
-  font-size: clamp(37px, 5.9vw, 88px);
+  font-size: var(--outro-letter-height);
   font-weight: 400;
   letter-spacing: -0.035em;
   line-height: 1;
@@ -119,10 +120,13 @@
 
 .journey-outro__slot {
   position: relative;
-  display: block;
-  width: var(--outro-screen-width);
-  height: var(--outro-screen-height);
+  display: inline-grid;
+  align-items: center;
+  justify-items: center;
+  width: max-content;
+  height: 1em;
   margin-top: 0.02em;
+  overflow: visible;
 }
 
 .journey-outro__ridge {
@@ -173,74 +177,70 @@
 }
 
 .journey-outro__m {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
+  display: inline-block;
+  grid-area: 1 / 1;
   opacity: 0;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.journey-outro__m-stack {
+  display: inline-grid;
+  width: max-content;
+  overflow: visible;
+}
+
+.journey-outro__m--snapshot {
   color: transparent;
-  background-image:
-    linear-gradient(rgba(16, 54, 47, 0.06), rgba(16, 54, 47, 0.06)),
-    url('/portfolio/project-night-clean.png');
-  background-position: 50% 20%;
-  background-size: auto 146%;
+  background-position: center;
+  /* The frozen overlay finishes at these measured ink bounds. Reuse that
+     exact texture projection instead of the inline element's line box. */
+  background-size: var(--outro-glyph-width) var(--outro-glyph-height);
   background-repeat: no-repeat;
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  filter: saturate(0.98) contrast(1.1) brightness(2.35);
-  text-shadow: 0 0 0.01px rgba(49, 95, 73, 0.12);
-  line-height: 1;
 }
 
-.journey-3d.is-outro .journey-scene-frame {
+.journey-outro__m--live {
+  color: var(--outro-green);
+  -webkit-text-fill-color: currentColor;
+}
+
+.journey-ending-frame {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  opacity: 1;
+  pointer-events: none;
+}
+
+.journey-ending-frame img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+}
+
+.journey-3d.is-outro:not(.is-portfolio) .journey-ending-frame {
   z-index: 6;
-  animation: outro-scene-card 6.4s cubic-bezier(.65, 0, .24, 1) both;
-  border: 0;
-  border-radius: 0;
-  box-shadow: none;
+  animation: outro-ending-frame 6.4s cubic-bezier(.65, 0, .24, 1) both;
+  will-change: top, left, width, height, opacity, transform;
 }
 
 .journey-3d.is-outro:not(.is-portfolio) .journey-scene-frame {
-  -webkit-mask-image:
-    linear-gradient(to right, transparent 0%, rgba(0, 0, 0, 0.72) 4%, #000 11%, #000 89%, rgba(0, 0, 0, 0.72) 96%, transparent 100%),
-    linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.72) 5%, #000 13%, #000 87%, rgba(0, 0, 0, 0.72) 95%, transparent 100%);
-  -webkit-mask-composite: source-in;
-  mask-image:
-    linear-gradient(to right, transparent 0%, rgba(0, 0, 0, 0.72) 4%, #000 11%, #000 89%, rgba(0, 0, 0, 0.72) 96%, transparent 100%),
-    linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.72) 5%, #000 13%, #000 87%, rgba(0, 0, 0, 0.72) 95%, transparent 100%);
-  mask-composite: intersect;
-}
-
-.journey-3d.is-outro:not(.is-portfolio) .journey-scene-frame::before {
-  position: absolute;
-  z-index: 1;
-  content: '';
-  inset: -1.5%;
-  pointer-events: none;
-  background-image: url('/portfolio/project-night-clean.png');
-  background-position: 50% 50%;
-  background-size: cover;
-  filter: brightness(1.45) saturate(0.9) contrast(1.04);
-  opacity: 0;
-  transform: scale(1.045);
-  animation: outro-watercolor-matte 6.4s cubic-bezier(.55, 0, .25, 1) both;
-}
-
-.journey-3d.is-outro:not(.is-portfolio) .journey-scene-frame::after {
-  position: absolute;
-  z-index: 2;
-  content: '';
-  inset: -3%;
-  pointer-events: none;
-  background:
-    radial-gradient(ellipse at 18% 22%, rgba(240, 238, 230, 0.28), transparent 31%),
-    radial-gradient(ellipse at 78% 68%, rgba(212, 225, 207, 0.2), transparent 36%),
-    radial-gradient(circle at 48% 50%, transparent 48%, rgba(240, 238, 230, 0.3) 93%),
-    repeating-linear-gradient(102deg, rgba(240, 238, 230, 0.035) 0 1px, transparent 1px 4px);
-  mix-blend-mode: screen;
-  opacity: 0;
-  animation: outro-watercolor-wash 6.4s ease both;
+  visibility: visible;
+  width: 100%;
+  height: 100%;
+  opacity: 1;
+  animation: none;
+  -webkit-mask-image: none;
+  mask-image: none;
+  filter: none;
 }
 
 .journey-3d.is-outro .journey-outro {
@@ -251,10 +251,6 @@
 .journey-3d.is-outro .journey-outro__prefix,
 .journey-3d.is-outro .journey-outro__suffix {
   animation: outro-copy-in 6.4s ease both;
-}
-
-.journey-3d.is-outro .journey-outro__slot {
-  animation: outro-slot-close 6.4s cubic-bezier(.6, 0, .2, 1) both;
 }
 
 .journey-3d.is-outro .journey-outro__ridge {
@@ -277,23 +273,28 @@
   animation: outro-ridge-draw 360ms ease-out 3.16s both;
 }
 
-.journey-3d.is-outro .journey-outro__m {
+.journey-3d.is-outro .journey-outro__m--snapshot {
+  animation: outro-snapshot-m-in 6.4s cubic-bezier(.62, 0, .22, 1) both;
+}
+
+.journey-3d.is-outro .journey-outro__m--live {
   animation: outro-m-in 6.4s cubic-bezier(.62, 0, .22, 1) both;
 }
 
-.journey-3d.is-outro .paper-texture,
-.journey-3d.is-outro .cave-grade,
-.journey-3d.is-outro .valley-mist,
-.journey-3d.is-outro .soft-vignette,
-.journey-3d.is-outro .journey-ui__header,
-.journey-3d.is-outro .journey-ui__menu,
-.journey-3d.is-outro .journey-ui__rail,
-.journey-3d.is-outro .journey-ui__operation,
-.journey-3d.is-outro .journey-ui__sound,
-.journey-3d.is-outro .journey-ui__timeline,
-.journey-3d.is-outro .journey-message,
-.journey-3d.is-outro .journey-cursor {
+.journey-3d.is-ending-preparing .paper-texture,
+.journey-3d.is-ending-preparing .cave-grade,
+.journey-3d.is-ending-preparing .valley-mist,
+.journey-3d.is-ending-preparing .soft-vignette,
+.journey-3d.is-ending-preparing .journey-ui__header,
+.journey-3d.is-ending-preparing .journey-ui__menu,
+.journey-3d.is-ending-preparing .journey-ui__rail,
+.journey-3d.is-ending-preparing .journey-ui__operation,
+.journey-3d.is-ending-preparing .journey-ui__sound,
+.journey-3d.is-ending-preparing .journey-ui__timeline,
+.journey-3d.is-ending-preparing .journey-message,
+.journey-3d.is-ending-preparing .journey-cursor {
   opacity: 0;
+  transition: opacity 600ms ease;
 }
 
 .journey-3d.is-outro:not(.is-portfolio) .journey-cursor {
@@ -323,6 +324,10 @@
   visibility: hidden;
   opacity: 0;
   animation: none;
+}
+
+.journey-3d.is-portfolio .journey-ending-frame {
+  display: none;
 }
 
 .journey-3d.is-outro.is-portfolio .journey-scene-frame {
@@ -570,13 +575,18 @@
 }
 
 .soft-vignette {
+  overflow: hidden;
   background:
     linear-gradient(to bottom, rgba(3, 8, 8, 0.1), transparent 18%, transparent 78%, rgba(2, 7, 8, 0.13)),
     radial-gradient(ellipse at center, transparent 57%, rgba(2, 7, 8, 0.14) 118%);
-  transition: background 2s ease;
+  transition: opacity 600ms ease;
 }
 
-.is-night .soft-vignette {
+.soft-vignette::after {
+  position: absolute;
+  content: '';
+  inset: 0;
+  opacity: var(--night-weight, 0);
   background:
     linear-gradient(to bottom, rgba(0, 4, 18, 0.18), transparent 23%, transparent 72%, rgba(0, 3, 13, 0.48)),
     radial-gradient(ellipse at center, transparent 48%, rgba(0, 3, 14, 0.5) 112%);
@@ -608,9 +618,15 @@
   will-change: opacity, filter, transform;
   text-shadow: none;
   transition:
-    opacity 480ms ease,
+    opacity 600ms ease,
     filter 520ms ease,
     transform 520ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.journey-ui__header,
+.journey-ui__sound,
+.journey-ui__timeline {
+  transition: opacity 600ms ease;
 }
 
 .journey-message::before {
@@ -1145,89 +1161,52 @@
   0% {
     opacity: 0;
   }
-  13%, 100% {
+  14%, 100% {
     opacity: 1;
   }
 }
 
-@keyframes outro-scene-card {
-  0%, 15% {
+@keyframes outro-ending-frame {
+  0%, 14% {
+    top: 50%;
+    left: 50%;
     width: 100%;
     height: 100%;
     opacity: 1;
-    filter: saturate(1) contrast(1) brightness(1) blur(0);
-    transform: translate(-50%, -50%) scale(1);
+    transform: translate(-50%, -50%);
   }
-  46%, 54% {
+  48%, 54% {
+    top: var(--outro-glyph-center-y);
+    left: var(--outro-glyph-center-x);
+    width: var(--outro-screen-width);
+    height: var(--outro-screen-height);
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+  66% {
+    top: var(--outro-glyph-center-y);
+    left: var(--outro-glyph-center-x);
     width: var(--outro-glyph-width);
     height: var(--outro-glyph-height);
     opacity: 1;
-    filter: saturate(0.88) contrast(0.98) brightness(1.18) blur(0);
-    transform: translate(-50%, -50%) scale(1);
+    transform: translate(-50%, -50%);
   }
-  72%, 100% {
-    width: var(--outro-letter-width);
-    height: var(--outro-letter-height);
+  74%, 100% {
+    top: var(--outro-glyph-center-y);
+    left: var(--outro-glyph-center-x);
+    width: var(--outro-glyph-width);
+    height: var(--outro-glyph-height);
     opacity: 0;
-    filter: saturate(0.66) contrast(0.92) brightness(1.16) blur(0.35px);
-    transform: translate(-50%, -50%) scale(1);
-  }
-}
-
-@keyframes outro-watercolor-wash {
-  0%, 15% {
-    opacity: 0;
-    transform: scale(1.035) rotate(-0.15deg);
-  }
-  46%, 54% {
-    opacity: 0.16;
-    transform: scale(1) rotate(0);
-  }
-  72%, 100% {
-    opacity: 0;
-    transform: scale(0.985) rotate(0.1deg);
-  }
-}
-
-@keyframes outro-watercolor-matte {
-  0%, 22% {
-    opacity: 0;
-    background-position: 50% 47%;
-    transform: scale(1.045);
-  }
-  46%, 54% {
-    opacity: 1;
-    background-position: 50% 51%;
-    transform: scale(1.005);
-  }
-  72%, 100% {
-    opacity: 0;
-    background-position: 50% 52%;
-    transform: scale(0.985);
+    transform: translate(-50%, -50%);
   }
 }
 
 @keyframes outro-copy-in {
-  0%, 40% {
+  0%, 58% {
     opacity: 0;
   }
-  50%, 100% {
+  76%, 100% {
     opacity: 1;
-  }
-}
-
-@keyframes outro-slot-close {
-  0%, 38% {
-    width: var(--outro-screen-width);
-    height: var(--outro-screen-height);
-  }
-  46%, 54% {
-    width: var(--outro-glyph-width);
-    height: var(--outro-glyph-height);
-  }
-  72%, 100% {
-    width: var(--outro-letter-width);
-    height: var(--outro-letter-height);
   }
 }
 
@@ -1253,13 +1232,23 @@
 }
 
 @keyframes outro-m-in {
-  0%, 54% {
+  0%, 74% {
     opacity: 0;
-    transform: scale(0.96);
   }
-  72%, 100% {
+  88%, 100% {
     opacity: 1;
-    transform: scale(1);
+  }
+}
+
+@keyframes outro-snapshot-m-in {
+  0%, 60% {
+    opacity: 0;
+  }
+  68%, 78% {
+    opacity: 1;
+  }
+  90%, 100% {
+    opacity: 0;
   }
 }
 
@@ -1303,7 +1292,7 @@
 @media (max-width: 720px) {
   .journey-3d {
     --outro-screen-width: clamp(112px, 28vw, 154px);
-    --outro-letter-height: clamp(27px, 9.2vw, 42px);
+    --outro-letter-height: clamp(25px, 8vw, 36px);
     --portfolio-card-width: 86vw;
     --portfolio-card-height: 48.375vw;
     --portfolio-start-scale: 0.4;
@@ -1313,7 +1302,7 @@
 
   .journey-outro__copy {
     padding-inline: 10px;
-    font-size: clamp(27px, 9.2vw, 42px);
+    font-size: var(--outro-letter-height);
   }
 
   .journey-ui__header {
@@ -1454,7 +1443,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .journey-scene-frame,
+  .journey-ending-frame,
   .journey-outro,
   .journey-outro__prefix,
   .journey-outro__suffix,
@@ -1462,14 +1451,32 @@
   .journey-outro__ridge,
   .journey-outro__ridge i,
   .journey-outro__m,
-  .journey-3d.is-outro:not(.is-portfolio) .journey-scene-frame::before,
-  .journey-3d.is-outro:not(.is-portfolio) .journey-scene-frame::after,
   .journey-ui__operation.is-hold > span,
   .journey-ui__operation.is-hold .hold-mark {
     transition-duration: 0.01ms;
     transition-delay: 0ms;
     animation-duration: 0.01ms !important;
     animation-delay: 0ms !important;
+  }
+
+  .journey-3d.is-outro:not(.is-portfolio) .journey-ending-frame {
+    top: var(--outro-glyph-center-y);
+    left: var(--outro-glyph-center-x);
+    width: var(--outro-glyph-width);
+    height: var(--outro-glyph-height);
+    opacity: 0;
+    transform: translate(-50%, -50%);
+  }
+
+  .journey-3d.is-outro .journey-outro__prefix,
+  .journey-3d.is-outro .journey-outro__suffix,
+  .journey-3d.is-outro .journey-outro__m--live {
+    opacity: 1;
+    transform: none;
+  }
+
+  .journey-3d.is-outro .journey-outro__m--snapshot {
+    opacity: 0;
   }
 
   .journey-3d.is-portfolio .portfolio-home,
@@ -5158,7 +5165,7 @@ textarea,
   min-height: 100svh;
 }
 
-/* Restore the live Journey frame shrinking into the m position. */
+/* The frozen WebGL frame and the measured DOM glyph share one center. */
 .journey-outro__copy {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
@@ -5185,14 +5192,14 @@ textarea,
 }
 
 .journey-outro__slot {
-  overflow: hidden;
+  width: max-content;
+  overflow: visible;
   padding-top: 0.01em;
 }
 
-.journey-outro__m {
+.journey-outro__m--live {
   color: var(--outro-green);
-  background: none;
-  -webkit-text-fill-color: currentColor;
+  -webkit-text-fill-color: var(--outro-green);
   filter: none;
 }
 
@@ -5200,24 +5207,17 @@ textarea,
   visibility: visible;
   opacity: 1;
   pointer-events: none;
-  animation: outro-scene-card 6.4s cubic-bezier(.65, 0, .24, 1) both;
-}
-
-.journey-3d.is-outro:not(.is-portfolio) .journey-scene-frame::before {
-  content: '';
-  animation: outro-watercolor-matte 6.4s cubic-bezier(.55, 0, .25, 1) both;
-}
-
-.journey-3d.is-outro:not(.is-portfolio) .journey-scene-frame::after {
-  content: '';
-  animation: outro-watercolor-wash 6.4s ease both;
+  animation: none;
+  -webkit-mask-image: none;
+  mask-image: none;
+  filter: none;
 }
 
 /* Safe areas and portrait composition keep the controls clear of browser UI
    without shrinking the WebGL world. */
 @media (max-width: 720px), (max-aspect-ratio: 4 / 5) {
   .journey-3d {
-    --outro-letter-height: clamp(34px, 10.4vw, 54px);
+    --outro-letter-height: clamp(25px, 8vw, 36px);
   }
 
   .journey-ui__header {
@@ -5266,15 +5266,21 @@ textarea,
 
   .journey-outro__copy {
     padding-inline: 16px;
-    font-size: clamp(34px, 10.4vw, 54px);
+    font-size: var(--outro-letter-height);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .journey-3d.is-outro .journey-outro__m {
+  .journey-3d.is-outro .journey-outro__m--snapshot {
     animation: none;
+    opacity: 0;
+  }
+
+  .journey-3d.is-outro .journey-outro__m--live {
+    animation: none;
+    opacity: 1;
+    transform: none;
     -webkit-text-fill-color: var(--outro-green);
-    filter: none;
   }
 }
 

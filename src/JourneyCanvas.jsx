@@ -1,5 +1,6 @@
 import { Suspense, useEffect, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
+import { Preload } from '@react-three/drei'
 import * as THREE from 'three'
 import JourneyScene from './JourneyScene.jsx'
 
@@ -8,82 +9,26 @@ const QUALITY_PRESETS = {
   medium: { name: 'medium', dpr: 0.9, particles: 0.76, shadows: false, fogLayers: 5 },
   high: { name: 'high', dpr: 1.15, particles: 1, shadows: true, fogLayers: 7 },
 }
-const QUALITY_ORDER = ['low', 'medium', 'high']
 
 const getInitialQuality = () => {
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return 'low'
   const memory = navigator.deviceMemory ?? 8
   const cores = navigator.hardwareConcurrency ?? 8
-  if (memory <= 4 || cores <= 4) return 'low'
-  if (memory <= 8 || cores <= 8 || window.matchMedia('(pointer: coarse)').matches) return 'medium'
+  if (memory < 6 || cores < 6) return 'low'
+  if (memory < 8 || cores < 8 || window.matchMedia('(pointer: coarse)').matches) return 'medium'
   return 'high'
 }
 
-function AdaptiveQualityController({ tier, onTierChange, maximumTier }) {
+function FixedQualityController({ tier }) {
   const { gl, setDpr } = useThree()
-  const sampleRef = useRef({
-    elapsed: 0,
-    frames: 0,
-    slowFrames: 0,
-    deltas: [],
-    strongSamples: 0,
-    cooldown: 0,
-  })
 
   useEffect(() => {
     const quality = QUALITY_PRESETS[tier]
     setDpr(quality.dpr)
     gl.shadowMap.enabled = quality.shadows
+    gl.shadowMap.type = THREE.PCFShadowMap
     gl.shadowMap.needsUpdate = true
-    sampleRef.current.elapsed = 0
-    sampleRef.current.frames = 0
-    sampleRef.current.slowFrames = 0
-    sampleRef.current.deltas.length = 0
-    sampleRef.current.cooldown = 5
   }, [gl, setDpr, tier])
-
-  useFrame((_, delta) => {
-    const sample = sampleRef.current
-    if (document.visibilityState !== 'visible') {
-      sample.elapsed = 0
-      sample.frames = 0
-      sample.strongSamples = 0
-      sample.slowFrames = 0
-      sample.deltas.length = 0
-      return
-    }
-    sample.cooldown = Math.max(0, sample.cooldown - delta)
-    sample.elapsed += Math.min(delta, 0.1)
-    sample.frames += 1
-    sample.slowFrames += delta > 1 / 38 ? 1 : 0
-    sample.deltas.push(Math.min(delta, 0.25))
-    if (sample.elapsed < 2.5 || sample.cooldown > 0) return
-
-    const fps = sample.frames / sample.elapsed
-    const index = QUALITY_ORDER.indexOf(tier)
-    const slowRatio = sample.slowFrames / Math.max(sample.frames, 1)
-    const sortedDeltas = sample.deltas.slice().sort((left, right) => left - right)
-    const p95 = sortedDeltas[Math.min(sortedDeltas.length - 1, Math.floor(sortedDeltas.length * 0.95))] ?? 0
-    if ((fps < 43 || slowRatio > 0.12 || p95 > 1 / 32) && index > 0) {
-      sample.strongSamples = 0
-      onTierChange(QUALITY_ORDER[index - 1])
-    } else if (
-      fps > 57 && slowRatio < 0.025 && p95 < 1 / 50 &&
-      index < QUALITY_ORDER.indexOf(maximumTier)
-    ) {
-      sample.strongSamples += 1
-      if (sample.strongSamples >= 2) {
-        sample.strongSamples = 0
-        onTierChange(QUALITY_ORDER[index + 1])
-      }
-    } else {
-      sample.strongSamples = 0
-    }
-    sample.elapsed = 0
-    sample.frames = 0
-    sample.slowFrames = 0
-    sample.deltas.length = 0
-  })
 
   return null
 }
@@ -98,6 +43,7 @@ function JourneyPerformanceProbe({ quality }) {
     maxCalls: 0,
     maxTriangles: 0,
     reportIndex: 0,
+    auditElapsed: 0,
   })
 
   useEffect(() => () => {
@@ -123,6 +69,19 @@ function JourneyPerformanceProbe({ quality }) {
   useFrame(({ gl }, frameDelta) => {
     if (!enabled) return
     const sample = sampleRef.current
+    sample.auditElapsed += frameDelta
+    if (sample.auditElapsed >= 0.5) {
+      sample.auditElapsed = 0
+      const liveDataset = document.documentElement.dataset
+      liveDataset.journeyCurrentTextures = String(gl.info.memory.textures)
+      liveDataset.journeyCurrentPrograms = String(gl.info.programs?.length ?? 0)
+      liveDataset.journeyCurrentGeometries = String(gl.info.memory.geometries)
+      liveDataset.journeyShadowState = JSON.stringify({
+        enabled: gl.shadowMap.enabled,
+        autoUpdate: gl.shadowMap.autoUpdate,
+        type: gl.shadowMap.type,
+      })
+    }
     if (document.visibilityState !== 'visible') {
       sample.elapsed = 0
       sample.deltas.length = 0
@@ -167,6 +126,10 @@ function JourneyPerformanceProbe({ quality }) {
     }
     sample.reportIndex += 1
     window.__JOURNEY_V1_PERFORMANCE__ = report
+    const auditDataset = document.documentElement.dataset
+    auditDataset.journeyCurrentTextures = String(gl.info.memory.textures)
+    auditDataset.journeyCurrentPrograms = String(gl.info.programs?.length ?? 0)
+    auditDataset.journeyCurrentGeometries = String(gl.info.memory.geometries)
     console.info(`[journey-performance] ${JSON.stringify(report)}`)
     sample.elapsed = 0
     sample.deltas.length = 0
@@ -178,22 +141,196 @@ function JourneyPerformanceProbe({ quality }) {
 }
 
 
-function JourneyLoadBridge({ onProgress }) {
-  const frameRef = useRef(null)
+const nextAnimationFrame = () => new Promise((resolve) => {
+  window.requestAnimationFrame(resolve)
+})
+
+const waitForRendererQuiescence = async (gl, isCancelled) => {
+  let signature = ''
+  let stableSince = performance.now()
+  while (!isCancelled()) {
+    await nextAnimationFrame()
+    const programs = gl.info.programs ?? []
+    const nextSignature = [
+      programs.length,
+      gl.info.memory.textures,
+      gl.info.memory.geometries,
+    ].join(':')
+    const programsReady = programs.every(
+      (program) => typeof program.isReady !== 'function' || program.isReady(),
+    )
+    if (nextSignature !== signature || !programsReady) {
+      signature = nextSignature
+      stableSince = performance.now()
+      continue
+    }
+    // Observe a genuinely quiet GPU/resource window rather than unlocking on
+    // an elapsed-time substitute. This also absorbs programs started by
+    // Preload's six offscreen cube faces.
+    if (performance.now() - stableSince >= 2000) return
+  }
+}
+
+function JourneyVisualReadyBridge({ onProgress, quality }) {
+  const readyRef = useRef(false)
+  const generationRef = useRef(0)
+  const onProgressRef = useRef(onProgress)
+  const { gl, scene, get } = useThree()
 
   useEffect(() => {
-    // This component only mounts once every GLTF/texture hook beneath the
-    // boundary has resolved. It therefore gives the loader an exact terminal
-    // signal without subscribing to drei's global progress store while the
-    // scene is suspending or being hot-reloaded.
-    frameRef.current = window.requestAnimationFrame(() => {
-      onProgress?.({ active: false, progress: 100 })
-      frameRef.current = null
+    onProgressRef.current = onProgress
+  }, [onProgress])
+
+  useEffect(() => {
+    if (readyRef.current) return undefined
+    const generation = ++generationRef.current
+    let cancelled = false
+
+    const runWarmup = async () => {
+      performance.mark?.('journey-visual-ready-start')
+      // Layout effects finalize every static instance buffer before this runs.
+      // Two browser frames also let the authored GLTF camera become active.
+      await nextAnimationFrame()
+      await nextAnimationFrame()
+      if (cancelled || generation !== generationRef.current) return
+
+      const activeCamera = get().camera
+      // `Preload all` uploads geometry offscreen, but its internal synchronous
+      // compile can return while KHR_parallel_shader_compile is still pending.
+      // Compile every threshold-hidden object asynchronously while preserving
+      // its exact authored visibility; no alternate story frame reaches the
+      // default framebuffer.
+      const hiddenObjects = []
+      scene.traverse((object) => {
+        if (!object.visible) {
+          hiddenObjects.push(object)
+          object.visible = true
+        }
+      })
+      try {
+        const warmTarget = new THREE.WebGLRenderTarget(16, 16, {
+          depthBuffer: true,
+          stencilBuffer: false,
+        })
+        const previousTarget = gl.getRenderTarget()
+        const previousXr = gl.xr.enabled
+        const previousShadowUpdate = gl.shadowMap.autoUpdate
+        try {
+          gl.xr.enabled = false
+          gl.shadowMap.autoUpdate = true
+          gl.setRenderTarget(warmTarget)
+          gl.clear()
+          // `compileAsync` prepares surface materials but does not instantiate
+          // every shadow/depth pass. One hidden offscreen render does, closing
+          // the remaining first-meadow program gap without exposing pixels.
+          gl.render(scene, activeCamera)
+        } finally {
+          gl.setRenderTarget(previousTarget)
+          gl.xr.enabled = previousXr
+          gl.shadowMap.autoUpdate = previousShadowUpdate
+          warmTarget.dispose()
+        }
+        if (typeof gl.compileAsync === 'function') {
+          await gl.compileAsync(scene, activeCamera)
+        } else {
+          gl.compile(scene, activeCamera)
+        }
+      } finally {
+        hiddenObjects.forEach((object) => {
+          object.visible = false
+        })
+      }
+      if (cancelled || generation !== generationRef.current) return
+
+      const textures = new Set()
+      const addTexture = (value) => {
+        if (value?.isTexture) textures.add(value)
+        else if (Array.isArray(value)) value.forEach(addTexture)
+      }
+      const inspectUniformGroup = (group) => {
+        if (!group || typeof group !== 'object') return
+        Object.values(group).forEach((uniform) => addTexture(uniform?.value ?? uniform))
+      }
+      scene.traverse((object) => {
+        const materials = Array.isArray(object.material)
+          ? object.material
+          : [object.material]
+        materials.filter(Boolean).forEach((material) => {
+          Object.values(material).forEach(addTexture)
+          inspectUniformGroup(material.uniforms)
+          Object.values(material.userData ?? {}).forEach(inspectUniformGroup)
+        })
+      })
+      textures.forEach((texture) => gl.initTexture(texture))
+
+      // Force the parent/loader's final pre-ready React commit while the CTA
+      // is still locked. That commit can finalize program variants owned by
+      // reconciled materials, so it belongs inside—not after—the GPU gate.
+      onProgressRef.current?.({ active: true, progress: 99 })
+      await waitForRendererQuiescence(
+        gl,
+        () => cancelled || generation !== generationRef.current,
+      )
+      if (cancelled || generation !== generationRef.current) return
+      readyRef.current = true
+      window.__JOURNEY_V1_VISUAL_READY__ = {
+        quality: quality.name,
+        textures: textures.size,
+        programs: gl.info.programs?.length ?? 0,
+        geometries: gl.info.memory.geometries,
+      }
+      const readyDataset = document.documentElement.dataset
+      readyDataset.journeyVisualReady = 'true'
+      readyDataset.journeyQuality = quality.name
+      readyDataset.journeyReadyTextures = String(gl.info.memory.textures)
+      readyDataset.journeyReadyPrograms = String(gl.info.programs?.length ?? 0)
+      readyDataset.journeyReadyGeometries = String(gl.info.memory.geometries)
+      performance.mark?.('journey-visual-ready-complete')
+      onProgressRef.current?.({ active: false, progress: 100 })
+    }
+
+    runWarmup().catch((error) => {
+      if (!cancelled) {
+        document.documentElement.dataset.journeyVisualReady = 'error'
+        console.error('[journey-visual-ready]', error)
+      }
     })
     return () => {
-      if (frameRef.current != null) window.cancelAnimationFrame(frameRef.current)
+      cancelled = true
     }
-  }, [onProgress])
+  }, [get, gl, quality.name, scene])
+
+  return null
+}
+
+function JourneyFrameCapture({ captureRequest, paused, onCaptured }) {
+  const capturedRequestRef = useRef(0)
+  const frozenRequestRef = useRef(0)
+
+  useEffect(() => {
+    if (!captureRequest) frozenRequestRef.current = 0
+  }, [captureRequest])
+
+  useFrame((state) => {
+    if (paused || frozenRequestRef.current) return
+    state.gl.setRenderTarget(null)
+    state.gl.render(state.scene, state.camera)
+    if (!captureRequest || capturedRequestRef.current === captureRequest) return
+
+    try {
+      const source = state.gl.domElement.toDataURL('image/png')
+      capturedRequestRef.current = captureRequest
+      // Stop on the exact frame synchronously. Waiting for PNG decode in the
+      // parent allowed the live clock to advance, then snapped backwards when
+      // the older bitmap finally painted.
+      frozenRequestRef.current = captureRequest
+      queueMicrotask(() => onCaptured?.({ requestId: captureRequest, source }))
+    } catch (error) {
+      capturedRequestRef.current = captureRequest
+      console.error('[journey-ending-capture]', error)
+      queueMicrotask(() => onCaptured?.({ requestId: captureRequest, error }))
+    }
+  }, 100)
 
   return null
 }
@@ -205,25 +342,23 @@ export default function JourneyCanvas({
   holdProgress,
   fogCompleted,
   presentationMode,
-  outroMode,
+  endingCaptureRequest,
+  endingPaused,
+  onEndingCaptured,
   onAssetsProgress,
   onListenerPose,
 }) {
-  const [qualityTier, setQualityTier] = useState(getInitialQuality)
+  const [qualityTier] = useState(getInitialQuality)
   const [performanceProbeEnabled] = useState(
     () => new URLSearchParams(window.location.search).get('capture') === '1',
   )
   const quality = QUALITY_PRESETS[qualityTier]
-  const maximumTier = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    ? 'low'
-    : window.matchMedia('(pointer: coarse)').matches
-      ? 'medium'
-      : 'high'
 
   return (
     <Canvas
       className="journey-canvas"
       dpr={quality.dpr}
+      shadows={quality.shadows ? { enabled: true, type: THREE.PCFShadowMap } : false}
       frameloop="always"
       camera={{ position: [0, 2.35, 23], fov: 40, near: 0.05, far: 1200 }}
       gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
@@ -235,11 +370,7 @@ export default function JourneyCanvas({
         gl.shadowMap.type = THREE.PCFShadowMap
       }}
     >
-      <AdaptiveQualityController
-        tier={qualityTier}
-        onTierChange={setQualityTier}
-        maximumTier={maximumTier}
-      />
+      <FixedQualityController tier={qualityTier} />
       <Suspense fallback={null}>
         <JourneyScene
           progress={presentationMode ? 28 : progress}
@@ -248,15 +379,17 @@ export default function JourneyCanvas({
           holdProgress={holdProgress}
           fogCompleted={fogCompleted}
           presentationMode={presentationMode}
-          outroMode={outroMode}
           onListenerPose={onListenerPose}
           quality={quality}
         />
         {performanceProbeEnabled && <JourneyPerformanceProbe quality={quality} />}
-        {/* Mount after the scene resolves. Reading the loader store while the
-            GLTF hooks suspend used to trigger a React cross-component update
-            warning during the first frame. */}
-        <JourneyLoadBridge onProgress={onAssetsProgress} />
+        <Preload all />
+        <JourneyVisualReadyBridge onProgress={onAssetsProgress} quality={quality} />
+        <JourneyFrameCapture
+          captureRequest={endingCaptureRequest}
+          paused={endingPaused}
+          onCaptured={onEndingCaptured}
+        />
       </Suspense>
     </Canvas>
   )

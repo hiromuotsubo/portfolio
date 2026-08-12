@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import './App.css'
+import { getJourneyTimeOfDay } from './journeyVisualState.js'
 
 const JourneyCanvas = lazy(() => import('./JourneyCanvas.jsx'))
 const JourneyV2 = lazy(() => import('./JourneyV2.jsx'))
@@ -37,6 +38,9 @@ const PREVIEW_GATE = {
 }[DEV_PREVIEW] ?? null
 const PREVIEW_HOLD_PROGRESS = ['foghold', 'riverhold'].includes(DEV_PREVIEW) ? 0.62 : 0
 const PREVIEW_ENTERED = Boolean(DEV_PREVIEW)
+const ENDING_SETTLE_PROGRESS = 99.995
+const ENDING_SETTLE_MS = 1500
+const ENDING_CAPTURE_MAX_ATTEMPTS = 3
 const PORTFOLIO_PAGES = ['home', 'about', 'project', 'contact']
 const PORTFOLIO_PATHS = {
   home: '/',
@@ -163,6 +167,30 @@ const STORY_MESSAGES = [
 
 const clamp = (value, min = 0, max = 100) =>
   Math.min(max, Math.max(min, value))
+
+const decodeImageSource = (source) => new Promise((resolve, reject) => {
+  const image = new Image()
+  let settled = false
+  const finish = (callback, value) => {
+    if (settled) return
+    settled = true
+    image.onload = null
+    image.onerror = null
+    callback(value)
+  }
+  image.decoding = 'sync'
+  image.onload = () => finish(resolve, image)
+  image.onerror = () => finish(reject, new Error('Unable to decode the Journey ending frame.'))
+  image.src = source
+  if (image.complete && image.naturalWidth > 0) finish(resolve, image)
+  image.decode?.().then(
+    () => finish(resolve, image),
+    () => {
+      // The load/error events remain the fallback for browsers whose decode()
+      // promise rejects before the data URL has completed loading.
+    },
+  )
+})
 
 const PORTFOLIO_IMAGE_URLS = [
   '/portfolio/about-hiromu.jpg',
@@ -423,10 +451,10 @@ function ExperienceLoader({ entered, onEnter, assetsActive, assetProgress }) {
   }, [ready])
 
   useEffect(() => {
-    if (!entered) return undefined
+    if (!entered || !ready) return undefined
     const timeout = window.setTimeout(() => setDismissed(true), 1150)
     return () => window.clearTimeout(timeout)
-  }, [entered])
+  }, [entered, ready])
 
   if (dismissed) return null
 
@@ -434,7 +462,7 @@ function ExperienceLoader({ entered, onEnter, assetsActive, assetProgress }) {
 
   return (
     <div
-      className={`experience-loader stage-${animationStage} ${ready ? 'is-ready' : ''} ${entered ? 'is-entering' : ''}`}
+      className={`experience-loader stage-${animationStage} ${ready ? 'is-ready' : ''} ${entered && ready ? 'is-entering' : ''}`}
       role="dialog"
       aria-label="Hiromu portfolio loading screen"
     >
@@ -948,7 +976,7 @@ function LegacyApp() {
   const [isSkyConnecting, setIsSkyConnecting] = useState(false)
   const [fogCompleted, setFogCompleted] = useState(PREVIEW_PROGRESS >= 20)
   const [showOutro, setShowOutro] = useState(
-    DEV_PREVIEW === 'outro' || DEV_PREVIEW === 'portfolio' || INITIAL_VIEW === 'portfolio',
+    DEV_PREVIEW === 'portfolio' || INITIAL_VIEW === 'portfolio',
   )
   const [showPortfolio, setShowPortfolio] = useState(
     DEV_PREVIEW === 'portfolio' || INITIAL_VIEW === 'portfolio',
@@ -960,6 +988,12 @@ function LegacyApp() {
   const [displayedMessage, setDisplayedMessage] = useState(null)
   const [messageVisible, setMessageVisible] = useState(false)
   const [journeyAssets, setJourneyAssets] = useState({ active: true, progress: 0 })
+  const [endingCaptureRequest, setEndingCaptureRequest] = useState(0)
+  const [endingFrameSource, setEndingFrameSource] = useState(null)
+  const [endingFrameLoaded, setEndingFrameLoaded] = useState(false)
+  const [endingGlyphMetrics, setEndingGlyphMetrics] = useState(null)
+  const [endingCapturePreparing, setEndingCapturePreparing] = useState(false)
+  const [endingCaptureBlocked, setEndingCaptureBlocked] = useState(false)
   const progressRef = useRef(PREVIEW_PROGRESS)
   const enteredRef = useRef(PREVIEW_ENTERED || INITIAL_VIEW === 'portfolio')
   const targetRef = useRef(PREVIEW_PROGRESS)
@@ -976,7 +1010,63 @@ function LegacyApp() {
   const storyDirectionRef = useRef(1)
   const messageTimersRef = useRef({ reveal: null, hide: null, clear: null })
   const portfolioRef = useRef(DEV_PREVIEW === 'portfolio' || INITIAL_VIEW === 'portfolio')
+  const endingRequestSerialRef = useRef(0)
+  const activeEndingRequestRef = useRef(0)
+  const endingCaptureFailureCountRef = useRef(0)
+  const endingCommittedRef = useRef(
+    DEV_PREVIEW === 'portfolio' || INITIAL_VIEW === 'portfolio',
+  )
+  const endingMRef = useRef(null)
   const { ensureAudio, updateListenerPose } = useAmbientAudio(progress, fogCompleted)
+
+  const clearEndingCapture = useCallback(() => {
+    activeEndingRequestRef.current = 0
+    setEndingCaptureRequest(0)
+    setEndingFrameSource(null)
+    setEndingFrameLoaded(false)
+    setEndingGlyphMetrics(null)
+  }, [])
+
+  const recordEndingCaptureFailure = useCallback((requestId, error, stage) => {
+    if (!requestId || requestId !== activeEndingRequestRef.current) return
+    const attempt = endingCaptureFailureCountRef.current + 1
+    endingCaptureFailureCountRef.current = attempt
+    console.error(`[journey-ending-${stage}] Capture attempt ${attempt} failed.`, error)
+    clearEndingCapture()
+    if (attempt >= ENDING_CAPTURE_MAX_ATTEMPTS) {
+      setEndingCaptureBlocked(true)
+      console.error(
+        `[journey-ending] Capture stopped after ${ENDING_CAPTURE_MAX_ATTEMPTS} attempts; retaining the live final frame.`,
+      )
+    }
+  }, [clearEndingCapture])
+
+  const handleEndingCaptured = useCallback(async ({ requestId, source, error }) => {
+    if (error) {
+      recordEndingCaptureFailure(requestId, error, 'webgl')
+      return
+    }
+    if (
+      !source ||
+      requestId !== activeEndingRequestRef.current ||
+      (DEV_PREVIEW !== 'outro' && progressRef.current < ENDING_SETTLE_PROGRESS)
+    ) return
+
+    try {
+      await decodeImageSource(source)
+    } catch (error) {
+      recordEndingCaptureFailure(requestId, error, 'decode')
+      return
+    }
+    if (
+      requestId !== activeEndingRequestRef.current ||
+      (DEV_PREVIEW !== 'outro' && progressRef.current < ENDING_SETTLE_PROGRESS)
+    ) return
+
+    setEndingCaptureRequest(0)
+    setEndingFrameLoaded(false)
+    setEndingFrameSource(source)
+  }, [recordEndingCaptureFailure])
 
   const handleJourneyAssets = useCallback(({ active, progress: nextProgress }) => {
     setJourneyAssets((current) =>
@@ -1010,17 +1100,95 @@ function LegacyApp() {
   }, [entered])
 
   useEffect(() => {
-    if (DEV_PREVIEW || portfolioRef.current) return undefined
-    if (progress < 99.85) {
+    const isOutroPreview = DEV_PREVIEW === 'outro'
+    if (portfolioRef.current || showPortfolio) return undefined
+    if (DEV_PREVIEW && !isOutroPreview) return undefined
+    if (journeyAssets.active || journeyAssets.progress < 99.95) return undefined
+    if (!isOutroPreview && progress < ENDING_SETTLE_PROGRESS) {
+      clearEndingCapture()
+      endingCaptureFailureCountRef.current = 0
+      setEndingCapturePreparing(false)
+      setEndingCaptureBlocked(false)
       setShowOutro(false)
       portfolioRef.current = false
       setShowPortfolio(false)
       setPortfolioScrolled(false)
       return undefined
     }
-    const timeout = window.setTimeout(() => setShowOutro(true), 1500)
+    setEndingCapturePreparing(true)
+    if (endingCaptureBlocked) return undefined
+    if (
+      showOutro ||
+      activeEndingRequestRef.current ||
+      endingCaptureRequest ||
+      endingFrameSource
+    ) return undefined
+
+    const timeout = window.setTimeout(() => {
+      if (!isOutroPreview && progressRef.current < ENDING_SETTLE_PROGRESS) return
+      const requestId = endingRequestSerialRef.current + 1
+      endingRequestSerialRef.current = requestId
+      activeEndingRequestRef.current = requestId
+      setEndingCaptureRequest(requestId)
+    }, ENDING_SETTLE_MS)
     return () => window.clearTimeout(timeout)
-  }, [progress])
+  }, [
+    clearEndingCapture,
+    endingCaptureRequest,
+    endingCaptureBlocked,
+    endingFrameSource,
+    journeyAssets.active,
+    journeyAssets.progress,
+    progress,
+    showOutro,
+    showPortfolio,
+  ])
+
+  useEffect(() => {
+    if (!endingFrameSource || !endingFrameLoaded || showOutro || showPortfolio) return undefined
+    let cancelled = false
+    let firstPaintFrame = null
+    let secondPaintFrame = null
+    const requestId = activeEndingRequestRef.current
+
+    const armOutro = async () => {
+      await document.fonts?.ready
+      if (cancelled || requestId !== activeEndingRequestRef.current) return
+      const glyph = endingMRef.current
+      if (!glyph) return
+      const range = document.createRange()
+      range.selectNodeContents(glyph)
+      const inkRect = range.getBoundingClientRect()
+      const elementRect = glyph.getBoundingClientRect()
+      const bounds = inkRect.width > 0 && inkRect.height > 0 ? inkRect : elementRect
+      setEndingGlyphMetrics({
+        centerX: bounds.left + bounds.width / 2,
+        centerY: bounds.top + bounds.height / 2,
+        width: bounds.width,
+        height: bounds.height,
+      })
+
+      firstPaintFrame = window.requestAnimationFrame(() => {
+        secondPaintFrame = window.requestAnimationFrame(() => {
+          if (
+            cancelled ||
+            requestId !== activeEndingRequestRef.current ||
+            (DEV_PREVIEW !== 'outro' && progressRef.current < ENDING_SETTLE_PROGRESS)
+          ) return
+          endingCaptureFailureCountRef.current = 0
+          setEndingCaptureBlocked(false)
+          endingCommittedRef.current = true
+          setShowOutro(true)
+        })
+      })
+    }
+    armOutro()
+    return () => {
+      cancelled = true
+      if (firstPaintFrame != null) window.cancelAnimationFrame(firstPaintFrame)
+      if (secondPaintFrame != null) window.cancelAnimationFrame(secondPaintFrame)
+    }
+  }, [endingFrameLoaded, endingFrameSource, showOutro, showPortfolio])
 
   useEffect(() => {
     if (!showOutro || showPortfolio) return undefined
@@ -1033,10 +1201,12 @@ function LegacyApp() {
         // The experience still completes when storage is unavailable.
       }
       window.history.replaceState(null, '', '/')
+      clearEndingCapture()
+      setEndingCapturePreparing(false)
       setShowPortfolio(true)
     }, 6800)
     return () => window.clearTimeout(timeout)
-  }, [showOutro, showPortfolio])
+  }, [clearEndingCapture, showOutro, showPortfolio])
 
   useEffect(() => {
     if (!showPortfolio) return undefined
@@ -1063,6 +1233,7 @@ function LegacyApp() {
         PUBLIC_SHOWCASE ||
         !enteredRef.current ||
         portfolioRef.current ||
+        endingCommittedRef.current ||
         !rawDelta ||
         holdRef.current.frame ||
         skyConnectionRef.current.frame
@@ -1386,7 +1557,7 @@ function LegacyApp() {
   )
 
   const activeConfig = activeGate ? GATES[activeGate] : null
-  const isNight = progress >= 60
+  const { nightWeight } = getJourneyTimeOfDay(progress)
   const caveDepth = 1 - clamp((progress - 6.5) / 12, 0, 1)
   const openAir = clamp((progress - 11.5) / 8.5, 0, 1)
   const valleyMist = fogCompleted
@@ -1451,7 +1622,12 @@ function LegacyApp() {
   }, [ensureAudio])
 
   const resetExperience = useCallback(() => {
+    clearEndingCapture()
+    endingCaptureFailureCountRef.current = 0
+    setEndingCapturePreparing(false)
+    setEndingCaptureBlocked(false)
     portfolioRef.current = false
+    endingCommittedRef.current = false
     enteredRef.current = false
     progressRef.current = 0
     previousStoryProgressRef.current = 0
@@ -1481,7 +1657,7 @@ function LegacyApp() {
     setMessageVisible(false)
     setMobileLook({ x: 0, y: 0 })
     setPortfolioPage('home')
-  }, [])
+  }, [clearEndingCapture])
 
   const replayExperience = useCallback(() => {
     resetExperience()
@@ -1491,6 +1667,10 @@ function LegacyApp() {
   const openPortfolioPage = useCallback((page, { updateHistory = true } = {}) => {
     const nextPage = PORTFOLIO_PAGES.includes(page) ? page : 'home'
     portfolioRef.current = true
+    clearEndingCapture()
+    endingCaptureFailureCountRef.current = 0
+    setEndingCapturePreparing(false)
+    setEndingCaptureBlocked(false)
     enteredRef.current = true
     setEntered(true)
     setShowOutro(true)
@@ -1500,7 +1680,7 @@ function LegacyApp() {
     if (updateHistory) {
       window.history.pushState(null, '', `${PORTFOLIO_PATHS[nextPage]}${window.location.search}`)
     }
-  }, [])
+  }, [clearEndingCapture])
 
   useEffect(() => {
     const syncRoute = () => {
@@ -1517,14 +1697,21 @@ function LegacyApp() {
 
   return (
     <main
-      className={`journey-3d ${entered ? 'is-entered' : ''} ${PUBLIC_SHOWCASE ? 'is-showcase' : ''} ${activeGate ? `has-gate is-gate-${activeGate}` : ''} ${activeGate && holdProgress > 0 ? 'is-holding' : ''} ${isNight ? 'is-night' : ''} ${showOutro ? 'is-outro' : ''} ${showPortfolio ? 'is-portfolio' : ''} ${portfolioScrolled ? 'is-portfolio-scrolled' : ''}`}
+      className={`journey-3d ${entered ? 'is-entered' : ''} ${PUBLIC_SHOWCASE ? 'is-showcase' : ''} ${activeGate ? `has-gate is-gate-${activeGate}` : ''} ${activeGate && holdProgress > 0 ? 'is-holding' : ''} ${endingCapturePreparing ? 'is-ending-preparing' : ''} ${endingFrameSource ? 'has-ending-frame' : ''} ${showOutro ? 'is-outro' : ''} ${showPortfolio ? 'is-portfolio' : ''} ${portfolioScrolled ? 'is-portfolio-scrolled' : ''}`}
       style={{
         '--cave-depth': caveDepth,
         '--open-air': openAir,
+        '--night-weight': nightWeight,
         '--valley-mist': valleyMist,
         '--hold-x': `${holdOrigin.x}px`,
         '--hold-y': `${holdOrigin.y}px`,
         '--hold-radius': `${80 + holdProgress * 360}px`,
+        ...(endingGlyphMetrics ? {
+          '--outro-glyph-center-x': `${endingGlyphMetrics.centerX}px`,
+          '--outro-glyph-center-y': `${endingGlyphMetrics.centerY}px`,
+          '--outro-glyph-width': `${endingGlyphMetrics.width}px`,
+          '--outro-glyph-height': `${endingGlyphMetrics.height}px`,
+        } : {}),
       }}
     >
       <div className="journey-scene-frame" aria-hidden={showOutro && !showPortfolio}>
@@ -1537,13 +1724,34 @@ function LegacyApp() {
               holdProgress={holdProgress}
               fogCompleted={fogCompleted}
               presentationMode={showPortfolio}
-              outroMode={showOutro && !showPortfolio}
+              endingCaptureRequest={endingCaptureRequest}
+              endingPaused={Boolean(endingFrameSource) && !showPortfolio}
+              onEndingCaptured={handleEndingCaptured}
               onAssetsProgress={handleJourneyAssets}
               onListenerPose={updateListenerPose}
             />
           </Suspense>
         ) : null}
       </div>
+
+      {endingFrameSource && !showPortfolio ? (
+        <div className="journey-ending-frame" aria-hidden="true">
+          <img
+            src={endingFrameSource}
+            alt=""
+            onLoad={() => {
+              if (activeEndingRequestRef.current) setEndingFrameLoaded(true)
+            }}
+            onError={() => {
+              recordEndingCaptureFailure(
+                activeEndingRequestRef.current,
+                new Error('Captured frame failed to paint.'),
+                'paint',
+              )
+            }}
+          />
+        </div>
+      ) : null}
 
       {!showPortfolio ? (
         <ExperienceLoader
@@ -1563,10 +1771,22 @@ function LegacyApp() {
         <p className="journey-outro__copy" aria-hidden="true">
           <span className="journey-outro__prefix">Thank you so</span>
           <span className="journey-outro__slot">
-            <span className="journey-outro__ridge" aria-hidden="true">
-              <i /><i /><i /><i />
+            <span className="journey-outro__m-stack">
+              <span
+                className="journey-outro__m journey-outro__m--snapshot"
+                style={endingFrameSource ? {
+                  backgroundImage: `url("${endingFrameSource}")`,
+                } : undefined}
+              >
+                m
+              </span>
+              <span
+                ref={endingMRef}
+                className="journey-outro__m journey-outro__m--live"
+              >
+                m
+              </span>
             </span>
-            <span className="journey-outro__m">m</span>
           </span>
           <span className="journey-outro__suffix">uch.</span>
         </p>

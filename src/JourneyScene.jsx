@@ -1,21 +1,28 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { useGLTF, useTexture } from '@react-three/drei'
 import * as THREE from 'three'
 import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader.js'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
+import { getJourneyTimeOfDay } from './journeyVisualState.js'
 
 // Versioned query prevents a previously cached GLB from reviving removed assets.
 const MODEL_URL = '/journey/models/journey-v17-runtime-optimized.glb?v=1-selective-runtime'
 const PHASE2_ENVIRONMENT_URL = '/journey/models/journey-phase2-environment.glb?v=5-distance-forest'
+const ALPINE_BIOME_MACRO_URL = '/journey/textures/surface/alpine-biome-macro-v1.jpg'
 
-// Creator controls: visual transition timing and cave brightness.
-const VISUAL_TIMING = {
-  sunsetStart: 30,
-  sunsetEnd: 54,
-  nightStart: 50,
-  nightEnd: 70,
-}
+// Pointer samples arrive much faster than a perceptible gust. A slightly wider
+// history plus a fixed emission cadence lets each accepted gust keep its own
+// direction while it crosses the meadow instead of being rewritten by the
+// next pointer event.
+// 30 slots retain a full 2.6-second trail at the 90ms emission cadence.
+// WebGL2 guarantees enough vertex uniforms for the two vec4 arrays, while the
+// fixed-size shader loop keeps the history entirely on the GPU.
+const MEADOW_WIND_IMPULSE_COUNT = 30
+const MEADOW_WIND_EMIT_INTERVAL = 0.09
+const MEADOW_WIND_REVERSAL_HOLD = 0.28
+const MEADOW_WIND_POINTER_PAUSE_RESET = 0.18
+const MEADOW_WIND_MAX_AGE = 2.6
 
 const ENDING_CAMERA = {
   liftStart: 78,
@@ -60,6 +67,12 @@ const smoothstep = (edge0, edge1, value) => {
   const x = clamp01((value - edge0) / (edge1 - edge0))
   return x * x * (3 - 2 * x)
 }
+
+const blendTimeOfDayColor = (target, day, sunset, night, weights) => target.setRGB(
+  day.r * weights.dayWeight + sunset.r * weights.sunsetWeight + night.r * weights.nightWeight,
+  day.g * weights.dayWeight + sunset.g * weights.sunsetWeight + night.g * weights.nightWeight,
+  day.b * weights.dayWeight + sunset.b * weights.sunsetWeight + night.b * weights.nightWeight,
+)
 
 // This is sampled from the source V1 river mesh, not an idealised spline.
 // Every supplemental element (the clear-current overlay, gravel, grass,
@@ -568,7 +581,7 @@ function SeatedStarFigure({ groupRef, materialRef, silhouetteMaterialRef, qualit
   const material = useMemo(() => createSeatedFigureMaterial(), [])
   const silhouetteTexture = useMemo(() => createSeatedSilhouetteTexture(), [])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     materialRef.current = material
   }, [material, materialRef])
   useEffect(() => () => geometry.dispose(), [geometry])
@@ -810,35 +823,6 @@ const getAlpineWatercolorTexture = () => {
   return alpineWatercolorTexture
 }
 
-let alpineForestSurfaceTexture = null
-const getAlpineForestSurfaceTexture = () => {
-  if (alpineForestSurfaceTexture) return alpineForestSurfaceTexture
-  alpineForestSurfaceTexture = new THREE.TextureLoader().load(
-    '/journey/textures/surface/alpine-forest-canopy-v1.jpg',
-  )
-  alpineForestSurfaceTexture.colorSpace = THREE.SRGBColorSpace
-  alpineForestSurfaceTexture.wrapS = THREE.RepeatWrapping
-  alpineForestSurfaceTexture.wrapT = THREE.RepeatWrapping
-  alpineForestSurfaceTexture.minFilter = THREE.LinearMipmapLinearFilter
-  alpineForestSurfaceTexture.magFilter = THREE.LinearFilter
-  return alpineForestSurfaceTexture
-}
-
-let alpineBiomeMacroTexture = null
-const getAlpineBiomeMacroTexture = () => {
-  if (alpineBiomeMacroTexture) return alpineBiomeMacroTexture
-  alpineBiomeMacroTexture = new THREE.TextureLoader().load(
-    '/journey/textures/surface/alpine-biome-macro-v1.jpg',
-  )
-  alpineBiomeMacroTexture.colorSpace = THREE.SRGBColorSpace
-  alpineBiomeMacroTexture.wrapS = THREE.RepeatWrapping
-  alpineBiomeMacroTexture.wrapT = THREE.RepeatWrapping
-  alpineBiomeMacroTexture.minFilter = THREE.LinearMipmapLinearFilter
-  alpineBiomeMacroTexture.magFilter = THREE.LinearFilter
-  alpineBiomeMacroTexture.anisotropy = 8
-  return alpineBiomeMacroTexture
-}
-
 function buildMysticMotes(count) {
   const positions = new Float32Array(count * 3)
   for (let index = 0; index < count; index += 1) {
@@ -981,7 +965,12 @@ function reshapeV1MassifGeometry(object) {
 // Retained as a source-reference fallback while the production path below is
 // intentionally much cheaper. Rollup removes this uncalled function.
 // eslint-disable-next-line no-unused-vars
-function applyAlpineIllustration(material, isFarRidge) {
+function applyAlpineIllustration(
+  material,
+  isFarRidge,
+  biomeMacroTexture,
+  forestSurfaceTexture = null,
+) {
   if (!material.isMeshStandardMaterial && !material.isMeshPhysicalMaterial) return
   const hasAlpineMap = Boolean(material.map)
   const triplanarNormalMap = material.normalMap
@@ -995,8 +984,8 @@ function applyAlpineIllustration(material, isFarRidge) {
     uJourneyDiscovery: { value: 0 },
     uJourneyTime: { value: 0 },
     uJourneyWatercolor: { value: getAlpineWatercolorTexture() },
-    uJourneyForestSurface: { value: getAlpineForestSurfaceTexture() },
-    uJourneyBiomeMacro: { value: getAlpineBiomeMacroTexture() },
+    uJourneyForestSurface: { value: forestSurfaceTexture },
+    uJourneyBiomeMacro: { value: biomeMacroTexture },
     uJourneyTriplanarNormal: { value: triplanarNormalMap },
     uJourneyTriplanarRoughness: { value: triplanarRoughnessMap },
   }
@@ -1826,7 +1815,7 @@ totalEmissiveRadiance += vec3(0.01, 0.024, 0.055) * uJourneyNight;`,
   material.customProgramCacheKey = () => `journey-alpine-${isFarRidge ? 'far' : 'near'}-v31-macro-biome-texture`
 }
 
-function applyAlpineProduction(material, isFarRidge) {
+function applyAlpineProduction(material, isFarRidge, biomeMacroTexture) {
   if (
     !material.isMeshLambertMaterial &&
     !material.isMeshStandardMaterial &&
@@ -1842,7 +1831,7 @@ function applyAlpineProduction(material, isFarRidge) {
     uJourneyRiverLight: { value: 0 },
     uJourneyDiscovery: { value: 0 },
     uJourneyTime: { value: 0 },
-    uJourneyBiomeMacro: { value: getAlpineBiomeMacroTexture() },
+    uJourneyBiomeMacro: { value: biomeMacroTexture },
   }
   material.userData.journeyAlpineUniforms = uniforms
   material.onBeforeCompile = (shader) => {
@@ -2528,7 +2517,9 @@ function createClearRiverMaterial() {
     roughness: 0.18,
     metalness: 0,
     ior: 1.333,
-    transmission: 0,
+    // Keep the transmission shader/render path stable across the full story;
+    // crossing exactly zero would otherwise compile and allocate it at night.
+    transmission: 0.001,
     thickness: 0.34,
     clearcoat: 1,
     clearcoatRoughness: 0.14,
@@ -2624,7 +2615,7 @@ function buildRiverAuroraGeometry() {
   return buildNaturalRiverGeometry({ count: 96, widthScale: 0.72, yOffset: 0.055 })
 }
 
-function prepareWorld(source) {
+function prepareWorld(source, biomeMacroTexture) {
   const root = source.clone(true)
   root.updateMatrixWorld(true)
   const groups = {
@@ -2862,7 +2853,7 @@ function prepareWorld(source) {
           // broad shoulders retain form instead of collapsing into one green.
           material.emissiveIntensity = 0.026
         }
-        applyAlpineProduction(material, isFarRidge)
+        applyAlpineProduction(material, isFarRidge, biomeMacroTexture)
       })
       materials.forEach((material, index) => {
         if (material !== alpineMaterials[index]) material.dispose()
@@ -2886,7 +2877,7 @@ function prepareWorld(source) {
   return { root, groups }
 }
 
-function preparePhase2Environment(source) {
+function preparePhase2Environment(source, biomeMacroTexture) {
   const root = source.clone(true)
   const cloudTexture = createCloudTexture(240809)
   const groups = {
@@ -2949,7 +2940,7 @@ function preparePhase2Environment(source) {
       // Both authored phase-2 ridge sheets sit behind the massif. Treat them
       // as distant terrain so their intersections haze away instead of
       // cutting dark, near-material seams across the V1 mountain surface.
-      applyAlpineProduction(material, true)
+      applyAlpineProduction(material, true, biomeMacroTexture)
       object.renderOrder = -1
       groups.ridges.push(object)
       return
@@ -3763,6 +3754,54 @@ function NaturalRiverCorridor({ progress, qualityScale = 1 }) {
     return texture
   }, [gravelTexture])
 
+  useLayoutEffect(() => {
+    gl.initRenderTarget(reflectionTarget)
+    let cancelled = false
+    let warmFrame = null
+    const setupFrame = window.requestAnimationFrame(() => {
+      warmFrame = window.requestAnimationFrame(() => {
+      if (cancelled) return
+      const previousTarget = gl.getRenderTarget()
+      const previousXr = gl.xr.enabled
+      const previousShadowUpdate = gl.shadowMap.autoUpdate
+      const hiddenObjects = []
+      scene.traverse((object) => {
+        if (!object.visible) {
+          hiddenObjects.push(object)
+          object.visible = true
+        }
+      })
+      const reflectorVisible = reflectionMeshRef.current?.visible
+      if (reflectionMeshRef.current) reflectionMeshRef.current.visible = false
+      reflectionCamera.copy(camera, false)
+      reflectionCamera.updateMatrixWorld()
+      gl.xr.enabled = false
+      gl.shadowMap.autoUpdate = false
+      try {
+        gl.setRenderTarget(reflectionTarget)
+        gl.clear()
+        // Compile/upload the exact 2D reflection-target variants while the DOM
+        // loader is opaque. Merely allocating the target left 34 programs to
+        // compile when the river first appeared in the live story.
+        gl.render(scene, reflectionCamera)
+      } finally {
+        gl.setRenderTarget(previousTarget)
+        gl.xr.enabled = previousXr
+        gl.shadowMap.autoUpdate = previousShadowUpdate
+        hiddenObjects.forEach((object) => {
+          object.visible = false
+        })
+        if (reflectionMeshRef.current) reflectionMeshRef.current.visible = reflectorVisible
+      }
+      })
+    })
+    return () => {
+      cancelled = true
+      window.cancelAnimationFrame(setupFrame)
+      if (warmFrame != null) window.cancelAnimationFrame(warmFrame)
+    }
+  }, [camera, gl, reflectionCamera, reflectionTarget, scene])
+
   useEffect(() => {
     const state = reflectionStateRef.current
     state.initialized = false
@@ -3786,7 +3825,7 @@ function NaturalRiverCorridor({ progress, qualityScale = 1 }) {
 
   useFrame((state) => {
     const reveal = smoothstep(16.5, 23.5, progress)
-    const night = smoothstep(VISUAL_TIMING.nightStart, VISUAL_TIMING.nightEnd, progress)
+    const { nightWeight: night } = getJourneyTimeOfDay(progress)
     if (corridorRef.current) corridorRef.current.visible = reveal > 0.01
     if (reflectionMeshRef.current) reflectionMeshRef.current.visible = reveal > 0.01
     const reflectionUniforms = reflectionMaterial.userData.journeyReflectionUniforms
@@ -3795,18 +3834,20 @@ function NaturalRiverCorridor({ progress, qualityScale = 1 }) {
     reflectionUniforms.uJourneyTime.value = state.clock.elapsedTime
 
     const reflectionState = reflectionStateRef.current
+    // Refresh on every perceptible camera/story movement. The previous coarse
+    // thresholds let the frozen render target lag for several scroll frames,
+    // then snap to a new reflection even though the live camera was continuous.
     const cameraChanged = !reflectionState.initialized ||
-      reflectionState.position.distanceToSquared(camera.position) > 0.04 ||
-      1 - Math.abs(reflectionState.quaternion.dot(camera.quaternion)) > 0.00002 ||
-      Math.abs(reflectionState.fov - camera.fov) > 0.08 ||
-      Math.abs(reflectionState.aspect - camera.aspect) > 0.003
-    const storyChanged = Math.abs(reflectionState.progress - progress) > 0.28
-    const updateDue = state.clock.elapsedTime - reflectionState.time > 0.38
+      reflectionState.position.distanceToSquared(camera.position) > 0.000001 ||
+      1 - Math.abs(reflectionState.quaternion.dot(camera.quaternion)) > 0.00000001 ||
+      Math.abs(reflectionState.fov - camera.fov) > 0.001 ||
+      Math.abs(reflectionState.aspect - camera.aspect) > 0.00001
+    const storyChanged = Math.abs(reflectionState.progress - progress) > 0.0001
+    const idleRefreshDue = state.clock.elapsedTime - reflectionState.time > 0.38
     if (
       planarReflectionEnabled &&
       reveal > 0.01 &&
-      updateDue &&
-      (cameraChanged || storyChanged)
+      (cameraChanged || storyChanged || idleRefreshDue)
     ) {
       const planeY = 0.14
       camera.getWorldDirection(reflectionForward)
@@ -3886,7 +3927,7 @@ function NaturalRiverCorridor({ progress, qualityScale = 1 }) {
       reflectionState.quaternion.copy(camera.quaternion)
     }
     if (bedMaterialRef.current) {
-      bedMaterialRef.current.depthWrite = reveal > 0.98
+      bedMaterialRef.current.depthWrite = false
       bedMaterialRef.current.opacity = reveal * THREE.MathUtils.lerp(0.76, 0.34, night)
       bedMaterialRef.current.color
         .set('#777b72')
@@ -3895,7 +3936,7 @@ function NaturalRiverCorridor({ progress, qualityScale = 1 }) {
     bankMaterialRefs.current.forEach((material, index) => {
       if (!material) return
       const wet = index < 2
-      material.depthWrite = wet && reveal > 0.98
+      material.depthWrite = false
       material.opacity = reveal * THREE.MathUtils.lerp(wet ? 0.62 : 0.4, wet ? 0.34 : 0.28, night)
       material.color
         .set(wet ? '#46544f' : '#4c544f')
@@ -3916,7 +3957,7 @@ function NaturalRiverCorridor({ progress, qualityScale = 1 }) {
           metalness={0}
           transparent
           opacity={0}
-          depthWrite
+          depthWrite={false}
           fog
         />
       </mesh>
@@ -3939,7 +3980,7 @@ function NaturalRiverCorridor({ progress, qualityScale = 1 }) {
             metalness={0}
             transparent
             opacity={0}
-            depthWrite
+            depthWrite={false}
             fog
             polygonOffset
             polygonOffsetFactor={-1}
@@ -4015,7 +4056,7 @@ function buildDistantRidgeVolume({ frontZ, backZ, baseY, width, heights, hueOffs
   return geometry
 }
 
-function FarRidgeCrown({ progress }) {
+function FarRidgeCrown({ progress, biomeMacroTexture }) {
   const geometry = useMemo(() => buildDistantRidgeVolume({
     frontZ: -426,
     backZ: -510,
@@ -4040,17 +4081,16 @@ function FarRidgeCrown({ progress }) {
       emissive: '#263d35',
       emissiveIntensity: 0.015,
     })
-    applyAlpineProduction(result, true)
+    applyAlpineProduction(result, true, biomeMacroTexture)
     return result
-  }, [])
+  }, [biomeMacroTexture])
   useEffect(() => () => {
     geometry.dispose()
     material.dispose()
   }, [geometry, material])
   useFrame(() => {
     const reveal = smoothstep(17.5, 24.5, progress)
-    const sunset = smoothstep(VISUAL_TIMING.sunsetStart, VISUAL_TIMING.sunsetEnd, progress)
-    const night = smoothstep(VISUAL_TIMING.nightStart, VISUAL_TIMING.nightEnd, progress)
+    const { sunsetWeight: sunset, nightWeight: night } = getJourneyTimeOfDay(progress)
     material.opacity = reveal * THREE.MathUtils.lerp(0.44, 0.26, night)
     material.color
       .set('#d6e4dd')
@@ -4088,10 +4128,11 @@ function createMeadowBladeGeometry(kind) {
     // Four real tapered blades remain very cheap, but the varied lean, height
     // and depth make each instance read as a soft grass clump at valley scale.
     ;[
-      { x: -0.38, z: 0.08, width: 0.17, height: 0.68, bend: -0.2, angle: -0.72 },
-      { x: -0.1, z: -0.08, width: 0.16, height: 1, bend: -0.035, angle: -0.18 },
-      { x: 0.17, z: 0.04, width: 0.18, height: 0.84, bend: 0.12, angle: 0.34 },
-      { x: 0.41, z: -0.02, width: 0.15, height: 0.58, bend: 0.22, angle: 0.86 },
+      { x: -0.44, z: 0.1, width: 0.2, height: 0.98, bend: -0.38, angle: -0.82 },
+      { x: -0.16, z: -0.1, width: 0.18, height: 1.35, bend: -0.09, angle: -0.22 },
+      { x: 0.2, z: 0.06, width: 0.24, height: 1.12, bend: 0.18, angle: 0.38 },
+      { x: 0.45, z: -0.04, width: 0.2, height: 0.84, bend: 0.3, angle: 0.82 },
+      { x: -0.08, z: -0.18, width: 0.17, height: 0.75, bend: 0.02, angle: 1.2 },
     ].forEach((blade) => {
       triangle(
         rotateY([blade.x - blade.width * 0.5, 0, blade.z], blade.angle),
@@ -4223,8 +4264,8 @@ function buildMeadowGroundGeometry() {
 function createMeadowGroundMaterial(map) {
   const uniforms = {
     uJourneyReveal: { value: 0 },
-    uJourneyNight: { value: 0 },
     uJourneySunset: { value: 0 },
+    uJourneyNight: { value: 0 },
   }
   const material = new THREE.MeshStandardMaterial({
     map,
@@ -4246,8 +4287,8 @@ function createMeadowGroundMaterial(map) {
         [
           '#include <common>',
           'uniform float uJourneyReveal;',
-          'uniform float uJourneyNight;',
           'uniform float uJourneySunset;',
+          'uniform float uJourneyNight;',
           'varying vec3 vJourneyMeadowGroundPosition;',
           'varying vec2 vJourneyMeadowGroundUv;',
         ].join('\n'),
@@ -4291,14 +4332,14 @@ function createMeadowGroundMaterial(map) {
   return material
 }
 
-const MEADOW_WIND_IMPULSE_COUNT = 4
-
 function createMeadowMaterial(kind, alphaMap = null) {
   const uniforms = {
     uJourneyReveal: { value: 0 },
+    uJourneySunset: { value: 0 },
     uJourneyNight: { value: 0 },
     uJourneyTime: { value: 0 },
     uJourneyAmbientWind: { value: 0 },
+    uJourneyMotionScale: { value: 1 },
     uJourneyWindImpulse: {
       value: Array.from({ length: MEADOW_WIND_IMPULSE_COUNT }, () => new THREE.Vector4()),
     },
@@ -4339,8 +4380,12 @@ function createMeadowMaterial(kind, alphaMap = null) {
           '#include <common>',
           'attribute float aJourneyMeadowPhase;',
           'attribute float aJourneyMeadowStiffness;',
+          'attribute float aJourneyMeadowResponseDelay;',
+          'attribute float aJourneyMeadowRecovery;',
+          'attribute float aJourneyMeadowMaxBend;',
           'uniform float uJourneyTime;',
           'uniform float uJourneyAmbientWind;',
+          'uniform float uJourneyMotionScale;',
           'uniform vec4 uJourneyWindImpulse[' + MEADOW_WIND_IMPULSE_COUNT + '];',
           'uniform vec4 uJourneyWindDirection[' + MEADOW_WIND_IMPULSE_COUNT + '];',
           'varying float vJourneyMeadowTip;',
@@ -4366,11 +4411,15 @@ function createMeadowMaterial(kind, alphaMap = null) {
           '  dot(journeyWorldAmbient, journeyInstanceX),',
           '  dot(journeyWorldAmbient, journeyInstanceZ)',
           ');',
-          'vec2 journeySway = journeyLocalAmbient * (0.038 + uJourneyAmbientWind * 0.096 + journeyGust * 0.046);',
+          'vec2 journeySway = journeyLocalAmbient * (0.038 + uJourneyAmbientWind * 0.096 + journeyGust * 0.046) * uJourneyMotionScale;',
           'for (int journeyImpulseIndex = 0; journeyImpulseIndex < ' + MEADOW_WIND_IMPULSE_COUNT + '; journeyImpulseIndex++) {',
           '  vec4 journeyImpulse = uJourneyWindImpulse[journeyImpulseIndex];',
           '  vec4 journeyDirectionAge = uJourneyWindDirection[journeyImpulseIndex];',
-          '  float journeyImpulseDistance = distance(journeyBladeBase.xz, journeyImpulse.xy);',
+          '  if (journeyImpulse.w <= 0.001) continue;',
+          '  vec2 journeyImpulseOffset = journeyBladeBase.xz - journeyImpulse.xy;',
+          '  float journeyImpulseDistanceSquared = dot(journeyImpulseOffset, journeyImpulseOffset);',
+          '  if (journeyImpulseDistanceSquared >= journeyImpulse.z * journeyImpulse.z) continue;',
+          '  float journeyImpulseDistance = sqrt(journeyImpulseDistanceSquared);',
           '  float journeyPropagation = smoothstep(',
           '    journeyImpulseDistance * 0.035 + ' + propagationDelay + ',',
           '    journeyImpulseDistance * 0.035 + 0.2 + ' + propagationDelay + ',',
@@ -4382,14 +4431,28 @@ function createMeadowMaterial(kind, alphaMap = null) {
           '    dot(journeyWorldDirection, journeyInstanceX),',
           '    dot(journeyWorldDirection, journeyInstanceZ)',
           '  );',
-          '  journeySway += journeyLocalDirection * journeyFalloff * journeyPropagation * journeyImpulse.w * ' + pointerScale + ';',
+          '  float journeyImpulseActive = step(aJourneyMeadowResponseDelay, journeyDirectionAge.z);',
+          '  float journeyImpulseLife = max(0.0, journeyDirectionAge.z - aJourneyMeadowResponseDelay);',
+          '  float journeyImpulseAttack = smoothstep(0.0, 0.14, journeyImpulseLife);',
+          '  float journeyImpulseRelease = 1.0 - smoothstep(0.55, 2.5, journeyImpulseLife);',
+          '  float journeyImpulseEnvelope = journeyImpulseActive * journeyImpulseAttack * journeyImpulseRelease;',
+          '  float journeyReturnLife = max(0.0, journeyImpulseLife - 0.34);',
+          '  float journeyReturnGate = smoothstep(0.3, 0.48, journeyImpulseLife) *',
+          '    (1.0 - smoothstep(1.9, 2.55, journeyImpulseLife));',
+          '  float journeyImpulseReturn = sin(',
+          '    journeyReturnLife * 4.15 + aJourneyMeadowPhase * 1.35',
+          '  ) * exp(-journeyReturnLife * (1.2 + aJourneyMeadowRecovery * 0.58)) * 0.13 * journeyReturnGate;',
+          '  float journeyImpulsePulse = journeyImpulse.w * (journeyImpulseEnvelope + journeyImpulseReturn);',
+          '  journeySway += journeyLocalDirection * journeyFalloff * journeyPropagation * journeyImpulsePulse * ' + pointerScale + ' * uJourneyMotionScale;',
           '}',
-          'journeySway *= mix(1.18, 0.62, aJourneyMeadowStiffness);',
+          'float journeyFlex = mix(1.14, 0.6, aJourneyMeadowStiffness) *',
+          '  mix(0.68, 1.15, aJourneyMeadowMaxBend);',
+          'journeySway *= journeyFlex;',
           'float journeyRestLean = aJourneyMeadowPhase * 6.2831853;',
           'transformed.x += sin(journeyRestLean) * journeyBladeTip * journeyBladeTip * 0.045;',
           'transformed.z += cos(journeyRestLean) * journeyBladeTip * journeyBladeTip * 0.025;',
-          'transformed.x += journeySway.x * journeyBladeTip * journeyBladeTip;',
-          'transformed.z += journeySway.y * journeyBladeTip * journeyBladeTip * 0.38;',
+          'transformed.x += journeySway.x * journeyBladeTip * journeyBladeTip * journeyBladeTip;',
+          'transformed.z += journeySway.y * journeyBladeTip * journeyBladeTip * 0.42;',
           'vJourneyMeadowTip = journeyBladeTip;',
           'vJourneyMeadowHue = fract(aJourneyMeadowPhase * 17.31);',
         ].join('\n'),
@@ -4400,6 +4463,7 @@ function createMeadowMaterial(kind, alphaMap = null) {
         [
           '#include <common>',
           'uniform float uJourneyReveal;',
+          'uniform float uJourneySunset;',
           'uniform float uJourneyNight;',
           'varying float vJourneyMeadowTip;',
           'varying float vJourneyMeadowHue;',
@@ -4419,11 +4483,12 @@ function createMeadowMaterial(kind, alphaMap = null) {
                 'journeyMeadowHue = mix(journeyMeadowHue, journeyMeadowSunlit, smoothstep(0.76, 0.98, vJourneyMeadowHue) * 0.46);',
                 'diffuseColor.rgb = mix(journeyMeadowHue * vec3(0.9, 0.95, 0.8), journeyMeadowHue * vec3(1.2, 1.16, 0.93), vJourneyMeadowTip);',
               ].join('\n'),
+          'diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(1.12, 0.82, 0.62), uJourneySunset * 0.34);',
           'diffuseColor.a *= uJourneyReveal * (1.0 - uJourneyNight * ' + nightFade + ') * ' + alphaMask + ';',
         ].join('\n'),
       )
   }
-  material.customProgramCacheKey = () => 'journey-meadow-' + kind + '-v5-local-impulses'
+  material.customProgramCacheKey = () => 'journey-meadow-' + kind + '-v8-independent-gusts'
   material.userData.journeyMeadowUniforms = uniforms
   return material
 }
@@ -4483,9 +4548,15 @@ function createMeadowPetalMaterial(texture, windUniforms) {
       .replace(
         '#include <common>',
         `#include <common>
-attribute float aJourneyMeadowPhase;
-uniform float uJourneyTime;
-uniform float uJourneyAmbientWind;
+	attribute float aJourneyMeadowPhase;
+	attribute float aJourneyMeadowStiffness;
+	attribute float aJourneyMeadowResponseDelay;
+	attribute float aJourneyMeadowRecovery;
+	attribute float aJourneyMeadowMaxBend;
+	attribute float aJourneyMeadowScale;
+	uniform float uJourneyTime;
+	uniform float uJourneyAmbientWind;
+uniform float uJourneyMotionScale;
 uniform vec4 uJourneyWindImpulse[${MEADOW_WIND_IMPULSE_COUNT}];
 uniform vec4 uJourneyWindDirection[${MEADOW_WIND_IMPULSE_COUNT}];`,
       )
@@ -4495,12 +4566,16 @@ uniform vec4 uJourneyWindDirection[${MEADOW_WIND_IMPULSE_COUNT}];`,
 vec4 journeyPetalBase = modelMatrix * vec4(position, 1.0);
 float journeyPetalGust = sin(uJourneyTime * 1.15 + aJourneyMeadowPhase * 11.0 + journeyPetalBase.z * 0.17) * 0.5 +
   sin(uJourneyTime * 0.48 + aJourneyMeadowPhase * 23.0 + journeyPetalBase.x * 0.11) * 0.5;
-vec2 journeyPetalSway = vec2(0.62, 0.34) *
-  (0.028 + uJourneyAmbientWind * 0.072 + journeyPetalGust * 0.034);
-for (int journeyImpulseIndex = 0; journeyImpulseIndex < ${MEADOW_WIND_IMPULSE_COUNT}; journeyImpulseIndex++) {
-  vec4 journeyImpulse = uJourneyWindImpulse[journeyImpulseIndex];
+	vec2 journeyPetalSway = normalize(vec2(0.62, 0.34)) *
+	  (0.038 + uJourneyAmbientWind * 0.096 + journeyPetalGust * 0.046) * uJourneyMotionScale;
+	for (int journeyImpulseIndex = 0; journeyImpulseIndex < ${MEADOW_WIND_IMPULSE_COUNT}; journeyImpulseIndex++) {
+	  vec4 journeyImpulse = uJourneyWindImpulse[journeyImpulseIndex];
   vec4 journeyDirectionAge = uJourneyWindDirection[journeyImpulseIndex];
-  float journeyPetalDistance = distance(journeyPetalBase.xz, journeyImpulse.xy);
+  if (journeyImpulse.w <= 0.001) continue;
+  vec2 journeyPetalOffset = journeyPetalBase.xz - journeyImpulse.xy;
+  float journeyPetalDistanceSquared = dot(journeyPetalOffset, journeyPetalOffset);
+  if (journeyPetalDistanceSquared >= journeyImpulse.z * journeyImpulse.z) continue;
+  float journeyPetalDistance = sqrt(journeyPetalDistanceSquared);
   float journeyPropagation = smoothstep(
     journeyPetalDistance * 0.035 + 0.12,
     journeyPetalDistance * 0.035 + 0.32,
@@ -4508,29 +4583,66 @@ for (int journeyImpulseIndex = 0; journeyImpulseIndex < ${MEADOW_WIND_IMPULSE_CO
   );
   float journeyFalloff = 1.0 - smoothstep(
     max(1.4, journeyImpulse.z * 0.32),
-    journeyImpulse.z,
-    journeyPetalDistance
-  );
-  journeyPetalSway += journeyDirectionAge.xy * journeyFalloff * journeyPropagation * journeyImpulse.w * 0.48;
-}
-transformed.x += journeyPetalSway.x;
-transformed.z += journeyPetalSway.y * 0.38;`,
+	    journeyImpulse.z,
+	    journeyPetalDistance
+	  );
+	  float journeyImpulseActive = step(aJourneyMeadowResponseDelay, journeyDirectionAge.z);
+	  float journeyImpulseLife = max(0.0, journeyDirectionAge.z - aJourneyMeadowResponseDelay);
+	  float journeyImpulseAttack = smoothstep(0.0, 0.14, journeyImpulseLife);
+	  float journeyImpulseRelease = 1.0 - smoothstep(0.55, 2.5, journeyImpulseLife);
+	  float journeyImpulseEnvelope = journeyImpulseActive * journeyImpulseAttack * journeyImpulseRelease;
+	  float journeyReturnLife = max(0.0, journeyImpulseLife - 0.34);
+	  float journeyReturnGate = smoothstep(0.3, 0.48, journeyImpulseLife) *
+	    (1.0 - smoothstep(1.9, 2.55, journeyImpulseLife));
+	  float journeyImpulseReturn = sin(
+	    journeyReturnLife * 4.15 + aJourneyMeadowPhase * 1.35
+	  ) * exp(-journeyReturnLife * (1.2 + aJourneyMeadowRecovery * 0.58)) * 0.13 * journeyReturnGate;
+	  float journeyImpulsePulse = journeyImpulse.w * (journeyImpulseEnvelope + journeyImpulseReturn);
+	  journeyPetalSway += journeyDirectionAge.xy * journeyFalloff * journeyPropagation * journeyImpulsePulse * 0.6 * uJourneyMotionScale;
+	}
+	float journeyPetalFlex = mix(1.14, 0.6, aJourneyMeadowStiffness) *
+	  mix(0.68, 1.15, aJourneyMeadowMaxBend);
+	journeyPetalSway *= journeyPetalFlex * aJourneyMeadowScale;
+	transformed.x += journeyPetalSway.x;
+	transformed.z += journeyPetalSway.y * 0.42;`,
       )
     shader.fragmentShader = shader.fragmentShader
       .replace(
         '#include <common>',
         `#include <common>
 uniform float uJourneyReveal;
+uniform float uJourneySunset;
 uniform float uJourneyNight;`,
       )
       .replace(
         '#include <color_fragment>',
         `#include <color_fragment>
+diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(1.12, 0.82, 0.62), uJourneySunset * 0.34);
 diffuseColor.a *= uJourneyReveal * (1.0 - uJourneyNight * 0.72);`,
       )
   }
-  material.customProgramCacheKey = () => 'journey-meadow-petals-v3-local-impulses'
+	material.customProgramCacheKey = () => 'journey-meadow-petals-v4-independent-gusts'
   return material
+}
+
+function attachMeadowResponseAttributes(geometry, items, { instanced = true, includeScale = false } = {}) {
+  const Attribute = instanced ? THREE.InstancedBufferAttribute : THREE.BufferAttribute
+  const setAttribute = (name, property, fallback) => {
+    geometry.setAttribute(
+      name,
+      new Attribute(
+        new Float32Array(items.map((item) => item[property] ?? fallback)),
+        1,
+      ),
+    )
+  }
+  setAttribute('aJourneyMeadowPhase', 'phase', 0)
+  setAttribute('aJourneyMeadowStiffness', 'stiffness', 0.5)
+  setAttribute('aJourneyMeadowResponseDelay', 'responseDelay', 0)
+  setAttribute('aJourneyMeadowRecovery', 'recovery', 0.5)
+  setAttribute('aJourneyMeadowMaxBend', 'maxBend', 0.5)
+  if (includeScale) setAttribute('aJourneyMeadowScale', 'scale', 1)
+  return geometry
 }
 
 function buildMeadowSeeds() {
@@ -4579,6 +4691,9 @@ function buildMeadowSeeds() {
           THREE.MathUtils.lerp(1.08, 0.88, depth),
         phase: seededRandom(attempt + seed + 251),
         stiffness: THREE.MathUtils.lerp(0.12, 0.94, seededRandom(attempt + seed + 283)),
+        responseDelay: THREE.MathUtils.lerp(0, 0.18, seededRandom(attempt + seed + 313)),
+        recovery: THREE.MathUtils.lerp(0.18, 1.12, seededRandom(attempt + seed + 345)),
+        maxBend: THREE.MathUtils.lerp(0.16, 1, seededRandom(attempt + seed + 377)),
         color: grassPalette[0].clone()
           .lerp(grassPalette[1], smoothstep(0.06, 0.72, tone))
           .lerp(grassPalette[2], Math.max(0, tone - 0.72) * 0.5 + moisture * 0.06),
@@ -4587,20 +4702,28 @@ function buildMeadowSeeds() {
     return items
   }
   const nearGrass = buildGrassBand({
-    count: 11200,
+    count: 13200,
     nearZ: -2,
     farZ: -43,
     seed: 47001,
-    height: [0.58, 1.02],
-    width: [0.2, 0.4],
+    height: [0.78, 1.45],
+    width: [0.22, 0.64],
   })
   const midGrass = buildGrassBand({
-    count: 4800,
+    count: 6200,
     nearZ: -38,
     farZ: -88,
     seed: 61001,
-    height: [0.34, 0.64],
-    width: [0.17, 0.31],
+    height: [0.52, 1.02],
+    width: [0.16, 0.38],
+  })
+  const foregroundGrass = buildGrassBand({
+    count: 5200,
+    nearZ: -2,
+    farZ: -23,
+    seed: 73001,
+    height: [1.05, 1.66],
+    width: [0.23, 0.66],
   })
 
   const flowerPalette = [
@@ -4644,6 +4767,9 @@ function buildMeadowSeeds() {
         scale: THREE.MathUtils.lerp(0.76, 1.14, seededRandom(flowerIndex + 52247)) * THREE.MathUtils.lerp(1, 0.68, depth),
         phase: seededRandom(flowerIndex + 52283) + clusterIndex * 0.07,
         stiffness: THREE.MathUtils.lerp(0.28, 0.88, seededRandom(flowerIndex + 52297)),
+        responseDelay: THREE.MathUtils.lerp(0, 0.12, seededRandom(flowerIndex + 52325)),
+        recovery: THREE.MathUtils.lerp(0.22, 0.78, seededRandom(flowerIndex + 52357)),
+        maxBend: THREE.MathUtils.lerp(0.08, 0.42, seededRandom(flowerIndex + 52389)),
         color: flowerPalette[paletteIndex].clone(),
         order: seededRandom(flowerIndex + 52307),
       })
@@ -4651,13 +4777,14 @@ function buildMeadowSeeds() {
     }
   })
   flowers.sort((left, right) => left.order - right.order)
-  return { nearGrass, midGrass, flowers }
+  return { nearGrass, midGrass, foregroundGrass, flowers }
 }
 
 function ValleyMeadow({ progress, travelWindRef, qualityScale = 1 }) {
   const groundRef = useRef(null)
   const nearGrassRef = useRef(null)
   const midGrassRef = useRef(null)
+  const foregroundGrassRef = useRef(null)
   const flowerRef = useRef(null)
   const flowerPointsRef = useRef(null)
   const seeds = useMemo(() => buildMeadowSeeds(), [])
@@ -4666,55 +4793,35 @@ function ValleyMeadow({ progress, travelWindRef, qualityScale = 1 }) {
   const groundMaterial = useMemo(() => createMeadowGroundMaterial(groundTexture), [groundTexture])
   const nearGrassCount = Math.max(1, Math.floor(seeds.nearGrass.length * qualityScale))
   const midGrassCount = Math.max(1, Math.floor(seeds.midGrass.length * qualityScale))
+  const foregroundGrassCount = Math.max(1, Math.floor(seeds.foregroundGrass.length * qualityScale))
   const flowerCount = Math.max(1, Math.floor(Math.min(seeds.flowers.length, 240) * qualityScale))
   const flowerStemCount = Math.max(1, Math.floor(flowerCount * 0.18))
-  const nearGrassGeometry = useMemo(() => {
-    const geometry = createMeadowBladeGeometry('grass')
-    geometry.setAttribute(
-      'aJourneyMeadowPhase',
-      new THREE.InstancedBufferAttribute(new Float32Array(seeds.nearGrass.map((item) => item.phase)), 1),
-    )
-    geometry.setAttribute(
-      'aJourneyMeadowStiffness',
-      new THREE.InstancedBufferAttribute(new Float32Array(seeds.nearGrass.map((item) => item.stiffness)), 1),
-    )
-    return geometry
-  }, [seeds])
-  const midGrassGeometry = useMemo(() => {
-    const geometry = createMeadowBladeGeometry('grass')
-    geometry.setAttribute(
-      'aJourneyMeadowPhase',
-      new THREE.InstancedBufferAttribute(new Float32Array(seeds.midGrass.map((item) => item.phase)), 1),
-    )
-    geometry.setAttribute(
-      'aJourneyMeadowStiffness',
-      new THREE.InstancedBufferAttribute(new Float32Array(seeds.midGrass.map((item) => item.stiffness)), 1),
-    )
-    return geometry
-  }, [seeds])
+  const nearGrassGeometry = useMemo(
+    () => attachMeadowResponseAttributes(createMeadowBladeGeometry('grass'), seeds.nearGrass),
+    [seeds],
+  )
+  const midGrassGeometry = useMemo(
+    () => attachMeadowResponseAttributes(createMeadowBladeGeometry('grass'), seeds.midGrass),
+    [seeds],
+  )
+  const foregroundGrassGeometry = useMemo(
+    () => attachMeadowResponseAttributes(createMeadowBladeGeometry('grass'), seeds.foregroundGrass),
+    [seeds],
+  )
   const grassMaterial = useMemo(
     () => createMeadowMaterial('grass'),
     [],
   )
-  const flowerGeometry = useMemo(() => {
-    const geometry = createMeadowBladeGeometry('flower')
-    geometry.setAttribute(
-      'aJourneyMeadowPhase',
-      new THREE.InstancedBufferAttribute(new Float32Array(seeds.flowers.map((item) => item.phase)), 1),
-    )
-    geometry.setAttribute(
-      'aJourneyMeadowStiffness',
-      new THREE.InstancedBufferAttribute(new Float32Array(seeds.flowers.map((item) => item.stiffness)), 1),
-    )
-    return geometry
-  }, [seeds])
+  const flowerGeometry = useMemo(
+    () => attachMeadowResponseAttributes(createMeadowBladeGeometry('flower'), seeds.flowers),
+    [seeds],
+  )
   const flowerMaterial = useMemo(() => createMeadowMaterial('flower'), [])
   const flowerPointTexture = useMemo(() => createMeadowPetalTexture(), [])
   const flowerPointGeometry = useMemo(() => {
     const geometry = new THREE.BufferGeometry()
     const positions = new Float32Array(seeds.flowers.length * 3)
     const colors = new Float32Array(seeds.flowers.length * 3)
-    const phases = new Float32Array(seeds.flowers.length)
     seeds.flowers.forEach((item, index) => {
       positions.set([
         item.position[0],
@@ -4722,11 +4829,13 @@ function ValleyMeadow({ progress, travelWindRef, qualityScale = 1 }) {
         item.position[2],
       ], index * 3)
       colors.set([item.color.r, item.color.g, item.color.b], index * 3)
-      phases[index] = item.phase
     })
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
     geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3))
-    geometry.setAttribute('aJourneyMeadowPhase', new THREE.BufferAttribute(phases, 1))
+    attachMeadowResponseAttributes(geometry, seeds.flowers, {
+      instanced: false,
+      includeScale: true,
+    })
     geometry.computeBoundingSphere()
     return geometry
   }, [seeds])
@@ -4739,7 +4848,7 @@ function ValleyMeadow({ progress, travelWindRef, qualityScale = 1 }) {
   )
   const pointerPlane = useMemo(() => new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.32), [])
   const meadowRaycaster = useMemo(() => new THREE.Raycaster(), [])
-  const impulseCursorRef = useRef(0)
+  const gustSequenceRef = useRef(0)
   const impulseScratch = useMemo(() => ({
     ndc: new THREE.Vector2(),
     hit: new THREE.Vector3(),
@@ -4748,16 +4857,27 @@ function ValleyMeadow({ progress, travelWindRef, qualityScale = 1 }) {
     right: new THREE.Vector3(),
     forward: new THREE.Vector3(),
     direction: new THREE.Vector2(),
+    acceptedDirection: new THREE.Vector2(1, 0),
+    reversalDirection: new THREE.Vector2(1, 0),
+    acceptedDirectionInitialized: false,
     initialized: false,
     time: 0,
+    lastEmissionTime: -Infinity,
+    reversalStartedAt: -Infinity,
+    pointerEvents: 0,
+    lastPointerStage: 'idle',
+    lastPointerSpeed: 0,
+    lastPointerHit: new THREE.Vector3(),
   }), [])
   const windImpulses = useMemo(
     () => Array.from({ length: MEADOW_WIND_IMPULSE_COUNT }, () => ({
+      id: 0,
       origin: new THREE.Vector2(0, -80),
       direction: new THREE.Vector2(1, 0),
       strength: 0,
       radius: 1,
       age: 99,
+      travelled: 0,
     })),
     [],
   )
@@ -4765,22 +4885,47 @@ function ValleyMeadow({ progress, travelWindRef, qualityScale = 1 }) {
     () => window.matchMedia('(prefers-reduced-motion: reduce)').matches,
     [],
   )
+  const windDebugEnabled = useMemo(
+    () => new URLSearchParams(window.location.search).get('windDebug') === '1',
+    [],
+  )
   const { camera, gl } = useThree()
 
   useEffect(() => {
+    const activeGustRemains = () => windImpulses.some(
+      (impulse) => impulse.strength > 0 && impulse.age < MEADOW_WIND_MAX_AGE,
+    )
+    const resetPointerSample = () => {
+      impulseScratch.initialized = false
+      // Losing a velocity sample must not erase the physical wind that is
+      // still crossing the meadow. Keep its accepted heading until all gusts
+      // have decayed, so pause-then-reverse cannot bypass hysteresis.
+      if (!activeGustRemains()) impulseScratch.acceptedDirectionInitialized = false
+      impulseScratch.reversalStartedAt = -Infinity
+    }
     const onPointerMove = (event) => {
-      if (reduceMotion || event.pointerType === 'touch') return
+      impulseScratch.pointerEvents += 1
+      if (reduceMotion || event.pointerType === 'touch') {
+        impulseScratch.lastPointerStage = reduceMotion ? 'reduced-motion' : 'touch'
+        return
+      }
       const bounds = gl.domElement.getBoundingClientRect()
       if (
         event.clientX < bounds.left || event.clientX > bounds.right ||
         event.clientY < bounds.top || event.clientY > bounds.bottom
-      ) return
+      ) {
+        impulseScratch.lastPointerStage = 'outside-canvas'
+        return
+      }
       const scratch = impulseScratch
       const now = event.timeStamp * 0.001
-      if (!scratch.initialized) {
+      if (!scratch.initialized || now - scratch.time > MEADOW_WIND_POINTER_PAUSE_RESET) {
         scratch.previousScreen.set(event.clientX, event.clientY)
         scratch.time = now
         scratch.initialized = true
+        if (!activeGustRemains()) scratch.acceptedDirectionInitialized = false
+        scratch.reversalStartedAt = -Infinity
+        scratch.lastPointerStage = 'sample-reset'
         return
       }
       const elapsed = Math.max(1 / 180, Math.min(0.12, now - scratch.time))
@@ -4791,43 +4936,144 @@ function ValleyMeadow({ progress, travelWindRef, qualityScale = 1 }) {
       scratch.previousScreen.set(event.clientX, event.clientY)
       scratch.time = now
       const speed = scratch.screenVelocity.length()
-      if (speed < 0.11) return
+      scratch.lastPointerSpeed = speed
+      if (speed < 0.11) {
+        scratch.lastPointerStage = 'below-speed'
+        return
+      }
       scratch.ndc.set(
         ((event.clientX - bounds.left) / Math.max(bounds.width, 1)) * 2 - 1,
         -((event.clientY - bounds.top) / Math.max(bounds.height, 1)) * 2 + 1,
       )
       meadowRaycaster.setFromCamera(scratch.ndc, camera)
-      if (!meadowRaycaster.ray.intersectPlane(pointerPlane, scratch.hit)) return
-      if (scratch.hit.z > 12 || scratch.hit.z < -126 || Math.abs(scratch.hit.x) > 105) return
+      if (!meadowRaycaster.ray.intersectPlane(pointerPlane, scratch.hit)) {
+        scratch.lastPointerStage = 'ray-miss'
+        return
+      }
+      scratch.lastPointerHit.copy(scratch.hit)
+      if (scratch.hit.z > 12 || scratch.hit.z < -126 || Math.abs(scratch.hit.x) > 105) {
+        scratch.lastPointerStage = 'outside-meadow'
+        return
+      }
       scratch.right.set(1, 0, 0).applyQuaternion(camera.quaternion).setY(0).normalize()
       scratch.forward.set(0, 0, -1).applyQuaternion(camera.quaternion).setY(0).normalize()
       scratch.direction.set(
         scratch.right.x * scratch.screenVelocity.x - scratch.forward.x * scratch.screenVelocity.y,
         scratch.right.z * scratch.screenVelocity.x - scratch.forward.z * scratch.screenVelocity.y,
       )
-      if (scratch.direction.lengthSq() < 0.0001) return
+      if (scratch.direction.lengthSq() < 0.0001) {
+        scratch.lastPointerStage = 'direction-zero'
+        return
+      }
       scratch.direction.normalize()
-      const slot = windImpulses[impulseCursorRef.current]
-      impulseCursorRef.current = (impulseCursorRef.current + 1) % MEADOW_WIND_IMPULSE_COUNT
+
+      if (!scratch.acceptedDirectionInitialized) {
+        scratch.acceptedDirection.copy(scratch.direction)
+        scratch.acceptedDirectionInitialized = true
+      } else {
+        const directionAgreement = scratch.acceptedDirection.dot(scratch.direction)
+        if (directionAgreement < -0.25) {
+          const reversalChanged = scratch.reversalStartedAt === -Infinity ||
+            scratch.reversalDirection.dot(scratch.direction) < 0.45
+          if (reversalChanged) {
+            scratch.reversalDirection.copy(scratch.direction)
+            scratch.reversalStartedAt = now
+          } else {
+            scratch.reversalDirection.lerp(scratch.direction, 0.22).normalize()
+          }
+          if (now - scratch.reversalStartedAt < MEADOW_WIND_REVERSAL_HOLD) {
+            scratch.lastPointerStage = 'reversal-hold'
+            return
+          }
+          scratch.acceptedDirection.copy(scratch.reversalDirection).normalize()
+          scratch.reversalStartedAt = -Infinity
+        } else {
+          scratch.reversalStartedAt = -Infinity
+          scratch.acceptedDirection
+            .lerp(scratch.direction, directionAgreement > 0.72 ? 0.28 : 0.14)
+            .normalize()
+        }
+      }
+      if (now - scratch.lastEmissionTime < MEADOW_WIND_EMIT_INTERVAL) {
+        scratch.lastPointerStage = 'emission-cadence'
+        return
+      }
+
+      const slot = windImpulses.find((impulse) => impulse.strength <= 0) ??
+        windImpulses.reduce((oldest, impulse) => impulse.age > oldest.age ? impulse : oldest)
+      gustSequenceRef.current += 1
+      slot.id = gustSequenceRef.current
       slot.origin.set(scratch.hit.x, scratch.hit.z)
-      slot.direction.copy(scratch.direction)
+      // Direction is immutable for this gust. Later pointer events can only
+      // create a new gust after cadence/hysteresis; they never turn this one.
+      slot.direction.copy(scratch.acceptedDirection)
       slot.strength = THREE.MathUtils.clamp(speed * 2.85, 0.16, 1)
       slot.radius = 4.4
       slot.age = 0
+      slot.travelled = 0
+      scratch.lastEmissionTime = now
+      scratch.lastPointerStage = 'emitted'
     }
     window.addEventListener('pointermove', onPointerMove, { passive: true })
-    return () => window.removeEventListener('pointermove', onPointerMove)
+    window.addEventListener('blur', resetPointerSample)
+    gl.domElement.addEventListener('pointerleave', resetPointerSample)
+    return () => {
+      window.removeEventListener('pointermove', onPointerMove)
+      window.removeEventListener('blur', resetPointerSample)
+      gl.domElement.removeEventListener('pointerleave', resetPointerSample)
+    }
   }, [camera, gl, impulseScratch, meadowRaycaster, pointerPlane, reduceMotion, windImpulses])
 
   useEffect(() => {
-    const writeInstances = (mesh, items, flower = false) => {
+    if (!windDebugEnabled) return undefined
+    const debugState = {
+      constants: {
+        emitInterval: MEADOW_WIND_EMIT_INTERVAL,
+        reversalHold: MEADOW_WIND_REVERSAL_HOLD,
+        pauseReset: MEADOW_WIND_POINTER_PAUSE_RESET,
+        maxAge: MEADOW_WIND_MAX_AGE,
+      },
+      getSnapshot: () => ({
+        pointerEvents: impulseScratch.pointerEvents,
+        lastPointerStage: impulseScratch.lastPointerStage,
+        lastPointerSpeed: impulseScratch.lastPointerSpeed,
+        lastPointerHit: impulseScratch.lastPointerHit.toArray(),
+        acceptedDirection: impulseScratch.acceptedDirection.toArray(),
+        acceptedDirectionInitialized: impulseScratch.acceptedDirectionInitialized,
+        reversalElapsed: impulseScratch.reversalStartedAt === -Infinity
+          ? 0
+          : Math.max(0, impulseScratch.time - impulseScratch.reversalStartedAt),
+        gusts: windImpulses
+          .filter((impulse) => impulse.strength > 0)
+          .map((impulse) => ({
+            id: impulse.id,
+            age: impulse.age,
+            direction: impulse.direction.toArray(),
+            origin: impulse.origin.toArray(),
+            radius: impulse.radius,
+            strength: impulse.strength,
+            travelled: impulse.travelled,
+          })),
+      }),
+    }
+    window.__JOURNEY_V1_WIND__ = debugState
+    document.documentElement.dataset.journeyWindConstants = JSON.stringify(debugState.constants)
+    return () => {
+      if (window.__JOURNEY_V1_WIND__ === debugState) delete window.__JOURNEY_V1_WIND__
+      delete document.documentElement.dataset.journeyWindConstants
+      delete document.documentElement.dataset.journeyWindSnapshot
+    }
+  }, [impulseScratch, windDebugEnabled, windImpulses])
+
+  useLayoutEffect(() => {
+    const writeInstances = (mesh, items, count, flower = false) => {
       if (!mesh) return
       const matrix = new THREE.Matrix4()
       const position = new THREE.Vector3()
       const scale = new THREE.Vector3()
       const color = new THREE.Color()
       const rotation = new THREE.Quaternion()
-      items.slice(0, mesh.count).forEach((item, index) => {
+      items.slice(0, Math.min(mesh.count, count)).forEach((item, index) => {
         position.set(...item.position)
         if (flower) scale.setScalar(item.scale)
         else scale.set(item.width, item.height, 1)
@@ -4845,11 +5091,12 @@ function ValleyMeadow({ progress, travelWindRef, qualityScale = 1 }) {
       if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
       mesh.material.needsUpdate = true
     }
-    writeInstances(nearGrassRef.current, seeds.nearGrass)
-    writeInstances(midGrassRef.current, seeds.midGrass)
-    writeInstances(flowerRef.current, seeds.flowers, true)
+    writeInstances(nearGrassRef.current, seeds.nearGrass, nearGrassCount)
+    writeInstances(midGrassRef.current, seeds.midGrass, midGrassCount)
+    writeInstances(foregroundGrassRef.current, seeds.foregroundGrass, foregroundGrassCount)
+    writeInstances(flowerRef.current, seeds.flowers, flowerStemCount, true)
     flowerPointGeometry.setDrawRange(0, flowerCount)
-  }, [flowerCount, flowerPointGeometry, midGrassCount, nearGrassCount, seeds])
+  }, [flowerCount, flowerPointGeometry, flowerStemCount, foregroundGrassCount, midGrassCount, nearGrassCount, seeds])
 
   useEffect(() => () => {
     groundGeometry.dispose()
@@ -4857,29 +5104,61 @@ function ValleyMeadow({ progress, travelWindRef, qualityScale = 1 }) {
     groundMaterial.dispose()
     nearGrassGeometry.dispose()
     midGrassGeometry.dispose()
+    foregroundGrassGeometry.dispose()
     grassMaterial.dispose()
     flowerGeometry.dispose()
     flowerMaterial.dispose()
     flowerPointGeometry.dispose()
     flowerPointMaterial.dispose()
     flowerPointTexture.dispose()
-  }, [flowerGeometry, flowerMaterial, flowerPointGeometry, flowerPointMaterial, flowerPointTexture, grassMaterial, groundGeometry, groundMaterial, groundTexture, midGrassGeometry, nearGrassGeometry])
+  }, [flowerGeometry, flowerMaterial, flowerPointGeometry, flowerPointMaterial, flowerPointTexture, foregroundGrassGeometry, grassMaterial, groundGeometry, groundMaterial, groundTexture, midGrassGeometry, nearGrassGeometry])
 
   useFrame((state, delta) => {
     const reveal = smoothstep(17.5, 24.5, progress)
+    const { sunsetWeight: sunset, nightWeight: night } = getJourneyTimeOfDay(progress)
     const windDelta = Math.min(delta, 0.05)
     windImpulses.forEach((impulse) => {
+      if (impulse.strength <= 0) return
       impulse.age += windDelta
-      impulse.radius = Math.min(17, impulse.radius + windDelta * 12)
-      impulse.strength *= Math.exp(-windDelta * 1.95)
-      if (impulse.age > 2.0 || impulse.strength < 0.006) impulse.strength = 0
+      const advection = windDelta * (5.2 + impulse.strength * 2.4)
+      impulse.origin.addScaledVector(impulse.direction, advection)
+      impulse.travelled += advection
+      impulse.radius = Math.min(18, impulse.radius + windDelta * 8.4)
+      impulse.strength *= Math.exp(-windDelta * 0.82)
+      if (impulse.age >= MEADOW_WIND_MAX_AGE || impulse.strength < 0.006) impulse.strength = 0
     })
+    if (windDebugEnabled) {
+      document.documentElement.dataset.journeyWindSnapshot = JSON.stringify({
+        pointerEvents: impulseScratch.pointerEvents,
+        lastPointerStage: impulseScratch.lastPointerStage,
+        lastPointerSpeed: impulseScratch.lastPointerSpeed,
+        lastPointerHit: impulseScratch.lastPointerHit.toArray(),
+        acceptedDirection: impulseScratch.acceptedDirection.toArray(),
+        acceptedDirectionInitialized: impulseScratch.acceptedDirectionInitialized,
+        reversalElapsed: impulseScratch.reversalStartedAt === -Infinity
+          ? 0
+          : Math.max(0, impulseScratch.time - impulseScratch.reversalStartedAt),
+        gusts: windImpulses
+          .filter((impulse) => impulse.strength > 0)
+          .map((impulse) => ({
+            id: impulse.id,
+            age: impulse.age,
+            direction: impulse.direction.toArray(),
+            origin: impulse.origin.toArray(),
+            radius: impulse.radius,
+            strength: impulse.strength,
+            travelled: impulse.travelled,
+          })),
+      })
+    }
     ;[grassMaterial, flowerMaterial].forEach((material) => {
       const uniforms = material.userData.journeyMeadowUniforms
       uniforms.uJourneyReveal.value = reveal
-      uniforms.uJourneyNight.value = smoothstep(VISUAL_TIMING.nightStart, VISUAL_TIMING.nightEnd, progress)
+      uniforms.uJourneySunset.value = sunset
+      uniforms.uJourneyNight.value = night
       uniforms.uJourneyTime.value = state.clock.elapsedTime
       uniforms.uJourneyAmbientWind.value = reduceMotion ? 0 : travelWindRef.current * 0.6 + 0.16
+      uniforms.uJourneyMotionScale.value = reduceMotion ? 0 : 1
       windImpulses.forEach((impulse, index) => {
         uniforms.uJourneyWindImpulse.value[index].set(
           impulse.origin.x,
@@ -4897,11 +5176,12 @@ function ValleyMeadow({ progress, travelWindRef, qualityScale = 1 }) {
     })
     const groundUniforms = groundMaterial.userData.journeyMeadowGroundUniforms
     groundUniforms.uJourneyReveal.value = reveal
-    groundUniforms.uJourneyNight.value = smoothstep(VISUAL_TIMING.nightStart, VISUAL_TIMING.nightEnd, progress)
-    groundUniforms.uJourneySunset.value = smoothstep(VISUAL_TIMING.sunsetStart, VISUAL_TIMING.sunsetEnd, progress)
+    groundUniforms.uJourneyNight.value = night
+    groundUniforms.uJourneySunset.value = sunset
     if (groundRef.current) groundRef.current.visible = reveal > 0.01
     if (nearGrassRef.current) nearGrassRef.current.visible = reveal > 0.01
     if (midGrassRef.current) midGrassRef.current.visible = reveal > 0.01
+    if (foregroundGrassRef.current) foregroundGrassRef.current.visible = reveal > 0.01
     if (flowerRef.current) flowerRef.current.visible = reveal > 0.01
     if (flowerPointsRef.current) flowerPointsRef.current.visible = reveal > 0.01
   })
@@ -4911,6 +5191,7 @@ function ValleyMeadow({ progress, travelWindRef, qualityScale = 1 }) {
       <mesh ref={groundRef} geometry={groundGeometry} material={groundMaterial} renderOrder={2} frustumCulled={false} />
       <instancedMesh ref={nearGrassRef} args={[nearGrassGeometry, grassMaterial, nearGrassCount]} renderOrder={7} frustumCulled={false} />
       <instancedMesh ref={midGrassRef} args={[midGrassGeometry, grassMaterial, midGrassCount]} renderOrder={7} frustumCulled={false} />
+      <instancedMesh ref={foregroundGrassRef} args={[foregroundGrassGeometry, grassMaterial, foregroundGrassCount]} renderOrder={7} frustumCulled={false} />
       <instancedMesh ref={flowerRef} args={[flowerGeometry, flowerMaterial, flowerStemCount]} renderOrder={8} frustumCulled={false} />
       <points
         ref={flowerPointsRef}
@@ -5030,7 +5311,7 @@ function ValleyForestEdge({ progress, qualityScale = 1 }) {
     Math.min(placements.length, Math.floor(VALLEY_FOREST_EDGE_CAPACITY * qualityScale)),
   )
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const mesh = meshRef.current
     if (!mesh) return
     const matrix = new THREE.Matrix4()
@@ -5054,8 +5335,7 @@ function ValleyForestEdge({ progress, qualityScale = 1 }) {
 
   useFrame(() => {
     const reveal = smoothstep(17.5, 24.5, progress)
-    const sunset = smoothstep(VISUAL_TIMING.sunsetStart, VISUAL_TIMING.sunsetEnd, progress)
-    const night = smoothstep(VISUAL_TIMING.nightStart, VISUAL_TIMING.nightEnd, progress)
+    const { sunsetWeight: sunset, nightWeight: night } = getJourneyTimeOfDay(progress)
     if (meshRef.current) meshRef.current.visible = reveal > 0.002
     material.opacity = reveal * THREE.MathUtils.lerp(0.38, 0.3, night)
     material.color
@@ -5262,7 +5542,6 @@ export default function JourneyScene({
   holdProgress = 0,
   fogCompleted = false,
   presentationMode = false,
-  outroMode = false,
   onListenerPose,
   quality = { name: 'high', particles: 1, shadows: true, fogLayers: 7 },
 }) {
@@ -5278,10 +5557,24 @@ export default function JourneyScene({
   )
   const gltf = useGLTF(MODEL_URL, true, true, configureLoader)
   const phase2Gltf = useGLTF(PHASE2_ENVIRONMENT_URL)
-  const { root, groups } = useMemo(() => prepareWorld(gltf.scene), [gltf.scene])
+  const loadedBiomeMacroTexture = useTexture(ALPINE_BIOME_MACRO_URL)
+  const biomeMacroTexture = useMemo(() => {
+    loadedBiomeMacroTexture.colorSpace = THREE.SRGBColorSpace
+    loadedBiomeMacroTexture.wrapS = THREE.RepeatWrapping
+    loadedBiomeMacroTexture.wrapT = THREE.RepeatWrapping
+    loadedBiomeMacroTexture.minFilter = THREE.LinearMipmapLinearFilter
+    loadedBiomeMacroTexture.magFilter = THREE.LinearFilter
+    loadedBiomeMacroTexture.anisotropy = 8
+    loadedBiomeMacroTexture.needsUpdate = true
+    return loadedBiomeMacroTexture
+  }, [loadedBiomeMacroTexture])
+  const { root, groups } = useMemo(
+    () => prepareWorld(gltf.scene, biomeMacroTexture),
+    [biomeMacroTexture, gltf.scene],
+  )
   const { root: phase2Root, groups: phase2Groups } = useMemo(
-    () => preparePhase2Environment(phase2Gltf.scene),
-    [phase2Gltf.scene],
+    () => preparePhase2Environment(phase2Gltf.scene, biomeMacroTexture),
+    [biomeMacroTexture, phase2Gltf.scene],
   )
   const camera = useMemo(
     () => root.getObjectByName('CAM_V13_MASTER_ANIMATED'),
@@ -5382,7 +5675,6 @@ export default function JourneyScene({
   )
   const previousProgressRef = useRef(progress)
   const travelWindRef = useRef(0)
-  const outroFramingRef = useRef(0)
   const gateCueRef = useRef({ type: null, elapsed: 0 })
   const sunRef = useRef(null)
   const skyLightRef = useRef(null)
@@ -5450,7 +5742,7 @@ export default function JourneyScene({
     }
   }, [camera, scene, set, size.height, size.width])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     scene.fog = new THREE.FogExp2('#85989b', 0.013)
     return () => {
       scene.fog = null
@@ -5458,6 +5750,13 @@ export default function JourneyScene({
   }, [scene])
 
   useFrame((state, delta) => {
+    const timeOfDay = getJourneyTimeOfDay(progress)
+    const {
+      sunsetWeight: sunset,
+      nightWeight: night,
+      starWeight,
+    } = timeOfDay
+    const eveningProgress = sunset + night
     const progressVelocity = Math.abs(progress - previousProgressRef.current) /
       Math.max(delta, 0.001)
     const travelWindTarget = THREE.MathUtils.clamp(progressVelocity * 0.085, 0, 1)
@@ -5534,19 +5833,7 @@ export default function JourneyScene({
       if (fade <= 0.002) riverRippleRef.current.visible = false
     }
 
-    outroFramingRef.current = presentationMode
-      ? 0
-      : THREE.MathUtils.damp(
-          outroFramingRef.current,
-          outroMode ? 1 : 0,
-          2.4,
-          delta,
-        )
-    const cameraProgress = THREE.MathUtils.lerp(
-      progress,
-      94,
-      outroFramingRef.current,
-    )
+    const cameraProgress = progress
     const clipTime = clip
       ? clip.duration * storyProgressToClipProgress(cameraProgress)
       : 0
@@ -5627,6 +5914,13 @@ export default function JourneyScene({
       camera.updateMatrixWorld()
       onListenerPose?.(camera)
       if (qaCaptureEnabled) {
+        const captureDataset = document.documentElement.dataset
+        captureDataset.journeyProgress = progress.toFixed(4)
+        captureDataset.journeyDayWeight = timeOfDay.dayWeight.toFixed(6)
+        captureDataset.journeySunsetWeight = sunset.toFixed(6)
+        captureDataset.journeyNightWeight = night.toFixed(6)
+        captureDataset.journeyStarWeight = starWeight.toFixed(6)
+        captureDataset.journeyQualityTier = quality.name
         window.__JOURNEY_V1_CAPTURE__ = {
           progress,
           camera: {
@@ -5654,22 +5948,15 @@ export default function JourneyScene({
       camera.getWorldPosition(skyAtmosphereRef.current.position)
     }
 
-    const sunset = smoothstep(
-      VISUAL_TIMING.sunsetStart,
-      VISUAL_TIMING.sunsetEnd,
-      progress,
-    )
     const sunsetColorMix = smoothstep(0, 0.72, sunset)
-    const night = smoothstep(
-      VISUAL_TIMING.nightStart,
-      VISUAL_TIMING.nightEnd,
-      progress,
-    )
     const caveRelease = smoothstep(7, 20, progress)
-    const skyColor = frameColors.sky
-      .copy(frameColors.daySky)
-      .lerp(frameColors.sunsetSky, sunsetColorMix)
-      .lerp(frameColors.nightSky, night)
+    const skyColor = blendTimeOfDayColor(
+      frameColors.sky,
+      frameColors.daySky,
+      frameColors.sunsetSky,
+      frameColors.nightSky,
+      timeOfDay,
+    )
     state.scene.background = skyColor
 
     if (skyAtmosphereMaterialRef.current) {
@@ -5688,8 +5975,8 @@ export default function JourneyScene({
         .lerp(frameColors.skySunNight, night)
       uniforms.uJourneySunDirection.value
         .set(
-          THREE.MathUtils.lerp(-0.48, 0.42, sunset),
-          THREE.MathUtils.lerp(0.46, 0.08, sunset),
+          THREE.MathUtils.lerp(-0.48, 0.42, eveningProgress),
+          THREE.MathUtils.lerp(0.46, 0.08, eveningProgress),
           -0.74,
         )
         .normalize()
@@ -5793,7 +6080,7 @@ export default function JourneyScene({
       daylightExposure,
       0.98,
       night,
-    ) + outroFramingRef.current * 0.3
+    )
 
     const openAirFogDensity = THREE.MathUtils.lerp(0.00102, 0.00078, night)
     const preHoldFog = progress < 9.3
@@ -5806,7 +6093,7 @@ export default function JourneyScene({
     if (state.scene.fog) {
       const openAirFog = frameColors.openAirFog
         .copy(skyColor)
-        .multiplyScalar(night > 0.5 ? 0.82 : 0.91)
+        .multiplyScalar(THREE.MathUtils.lerp(0.91, 0.82, night))
       state.scene.fog.color
         .set('#050909')
         .lerp(openAirFog, caveRelease)
@@ -5814,6 +6101,10 @@ export default function JourneyScene({
         openAirFogDensity,
         entranceFog * (1 - travelWindRef.current * 0.08),
       )
+      if (qaCaptureEnabled) {
+        document.documentElement.dataset.journeyFogDensity =
+          state.scene.fog.density.toFixed(7)
+      }
     }
 
     if (sunRef.current) {
@@ -5827,8 +6118,8 @@ export default function JourneyScene({
         .set('#fff0cf')
         .lerp(frameColors.sunSunset, sunset * 0.86)
         .lerp(frameColors.sunNight, night)
-      sunRef.current.position.x = THREE.MathUtils.lerp(-90, 40, sunset)
-      sunRef.current.position.y = THREE.MathUtils.lerp(130, 30, sunset)
+      sunRef.current.position.x = THREE.MathUtils.lerp(-90, 40, eveningProgress)
+      sunRef.current.position.y = THREE.MathUtils.lerp(130, 30, eveningProgress)
     }
     if (skyLightRef.current) {
       const dayIntensity = THREE.MathUtils.lerp(
@@ -5837,7 +6128,6 @@ export default function JourneyScene({
         caveRelease,
       )
       skyLightRef.current.intensity = THREE.MathUtils.lerp(dayIntensity, 1.08, night)
-        + outroFramingRef.current * 0.28
       skyLightRef.current.color
         .set('#d9eff4')
         .lerp(frameColors.skyLightSunset, sunset * 0.72)
@@ -5854,7 +6144,6 @@ export default function JourneyScene({
         caveRelease,
       )
       ambientRef.current.intensity = THREE.MathUtils.lerp(dayIntensity, 0.23, night)
-        + outroFramingRef.current * 0.14
       ambientRef.current.color
         .set('#a7b8b4')
         .lerp(frameColors.ambientSunset, sunset * 0.58)
@@ -5867,16 +6156,15 @@ export default function JourneyScene({
         (1 - smoothstep(8, 16, progress)) * CAVE_LOOK.guideLightIntensity
     }
 
-    const starOpacity = smoothstep(
-      VISUAL_TIMING.nightStart,
-      VISUAL_TIMING.nightEnd,
-      progress,
-    )
+    const starOpacity = starWeight
     if (starMaterialRef.current) {
       starMaterialRef.current.uniforms.uJourneyOpacity.value = starOpacity
       starMaterialRef.current.uniforms.uJourneyTime.value = state.clock.elapsedTime
     }
     if (starPointsRef.current) starPointsRef.current.visible = starOpacity > 0.002
+    if (qaCaptureEnabled) {
+      document.documentElement.dataset.journeyStarsVisible = String(starOpacity > 0.002)
+    }
     const bridgeReveal = smoothstep(0, 0.72, skyConnectionProgress)
     const milkyWayReveal = smoothstep(0.28, 1, skyConnectionProgress)
     const bridgeFade = 1 - smoothstep(0.7, 1, skyConnectionProgress) * 0.72
@@ -6061,7 +6349,7 @@ export default function JourneyScene({
           )
         }
         if (isClearRiver && 'transmission' in material) {
-          material.transmission = THREE.MathUtils.lerp(0, 0.54, night)
+          material.transmission = THREE.MathUtils.lerp(0.001, 0.54, night)
           material.clearcoatRoughness = THREE.MathUtils.lerp(0.14, 0.04, night)
           material.attenuationColor
             .set('#6aa99c')
@@ -6100,14 +6388,15 @@ export default function JourneyScene({
     const cavePresence = 1 - smoothstep(13.5, 20.2, progress)
     if (cavePresence !== cavePresenceRef.current) {
       const caveVisible = cavePresence > 0.004
-      const caveWritesDepth = cavePresence > 0.18
       groups.cave.forEach((object) => {
         object.visible = caveVisible
         const materials = Array.isArray(object.material) ? object.material : [object.material]
         materials.forEach((material) => {
           const baseOpacity = material.userData.journeyCaveBaseOpacity ?? 1
           material.opacity = baseOpacity * cavePresence
-          material.depthWrite = caveWritesDepth
+          // Keep the occlusion policy stable while opacity fades. The old
+          // 0.18 cutoff made the cave abruptly stop writing depth mid-scroll.
+          material.depthWrite = true
         })
       })
       cavePresenceRef.current = cavePresence
@@ -6122,7 +6411,7 @@ export default function JourneyScene({
     <>
       <primitive object={root} />
       <primitive object={phase2Root} />
-      <FarRidgeCrown progress={progress} />
+      <FarRidgeCrown progress={progress} biomeMacroTexture={biomeMacroTexture} />
       <NaturalRiverCorridor progress={progress} qualityScale={quality.particles} />
       <ValleyMeadow
         progress={progress}
