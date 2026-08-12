@@ -4464,6 +4464,7 @@ function createMeadowMaterial(kind, alphaMap = null) {
     // that 30-slot loop there preserves the reflected meadow while removing
     // the cave-exit spike from duplicate vertex work.
     uJourneyReflectionPass: { value: 0 },
+    uJourneyActiveImpulseCount: { value: 0 },
     uJourneyWindImpulse: {
       value: Array.from({ length: MEADOW_WIND_IMPULSE_COUNT }, () => new THREE.Vector4()),
     },
@@ -4511,6 +4512,7 @@ function createMeadowMaterial(kind, alphaMap = null) {
           'uniform float uJourneyAmbientWind;',
           'uniform float uJourneyMotionScale;',
           'uniform float uJourneyReflectionPass;',
+          'uniform float uJourneyActiveImpulseCount;',
           'uniform vec4 uJourneyWindImpulse[' + MEADOW_WIND_IMPULSE_COUNT + '];',
           'uniform vec4 uJourneyWindDirection[' + MEADOW_WIND_IMPULSE_COUNT + '];',
           'varying float vJourneyMeadowTip;',
@@ -4539,6 +4541,7 @@ function createMeadowMaterial(kind, alphaMap = null) {
           'vec2 journeySway = journeyLocalAmbient * (0.038 + uJourneyAmbientWind * 0.096 + journeyGust * 0.046) * uJourneyMotionScale;',
           'if (uJourneyReflectionPass < 0.5) {',
           'for (int journeyImpulseIndex = 0; journeyImpulseIndex < ' + MEADOW_WIND_IMPULSE_COUNT + '; journeyImpulseIndex++) {',
+          '  if (float(journeyImpulseIndex) >= uJourneyActiveImpulseCount) break;',
           '  vec4 journeyImpulse = uJourneyWindImpulse[journeyImpulseIndex];',
           '  vec4 journeyDirectionAge = uJourneyWindDirection[journeyImpulseIndex];',
           '  if (journeyImpulse.w <= 0.001) continue;',
@@ -4615,7 +4618,7 @@ function createMeadowMaterial(kind, alphaMap = null) {
         ].join('\n'),
       )
   }
-  material.customProgramCacheKey = () => 'journey-meadow-' + kind + '-v8-independent-gusts'
+  material.customProgramCacheKey = () => 'journey-meadow-' + kind + '-v9-active-gusts'
   material.userData.journeyMeadowUniforms = uniforms
   return material
 }
@@ -4685,6 +4688,7 @@ function createMeadowPetalMaterial(texture, windUniforms) {
 	uniform float uJourneyAmbientWind;
 uniform float uJourneyMotionScale;
 uniform float uJourneyReflectionPass;
+uniform float uJourneyActiveImpulseCount;
 uniform vec4 uJourneyWindImpulse[${MEADOW_WIND_IMPULSE_COUNT}];
 uniform vec4 uJourneyWindDirection[${MEADOW_WIND_IMPULSE_COUNT}];`,
       )
@@ -4698,6 +4702,7 @@ float journeyPetalGust = sin(uJourneyTime * 1.15 + aJourneyMeadowPhase * 11.0 + 
 	  (0.038 + uJourneyAmbientWind * 0.096 + journeyPetalGust * 0.046) * uJourneyMotionScale;
 	if (uJourneyReflectionPass < 0.5) {
 	for (int journeyImpulseIndex = 0; journeyImpulseIndex < ${MEADOW_WIND_IMPULSE_COUNT}; journeyImpulseIndex++) {
+	  if (float(journeyImpulseIndex) >= uJourneyActiveImpulseCount) break;
 	  vec4 journeyImpulse = uJourneyWindImpulse[journeyImpulseIndex];
   vec4 journeyDirectionAge = uJourneyWindDirection[journeyImpulseIndex];
   if (journeyImpulse.w <= 0.001) continue;
@@ -4751,7 +4756,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(1.12, 0.82, 0.6
 diffuseColor.a *= uJourneyReveal * (1.0 - uJourneyNight * 0.72);`,
       )
   }
-	material.customProgramCacheKey = () => 'journey-meadow-petals-v4-independent-gusts'
+	material.customProgramCacheKey = () => 'journey-meadow-petals-v5-active-gusts'
   return material
 }
 
@@ -5289,20 +5294,27 @@ function ValleyMeadow({ progress, travelWindRef, qualityScale = 1 }) {
       uniforms.uJourneyTime.value = state.clock.elapsedTime
       uniforms.uJourneyAmbientWind.value = reduceMotion ? 0 : travelWindRef.current * 0.6 + 0.16
       uniforms.uJourneyMotionScale.value = reduceMotion ? 0 : 1
-      windImpulses.forEach((impulse, index) => {
-        uniforms.uJourneyWindImpulse.value[index].set(
+      let activeImpulseCount = 0
+      windImpulses.forEach((impulse) => {
+        if (impulse.strength <= 0.001) return
+        uniforms.uJourneyWindImpulse.value[activeImpulseCount].set(
           impulse.origin.x,
           impulse.origin.y,
           impulse.radius,
           impulse.strength,
         )
-        uniforms.uJourneyWindDirection.value[index].set(
+        uniforms.uJourneyWindDirection.value[activeImpulseCount].set(
           impulse.direction.x,
           impulse.direction.y,
           impulse.age,
           0,
         )
+        activeImpulseCount += 1
       })
+      uniforms.uJourneyActiveImpulseCount.value = activeImpulseCount
+      for (let index = activeImpulseCount; index < MEADOW_WIND_IMPULSE_COUNT; index += 1) {
+        uniforms.uJourneyWindImpulse.value[index].w = 0
+      }
     })
     const groundUniforms = groundMaterial.userData.journeyMeadowGroundUniforms
     groundUniforms.uJourneyReveal.value = reveal
