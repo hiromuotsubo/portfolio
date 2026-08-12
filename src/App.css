@@ -536,7 +536,9 @@
 }
 
 .paper-texture {
-  opacity: calc(0.06 + var(--open-air) * 0.14);
+  /* Keep the tactile grain in the cave, but let Day Clear read as a clean
+     landscape rather than a dark printed overlay. */
+  opacity: calc(0.055 + var(--open-air) * 0.035);
   mix-blend-mode: overlay;
   background-image:
     repeating-radial-gradient(circle at 23% 31%, rgba(255,255,255,.32) 0 .52px, transparent .8px 3px),
@@ -564,8 +566,8 @@
 
 .soft-vignette {
   background:
-    linear-gradient(to bottom, rgba(3, 8, 8, 0.16), transparent 18%, transparent 78%, rgba(2, 7, 8, 0.24)),
-    radial-gradient(ellipse at center, transparent 55%, rgba(2, 7, 8, 0.24) 118%);
+    linear-gradient(to bottom, rgba(3, 8, 8, 0.1), transparent 18%, transparent 78%, rgba(2, 7, 8, 0.13)),
+    radial-gradient(ellipse at center, transparent 57%, rgba(2, 7, 8, 0.14) 118%);
   transition: background 2s ease;
 }
 
@@ -680,6 +682,30 @@
   font-size: 7px;
   font-weight: 400;
   letter-spacing: 0.17em;
+}
+
+.journey-showcase-note {
+  position: absolute;
+  z-index: 8;
+  top: 28px;
+  right: 58px;
+  display: grid;
+  gap: 4px;
+  padding: 8px 10px 7px;
+  color: rgba(245, 244, 233, 0.86);
+  border: 1px solid rgba(245, 244, 233, 0.24);
+  background: rgba(12, 25, 25, 0.18);
+  font-size: 7px;
+  letter-spacing: 0.18em;
+  line-height: 1;
+  pointer-events: none;
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.38);
+}
+
+.journey-showcase-note small {
+  color: rgba(245, 244, 233, 0.56);
+  font-size: 6px;
+  letter-spacing: 0.15em;
 }
 
 .journey-ui__menu {
@@ -1292,6 +1318,13 @@
 
   .journey-ui__header small {
     display: none;
+  }
+
+  .journey-showcase-note {
+    top: 18px;
+    right: 39px;
+    padding: 6px 7px;
+    font-size: 6px;
   }
 
   .journey-ui__menu {

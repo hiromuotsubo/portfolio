@@ -5,9 +5,14 @@ const JourneyCanvas = lazy(() => import('./JourneyCanvas.jsx'))
 const JourneyV2 = lazy(() => import('./JourneyV2.jsx'))
 const JourneyV3 = lazy(() => import('./journey-v3/JourneyV3.jsx'))
 
-// Local-only visual checkpoints for animation and scene QA.
-const DEV_PREVIEW = (import.meta.env.DEV || ['localhost', '127.0.0.1'].includes(window.location.hostname))
-  ? new URLSearchParams(window.location.search).get('preview')
+// Local-only visual checkpoints for animation and scene QA. `?showcase=day`
+// is the single public exception: an opt-in, fixed Day Clear frame
+// that lets a reviewer see the finished valley without skipping the normal
+// Enter → cave → valley experience on `/journey`.
+const journeySearch = new URLSearchParams(window.location.search)
+const PUBLIC_SHOWCASE = journeySearch.get('showcase') === 'day'
+const DEV_PREVIEW = (import.meta.env.DEV || ['localhost', '127.0.0.1'].includes(window.location.hostname) || PUBLIC_SHOWCASE)
+  ? (PUBLIC_SHOWCASE ? 'day' : journeySearch.get('preview'))
   : null
 const PREVIEW_PROGRESS = {
   cave: 5,
@@ -1032,6 +1037,7 @@ function LegacyApp() {
   const advance = useCallback(
     (rawDelta) => {
       if (
+        PUBLIC_SHOWCASE ||
         !enteredRef.current ||
         portfolioRef.current ||
         !rawDelta ||
@@ -1153,12 +1159,14 @@ function LegacyApp() {
 
   useEffect(() => {
     const onWheel = (event) => {
+      if (PUBLIC_SHOWCASE) return
       if (portfolioRef.current) return
       event.preventDefault()
       const multiplier = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? window.innerHeight : 1
       advance(event.deltaY * multiplier)
     }
     const onTouchStart = (event) => {
+      if (PUBLIC_SHOWCASE) return
       if (portfolioRef.current) return
       if (gateRef.current || event.touches.length !== 1) return
       const touch = event.touches[0]
@@ -1172,6 +1180,7 @@ function LegacyApp() {
       }
     }
     const onTouchMove = (event) => {
+      if (PUBLIC_SHOWCASE) return
       if (portfolioRef.current) return
       if (!touchRef.current.active || event.touches.length !== 1) return
       const touch = event.touches[0]
@@ -1282,7 +1291,7 @@ function LegacyApp() {
   const startHold = useCallback(
     (event) => {
       const type = gateRef.current
-      if (!type || holdRef.current.frame) return
+      if (PUBLIC_SHOWCASE || !type || holdRef.current.frame) return
       if (Number.isFinite(event?.button) && event.button !== 0) return
       if (event?.cancelable) event.preventDefault()
       setHoldOrigin({
@@ -1495,7 +1504,7 @@ function LegacyApp() {
 
   return (
     <main
-      className={`journey-3d ${entered ? 'is-entered' : ''} ${activeGate ? `has-gate is-gate-${activeGate}` : ''} ${activeGate && holdProgress > 0 ? 'is-holding' : ''} ${isNight ? 'is-night' : ''} ${showOutro ? 'is-outro' : ''} ${showPortfolio ? 'is-portfolio' : ''} ${portfolioScrolled ? 'is-portfolio-scrolled' : ''}`}
+      className={`journey-3d ${entered ? 'is-entered' : ''} ${PUBLIC_SHOWCASE ? 'is-showcase' : ''} ${activeGate ? `has-gate is-gate-${activeGate}` : ''} ${activeGate && holdProgress > 0 ? 'is-holding' : ''} ${isNight ? 'is-night' : ''} ${showOutro ? 'is-outro' : ''} ${showPortfolio ? 'is-portfolio' : ''} ${portfolioScrolled ? 'is-portfolio-scrolled' : ''}`}
       style={{
         '--cave-depth': caveDepth,
         '--open-air': openAir,
@@ -1564,6 +1573,13 @@ function LegacyApp() {
         <span>JOURNEY</span>
         <small>INSPIRED BY KAMIKOCHI</small>
       </header>
+
+      {PUBLIC_SHOWCASE ? (
+        <aside className="journey-showcase-note" aria-label="Journey visual showcase">
+          <span>DAY CLEAR</span>
+          <small>VALLEY STUDY</small>
+        </aside>
+      ) : null}
 
       {activeMessage ? (
         <aside
