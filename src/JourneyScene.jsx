@@ -4313,8 +4313,8 @@ function createMeadowMaterial(kind, alphaMap = null) {
     vertexColors: kind === 'flower',
     alphaMap: kind === 'grass' ? alphaMap : null,
     transparent: true,
-    opacity: kind === 'flower' ? 0.7 : 0.68,
-    alphaTest: kind === 'flower' ? 0.02 : 0.085,
+    opacity: kind === 'flower' ? 0.74 : 0.68,
+    alphaTest: kind === 'flower' ? 0.022 : 0.085,
     depthWrite: false,
     side: THREE.DoubleSide,
     fog: true,
@@ -4326,7 +4326,7 @@ function createMeadowMaterial(kind, alphaMap = null) {
     const bladeTip = kind === 'flower'
       ? 'clamp(transformed.y / 0.77, 0.0, 1.0)'
       : 'clamp(transformed.y, 0.0, 1.0)'
-    const pointerScale = kind === 'flower' ? '0.48' : '0.78'
+    const pointerScale = kind === 'flower' ? '0.6' : '1.05'
     const propagationDelay = kind === 'flower' ? '0.12' : '0.0'
     const nightFade = kind === 'flower' ? '0.72' : '0.58'
     const alphaMask = kind === 'flower'
@@ -4363,10 +4363,10 @@ function createMeadowMaterial(kind, alphaMap = null) {
           'vec2 journeyInstanceZ = journeyRawInstanceZ / journeyInstanceScaleZ;',
           'vec2 journeyWorldAmbient = normalize(vec2(0.62, 0.34));',
           'vec2 journeyLocalAmbient = vec2(',
-          '  dot(journeyWorldAmbient, journeyInstanceX) / journeyInstanceScaleX,',
-          '  dot(journeyWorldAmbient, journeyInstanceZ) / journeyInstanceScaleZ',
+          '  dot(journeyWorldAmbient, journeyInstanceX),',
+          '  dot(journeyWorldAmbient, journeyInstanceZ)',
           ');',
-          'vec2 journeySway = journeyLocalAmbient * (0.032 + uJourneyAmbientWind * 0.084 + journeyGust * 0.038);',
+          'vec2 journeySway = journeyLocalAmbient * (0.038 + uJourneyAmbientWind * 0.096 + journeyGust * 0.046);',
           'for (int journeyImpulseIndex = 0; journeyImpulseIndex < ' + MEADOW_WIND_IMPULSE_COUNT + '; journeyImpulseIndex++) {',
           '  vec4 journeyImpulse = uJourneyWindImpulse[journeyImpulseIndex];',
           '  vec4 journeyDirectionAge = uJourneyWindDirection[journeyImpulseIndex];',
@@ -4379,12 +4379,12 @@ function createMeadowMaterial(kind, alphaMap = null) {
           '  float journeyFalloff = 1.0 - smoothstep(max(1.4, journeyImpulse.z * 0.32), journeyImpulse.z, journeyImpulseDistance);',
           '  vec2 journeyWorldDirection = journeyDirectionAge.xy;',
           '  vec2 journeyLocalDirection = vec2(',
-          '    dot(journeyWorldDirection, journeyInstanceX) / journeyInstanceScaleX,',
-          '    dot(journeyWorldDirection, journeyInstanceZ) / journeyInstanceScaleZ',
+          '    dot(journeyWorldDirection, journeyInstanceX),',
+          '    dot(journeyWorldDirection, journeyInstanceZ)',
           '  );',
           '  journeySway += journeyLocalDirection * journeyFalloff * journeyPropagation * journeyImpulse.w * ' + pointerScale + ';',
           '}',
-          'journeySway *= mix(1.1, 0.72, aJourneyMeadowStiffness);',
+          'journeySway *= mix(1.18, 0.62, aJourneyMeadowStiffness);',
           'float journeyRestLean = aJourneyMeadowPhase * 6.2831853;',
           'transformed.x += sin(journeyRestLean) * journeyBladeTip * journeyBladeTip * 0.045;',
           'transformed.z += cos(journeyRestLean) * journeyBladeTip * journeyBladeTip * 0.025;',
@@ -4410,20 +4410,20 @@ function createMeadowMaterial(kind, alphaMap = null) {
         [
           '#include <color_fragment>',
           kind === 'flower'
-            ? 'diffuseColor.rgb = mix(vec3(0.22, 0.34, 0.16), diffuseColor.rgb, smoothstep(0.7, 0.84, vJourneyMeadowTip));'
+            ? 'diffuseColor.rgb = mix(vec3(0.84, 0.86, 0.57), diffuseColor.rgb, smoothstep(0.7, 0.84, vJourneyMeadowTip));'
             : [
-                'vec3 journeyMeadowCool = vec3(0.12, 0.235, 0.07);',
-                'vec3 journeyMeadowFresh = vec3(0.205, 0.335, 0.095);',
-                'vec3 journeyMeadowSunlit = vec3(0.285, 0.405, 0.13);',
+                'vec3 journeyMeadowCool = vec3(0.13, 0.255, 0.075);',
+                'vec3 journeyMeadowFresh = vec3(0.215, 0.355, 0.105);',
+                'vec3 journeyMeadowSunlit = vec3(0.305, 0.425, 0.13);',
                 'vec3 journeyMeadowHue = mix(journeyMeadowCool, journeyMeadowFresh, smoothstep(0.08, 0.72, vJourneyMeadowHue));',
                 'journeyMeadowHue = mix(journeyMeadowHue, journeyMeadowSunlit, smoothstep(0.76, 0.98, vJourneyMeadowHue) * 0.46);',
-                'diffuseColor.rgb = mix(journeyMeadowHue * vec3(0.88, 0.94, 0.78), journeyMeadowHue * vec3(1.18, 1.15, 0.9), vJourneyMeadowTip);',
+                'diffuseColor.rgb = mix(journeyMeadowHue * vec3(0.9, 0.95, 0.8), journeyMeadowHue * vec3(1.2, 1.16, 0.93), vJourneyMeadowTip);',
               ].join('\n'),
           'diffuseColor.a *= uJourneyReveal * (1.0 - uJourneyNight * ' + nightFade + ') * ' + alphaMask + ';',
         ].join('\n'),
       )
   }
-  material.customProgramCacheKey = () => 'journey-meadow-' + kind + '-v4-local-impulses'
+  material.customProgramCacheKey = () => 'journey-meadow-' + kind + '-v5-local-impulses'
   material.userData.journeyMeadowUniforms = uniforms
   return material
 }
@@ -4470,7 +4470,7 @@ function createMeadowPetalMaterial(texture, windUniforms) {
     transparent: true,
     opacity: 0.7,
     alphaTest: 0.055,
-    size: 0.62,
+    size: 0.75,
     sizeAttenuation: true,
     depthWrite: false,
     depthTest: true,
@@ -4529,7 +4529,7 @@ uniform float uJourneyNight;`,
 diffuseColor.a *= uJourneyReveal * (1.0 - uJourneyNight * 0.72);`,
       )
   }
-  material.customProgramCacheKey = () => 'journey-meadow-petals-v2-local-impulses'
+  material.customProgramCacheKey = () => 'journey-meadow-petals-v3-local-impulses'
   return material
 }
 
@@ -4548,7 +4548,7 @@ function buildMeadowSeeds() {
       const sceneDepth = clamp01((-z - 2) / 114)
       const maximumBank = THREE.MathUtils.lerp(62, 44, sceneDepth)
       const bank = THREE.MathUtils.lerp(
-        4.8,
+        5.2,
         maximumBank,
         Math.pow(seededRandom(attempt + seed + 71), 0.82),
       )
@@ -4587,20 +4587,20 @@ function buildMeadowSeeds() {
     return items
   }
   const nearGrass = buildGrassBand({
-    count: 10000,
+    count: 11200,
     nearZ: -2,
     farZ: -43,
     seed: 47001,
-    height: [0.5, 0.9],
-    width: [0.18, 0.34],
+    height: [0.58, 1.02],
+    width: [0.2, 0.4],
   })
   const midGrass = buildGrassBand({
-    count: 4200,
+    count: 4800,
     nearZ: -38,
     farZ: -88,
     seed: 61001,
-    height: [0.3, 0.58],
-    width: [0.15, 0.27],
+    height: [0.34, 0.64],
+    width: [0.17, 0.31],
   })
 
   const flowerPalette = [
@@ -4637,11 +4637,11 @@ function buildMeadowSeeds() {
         cluster.side * (station.halfWidth + bank),
       )
       const paletteSeed = seededRandom(flowerIndex + 52211)
-      const paletteIndex = paletteSeed < 0.43 ? 0 : paletteSeed < 0.67 ? 1 : paletteSeed < 0.82 ? 2 : paletteSeed < 0.96 ? 3 : 4
+      const paletteIndex = paletteSeed < 0.39 ? 0 : paletteSeed < 0.67 ? 1 : paletteSeed < 0.82 ? 2 : paletteSeed < 0.96 ? 3 : 4
       const depth = clamp01((-z - 2) / 114)
       flowers.push({
         position: [point.x, sampleValleyMeadowHeight(point.z, cluster.side, bank) + 0.055, point.z],
-        scale: THREE.MathUtils.lerp(0.65, 1.05, seededRandom(flowerIndex + 52247)) * THREE.MathUtils.lerp(1, 0.68, depth),
+        scale: THREE.MathUtils.lerp(0.76, 1.14, seededRandom(flowerIndex + 52247)) * THREE.MathUtils.lerp(1, 0.68, depth),
         phase: seededRandom(flowerIndex + 52283) + clusterIndex * 0.07,
         stiffness: THREE.MathUtils.lerp(0.28, 0.88, seededRandom(flowerIndex + 52297)),
         color: flowerPalette[paletteIndex].clone(),
@@ -4666,8 +4666,8 @@ function ValleyMeadow({ progress, travelWindRef, qualityScale = 1 }) {
   const groundMaterial = useMemo(() => createMeadowGroundMaterial(groundTexture), [groundTexture])
   const nearGrassCount = Math.max(1, Math.floor(seeds.nearGrass.length * qualityScale))
   const midGrassCount = Math.max(1, Math.floor(seeds.midGrass.length * qualityScale))
-  const flowerCount = Math.max(1, Math.floor(Math.min(seeds.flowers.length, 180) * qualityScale))
-  const flowerStemCount = Math.max(1, Math.floor(flowerCount * 0.12))
+  const flowerCount = Math.max(1, Math.floor(Math.min(seeds.flowers.length, 240) * qualityScale))
+  const flowerStemCount = Math.max(1, Math.floor(flowerCount * 0.18))
   const nearGrassGeometry = useMemo(() => {
     const geometry = createMeadowBladeGeometry('grass')
     geometry.setAttribute(
@@ -4718,7 +4718,7 @@ function ValleyMeadow({ progress, travelWindRef, qualityScale = 1 }) {
     seeds.flowers.forEach((item, index) => {
       positions.set([
         item.position[0],
-        item.position[1] + item.scale * 0.61,
+        item.position[1] + item.scale * 0.72,
         item.position[2],
       ], index * 3)
       colors.set([item.color.r, item.color.g, item.color.b], index * 3)
@@ -4791,7 +4791,7 @@ function ValleyMeadow({ progress, travelWindRef, qualityScale = 1 }) {
       scratch.previousScreen.set(event.clientX, event.clientY)
       scratch.time = now
       const speed = scratch.screenVelocity.length()
-      if (speed < 0.16) return
+      if (speed < 0.11) return
       scratch.ndc.set(
         ((event.clientX - bounds.left) / Math.max(bounds.width, 1)) * 2 - 1,
         -((event.clientY - bounds.top) / Math.max(bounds.height, 1)) * 2 + 1,
@@ -4811,8 +4811,8 @@ function ValleyMeadow({ progress, travelWindRef, qualityScale = 1 }) {
       impulseCursorRef.current = (impulseCursorRef.current + 1) % MEADOW_WIND_IMPULSE_COUNT
       slot.origin.set(scratch.hit.x, scratch.hit.z)
       slot.direction.copy(scratch.direction)
-      slot.strength = THREE.MathUtils.clamp((speed - 0.12) * 0.34, 0.16, 1)
-      slot.radius = 3.2
+      slot.strength = THREE.MathUtils.clamp(speed * 2.85, 0.16, 1)
+      slot.radius = 4.4
       slot.age = 0
     }
     window.addEventListener('pointermove', onPointerMove, { passive: true })
@@ -4870,16 +4870,16 @@ function ValleyMeadow({ progress, travelWindRef, qualityScale = 1 }) {
     const windDelta = Math.min(delta, 0.05)
     windImpulses.forEach((impulse) => {
       impulse.age += windDelta
-      impulse.radius = Math.min(17, impulse.radius + windDelta * 9.4)
-      impulse.strength *= Math.exp(-windDelta * 2.55)
-      if (impulse.age > 1.65 || impulse.strength < 0.006) impulse.strength = 0
+      impulse.radius = Math.min(17, impulse.radius + windDelta * 12)
+      impulse.strength *= Math.exp(-windDelta * 1.95)
+      if (impulse.age > 2.0 || impulse.strength < 0.006) impulse.strength = 0
     })
     ;[grassMaterial, flowerMaterial].forEach((material) => {
       const uniforms = material.userData.journeyMeadowUniforms
       uniforms.uJourneyReveal.value = reveal
       uniforms.uJourneyNight.value = smoothstep(VISUAL_TIMING.nightStart, VISUAL_TIMING.nightEnd, progress)
       uniforms.uJourneyTime.value = state.clock.elapsedTime
-      uniforms.uJourneyAmbientWind.value = reduceMotion ? 0 : travelWindRef.current * 0.7 + 0.18
+      uniforms.uJourneyAmbientWind.value = reduceMotion ? 0 : travelWindRef.current * 0.6 + 0.16
       windImpulses.forEach((impulse, index) => {
         uniforms.uJourneyWindImpulse.value[index].set(
           impulse.origin.x,
