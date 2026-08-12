@@ -2662,6 +2662,11 @@ function prepareWorld(source, biomeMacroTexture) {
 
     if (identity.includes('CAVE_') || identity.includes('WEB_CAVE')) {
       groups.cave.push(object)
+      // The cave is behind the final valley camera and cannot contribute to
+      // the river surface. Excluding it from the secondary planar pass keeps
+      // the authored main view unchanged while avoiding a full duplicate draw
+      // of the fading shell during the cave-to-valley handoff.
+      object.userData.journeySkipPlanarReflection = true
       object.castShadow = true
       materials.forEach((material) => {
         material.userData.journeyCaveBaseOpacity = material.opacity
@@ -3696,8 +3701,14 @@ function NaturalRiverCorridor({ progress, qualityScale = 1 }) {
     position: new THREE.Vector3(),
     quaternion: new THREE.Quaternion(),
     mainRiver: null,
+    exclusions: [],
+    motionUniforms: [],
   })
   const { gl, scene, camera } = useThree()
+  const qaCaptureEnabled = useMemo(
+    () => new URLSearchParams(window.location.search).get('capture') === '1',
+    [],
+  )
   const planarReflectionEnabled = qualityScale >= 0.9
   const reflectionResolution = planarReflectionEnabled ? 320 : 2
   const bedGeometry = useMemo(
@@ -3754,6 +3765,74 @@ function NaturalRiverCorridor({ progress, qualityScale = 1 }) {
     return texture
   }, [gravelTexture])
 
+  const hideReflectionExclusions = useCallback(() => {
+    const reflectionState = reflectionStateRef.current
+    // Cache the small exclusion set after the procedural React siblings have
+    // mounted. Rebuild only if the cached objects were removed from the scene.
+    if (
+      reflectionState.exclusions.length === 0 ||
+      reflectionState.exclusions.some((object) => !object.parent)
+    ) {
+      const candidates = []
+      scene.traverse((object) => {
+        if (object.userData?.journeySkipPlanarReflection) candidates.push(object)
+      })
+      reflectionState.exclusions = candidates.filter((object) => {
+        let parent = object.parent
+        while (parent) {
+          if (parent.userData?.journeySkipPlanarReflection) return false
+          parent = parent.parent
+        }
+        return true
+      })
+    }
+    const visibility = reflectionState.exclusions.map((object) => object.visible)
+    reflectionState.exclusions.forEach((object) => {
+      object.visible = false
+    })
+    return () => {
+      reflectionState.exclusions.forEach((object, index) => {
+        object.visible = visibility[index]
+      })
+    }
+  }, [scene])
+
+  const setReflectionMotionMode = useCallback((value) => {
+    const reflectionState = reflectionStateRef.current
+    if (
+      reflectionState.motionUniforms.length === 0 ||
+      reflectionState.motionUniforms.some(({ object }) => !object.parent)
+    ) {
+      const uniforms = new Map()
+      scene.traverse((object) => {
+        const materials = Array.isArray(object.material)
+          ? object.material
+          : [object.material]
+        materials.filter(Boolean).forEach((material) => {
+          const reflectionUniform = material.userData
+            ?.journeyMeadowUniforms
+            ?.uJourneyReflectionPass
+          if (reflectionUniform) uniforms.set(reflectionUniform, object)
+        })
+      })
+      reflectionState.motionUniforms = Array.from(
+        uniforms,
+        ([uniform, object]) => ({ object, uniform }),
+      )
+    }
+    const previousValues = reflectionState.motionUniforms.map(
+      ({ uniform }) => uniform.value,
+    )
+    reflectionState.motionUniforms.forEach(({ uniform }) => {
+      uniform.value = value
+    })
+    return () => {
+      reflectionState.motionUniforms.forEach(({ uniform }, index) => {
+        uniform.value = previousValues[index]
+      })
+    }
+  }, [scene])
+
   useLayoutEffect(() => {
     gl.initRenderTarget(reflectionTarget)
     let cancelled = false
@@ -3765,8 +3844,10 @@ function NaturalRiverCorridor({ progress, qualityScale = 1 }) {
       const previousXr = gl.xr.enabled
       const previousShadowUpdate = gl.shadowMap.autoUpdate
       const hiddenObjects = []
+      const restoreReflectionExclusions = hideReflectionExclusions()
+      const restoreReflectionMotion = setReflectionMotionMode(1)
       scene.traverse((object) => {
-        if (!object.visible) {
+        if (!object.visible && !object.userData?.journeySkipPlanarReflection) {
           hiddenObjects.push(object)
           object.visible = true
         }
@@ -3791,6 +3872,8 @@ function NaturalRiverCorridor({ progress, qualityScale = 1 }) {
         hiddenObjects.forEach((object) => {
           object.visible = false
         })
+        restoreReflectionMotion()
+        restoreReflectionExclusions()
         if (reflectionMeshRef.current) reflectionMeshRef.current.visible = reflectorVisible
       }
       })
@@ -3800,7 +3883,15 @@ function NaturalRiverCorridor({ progress, qualityScale = 1 }) {
       window.cancelAnimationFrame(setupFrame)
       if (warmFrame != null) window.cancelAnimationFrame(warmFrame)
     }
-  }, [camera, gl, reflectionCamera, reflectionTarget, scene])
+  }, [
+    camera,
+    gl,
+    hideReflectionExclusions,
+    reflectionCamera,
+    reflectionTarget,
+    scene,
+    setReflectionMotionMode,
+  ])
 
   useEffect(() => {
     const state = reflectionStateRef.current
@@ -3903,20 +3994,39 @@ function NaturalRiverCorridor({ progress, qualityScale = 1 }) {
       const corridorVisible = corridorRef.current?.visible
       if (corridorRef.current) corridorRef.current.visible = false
       if (mainRiver) mainRiver.visible = false
+      const restoreReflectionExclusions = hideReflectionExclusions()
+      const restoreReflectionMotion = setReflectionMotionMode(1)
       const previousTarget = gl.getRenderTarget()
       const previousXr = gl.xr.enabled
       const previousShadowUpdate = gl.shadowMap.autoUpdate
-      gl.xr.enabled = false
-      gl.shadowMap.autoUpdate = false
-      gl.setRenderTarget(reflectionTarget)
-      gl.clear()
-      gl.render(scene, reflectionCamera)
-      gl.setRenderTarget(previousTarget)
-      gl.xr.enabled = previousXr
-      gl.shadowMap.autoUpdate = previousShadowUpdate
-      if (mainRiver) mainRiver.visible = mainRiverVisible
-      if (corridorRef.current) corridorRef.current.visible = corridorVisible
-      if (reflectionMeshRef.current) reflectionMeshRef.current.visible = reflectorVisible
+      const reflectionRenderStartedAt = qaCaptureEnabled ? performance.now() : 0
+      try {
+        gl.xr.enabled = false
+        gl.shadowMap.autoUpdate = false
+        gl.setRenderTarget(reflectionTarget)
+        gl.clear()
+        gl.render(scene, reflectionCamera)
+        if (qaCaptureEnabled) {
+          const captureDataset = document.documentElement.dataset
+          captureDataset.journeyReflectionCalls = String(gl.info.render.calls)
+          captureDataset.journeyReflectionTriangles = String(gl.info.render.triangles)
+          captureDataset.journeyReflectionExcludedRoots = String(
+            reflectionState.exclusions.length,
+          )
+          captureDataset.journeyReflectionLastMs = (
+            performance.now() - reflectionRenderStartedAt
+          ).toFixed(3)
+        }
+      } finally {
+        gl.setRenderTarget(previousTarget)
+        gl.xr.enabled = previousXr
+        gl.shadowMap.autoUpdate = previousShadowUpdate
+        if (mainRiver) mainRiver.visible = mainRiverVisible
+        if (corridorRef.current) corridorRef.current.visible = corridorVisible
+        restoreReflectionMotion()
+        restoreReflectionExclusions()
+        if (reflectionMeshRef.current) reflectionMeshRef.current.visible = reflectorVisible
+      }
       reflectionUniforms.uJourneyReflectionReady.value = 1
       reflectionState.initialized = true
       reflectionState.time = state.clock.elapsedTime
@@ -3943,6 +4053,15 @@ function NaturalRiverCorridor({ progress, qualityScale = 1 }) {
         .lerp(new THREE.Color(wet ? '#354b50' : '#4b5960'), night)
     })
   })
+
+  useEffect(() => () => {
+    if (!qaCaptureEnabled) return
+    const captureDataset = document.documentElement.dataset
+    delete captureDataset.journeyReflectionCalls
+    delete captureDataset.journeyReflectionTriangles
+    delete captureDataset.journeyReflectionExcludedRoots
+    delete captureDataset.journeyReflectionLastMs
+  }, [qaCaptureEnabled])
 
   return (
     <group ref={corridorRef} name="JOURNEY_V1_NATURAL_RIVER_CORRIDOR">
@@ -4340,6 +4459,11 @@ function createMeadowMaterial(kind, alphaMap = null) {
     uJourneyTime: { value: 0 },
     uJourneyAmbientWind: { value: 0 },
     uJourneyMotionScale: { value: 1 },
+    // The 320x200 planar pass keeps every blade and its ambient motion, but
+    // pointer-gust micro-deformation is below its pixel footprint. Bypassing
+    // that 30-slot loop there preserves the reflected meadow while removing
+    // the cave-exit spike from duplicate vertex work.
+    uJourneyReflectionPass: { value: 0 },
     uJourneyWindImpulse: {
       value: Array.from({ length: MEADOW_WIND_IMPULSE_COUNT }, () => new THREE.Vector4()),
     },
@@ -4386,6 +4510,7 @@ function createMeadowMaterial(kind, alphaMap = null) {
           'uniform float uJourneyTime;',
           'uniform float uJourneyAmbientWind;',
           'uniform float uJourneyMotionScale;',
+          'uniform float uJourneyReflectionPass;',
           'uniform vec4 uJourneyWindImpulse[' + MEADOW_WIND_IMPULSE_COUNT + '];',
           'uniform vec4 uJourneyWindDirection[' + MEADOW_WIND_IMPULSE_COUNT + '];',
           'varying float vJourneyMeadowTip;',
@@ -4412,6 +4537,7 @@ function createMeadowMaterial(kind, alphaMap = null) {
           '  dot(journeyWorldAmbient, journeyInstanceZ)',
           ');',
           'vec2 journeySway = journeyLocalAmbient * (0.038 + uJourneyAmbientWind * 0.096 + journeyGust * 0.046) * uJourneyMotionScale;',
+          'if (uJourneyReflectionPass < 0.5) {',
           'for (int journeyImpulseIndex = 0; journeyImpulseIndex < ' + MEADOW_WIND_IMPULSE_COUNT + '; journeyImpulseIndex++) {',
           '  vec4 journeyImpulse = uJourneyWindImpulse[journeyImpulseIndex];',
           '  vec4 journeyDirectionAge = uJourneyWindDirection[journeyImpulseIndex];',
@@ -4444,6 +4570,7 @@ function createMeadowMaterial(kind, alphaMap = null) {
           '  ) * exp(-journeyReturnLife * (1.2 + aJourneyMeadowRecovery * 0.58)) * 0.13 * journeyReturnGate;',
           '  float journeyImpulsePulse = journeyImpulse.w * (journeyImpulseEnvelope + journeyImpulseReturn);',
           '  journeySway += journeyLocalDirection * journeyFalloff * journeyPropagation * journeyImpulsePulse * ' + pointerScale + ' * uJourneyMotionScale;',
+          '}',
           '}',
           'float journeyFlex = mix(1.14, 0.6, aJourneyMeadowStiffness) *',
           '  mix(0.68, 1.15, aJourneyMeadowMaxBend);',
@@ -4557,6 +4684,7 @@ function createMeadowPetalMaterial(texture, windUniforms) {
 	uniform float uJourneyTime;
 	uniform float uJourneyAmbientWind;
 uniform float uJourneyMotionScale;
+uniform float uJourneyReflectionPass;
 uniform vec4 uJourneyWindImpulse[${MEADOW_WIND_IMPULSE_COUNT}];
 uniform vec4 uJourneyWindDirection[${MEADOW_WIND_IMPULSE_COUNT}];`,
       )
@@ -4568,6 +4696,7 @@ float journeyPetalGust = sin(uJourneyTime * 1.15 + aJourneyMeadowPhase * 11.0 + 
   sin(uJourneyTime * 0.48 + aJourneyMeadowPhase * 23.0 + journeyPetalBase.x * 0.11) * 0.5;
 	vec2 journeyPetalSway = normalize(vec2(0.62, 0.34)) *
 	  (0.038 + uJourneyAmbientWind * 0.096 + journeyPetalGust * 0.046) * uJourneyMotionScale;
+	if (uJourneyReflectionPass < 0.5) {
 	for (int journeyImpulseIndex = 0; journeyImpulseIndex < ${MEADOW_WIND_IMPULSE_COUNT}; journeyImpulseIndex++) {
 	  vec4 journeyImpulse = uJourneyWindImpulse[journeyImpulseIndex];
   vec4 journeyDirectionAge = uJourneyWindDirection[journeyImpulseIndex];
@@ -4599,6 +4728,7 @@ float journeyPetalGust = sin(uJourneyTime * 1.15 + aJourneyMeadowPhase * 11.0 + 
 	  ) * exp(-journeyReturnLife * (1.2 + aJourneyMeadowRecovery * 0.58)) * 0.13 * journeyReturnGate;
 	  float journeyImpulsePulse = journeyImpulse.w * (journeyImpulseEnvelope + journeyImpulseReturn);
 	  journeyPetalSway += journeyDirectionAge.xy * journeyFalloff * journeyPropagation * journeyImpulsePulse * 0.6 * uJourneyMotionScale;
+	}
 	}
 	float journeyPetalFlex = mix(1.14, 0.6, aJourneyMeadowStiffness) *
 	  mix(0.68, 1.15, aJourneyMeadowMaxBend);
@@ -5187,7 +5317,7 @@ function ValleyMeadow({ progress, travelWindRef, qualityScale = 1 }) {
   })
 
   return (
-    <group renderOrder={3}>
+    <group name="JOURNEY_V1_VALLEY_MEADOW" renderOrder={3}>
       <mesh ref={groundRef} geometry={groundGeometry} material={groundMaterial} renderOrder={2} frustumCulled={false} />
       <instancedMesh ref={nearGrassRef} args={[nearGrassGeometry, grassMaterial, nearGrassCount]} renderOrder={7} frustumCulled={false} />
       <instancedMesh ref={midGrassRef} args={[midGrassGeometry, grassMaterial, midGrassCount]} renderOrder={7} frustumCulled={false} />

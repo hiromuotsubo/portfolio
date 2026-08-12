@@ -41,6 +41,8 @@ const PREVIEW_ENTERED = Boolean(DEV_PREVIEW)
 const ENDING_SETTLE_PROGRESS = 99.995
 const ENDING_SETTLE_MS = 1500
 const ENDING_CAPTURE_MAX_ATTEMPTS = 3
+const ENDING_COPY = 'Thank you so much.'
+const ENDING_M_INDEX = ENDING_COPY.indexOf('m')
 const PORTFOLIO_PAGES = ['home', 'about', 'project', 'contact']
 const PORTFOLIO_PATHS = {
   home: '/',
@@ -1016,7 +1018,7 @@ function LegacyApp() {
   const endingCommittedRef = useRef(
     DEV_PREVIEW === 'portfolio' || INITIAL_VIEW === 'portfolio',
   )
-  const endingMRef = useRef(null)
+  const endingCopyRef = useRef(null)
   const { ensureAudio, updateListenerPose } = useAmbientAudio(progress, fogCompleted)
 
   const clearEndingCapture = useCallback(() => {
@@ -1154,18 +1156,27 @@ function LegacyApp() {
     const armOutro = async () => {
       await document.fonts?.ready
       if (cancelled || requestId !== activeEndingRequestRef.current) return
-      const glyph = endingMRef.current
-      if (!glyph) return
+      const copy = endingCopyRef.current
+      const textNode = copy?.firstChild
+      if (!copy || !textNode || textNode.nodeType !== Node.TEXT_NODE) return
       const range = document.createRange()
-      range.selectNodeContents(glyph)
+      range.setStart(textNode, ENDING_M_INDEX)
+      range.setEnd(textNode, ENDING_M_INDEX + 1)
       const inkRect = range.getBoundingClientRect()
-      const elementRect = glyph.getBoundingClientRect()
+      const elementRect = copy.getBoundingClientRect()
       const bounds = inkRect.width > 0 && inkRect.height > 0 ? inkRect : elementRect
+      const portraitEnding = window.matchMedia(
+        '(max-width: 720px), (max-aspect-ratio: 4 / 5)',
+      ).matches
+      const cardWidth = portraitEnding
+        ? clamp(window.innerWidth * 0.28, 112, 154)
+        : clamp(window.innerWidth * 0.19, 176, 304)
       setEndingGlyphMetrics({
         centerX: bounds.left + bounds.width / 2,
         centerY: bounds.top + bounds.height / 2,
         width: bounds.width,
         height: bounds.height,
+        cardScale: cardWidth / Math.max(window.innerWidth, 1),
       })
 
       firstPaintFrame = window.requestAnimationFrame(() => {
@@ -1711,6 +1722,7 @@ function LegacyApp() {
           '--outro-glyph-center-y': `${endingGlyphMetrics.centerY}px`,
           '--outro-glyph-width': `${endingGlyphMetrics.width}px`,
           '--outro-glyph-height': `${endingGlyphMetrics.height}px`,
+          '--outro-card-scale': endingGlyphMetrics.cardScale,
         } : {}),
       }}
     >
@@ -1769,26 +1781,17 @@ function LegacyApp() {
 
       <section className="journey-outro" aria-label="Thank you so much.">
         <p className="journey-outro__copy" aria-hidden="true">
-          <span className="journey-outro__prefix">Thank you so</span>
-          <span className="journey-outro__slot">
-            <span className="journey-outro__m-stack">
-              <span
-                className="journey-outro__m journey-outro__m--snapshot"
-                style={endingFrameSource ? {
-                  backgroundImage: `url("${endingFrameSource}")`,
-                } : undefined}
-              >
-                m
-              </span>
-              <span
-                ref={endingMRef}
-                className="journey-outro__m journey-outro__m--live"
-              >
-                m
-              </span>
-            </span>
+          <span ref={endingCopyRef} className="journey-outro__phrase">
+            {ENDING_COPY}
           </span>
-          <span className="journey-outro__suffix">uch.</span>
+          <span
+            className="journey-outro__m journey-outro__m--snapshot"
+            style={endingFrameSource ? {
+              backgroundImage: `url("${endingFrameSource}")`,
+            } : undefined}
+          >
+            m
+          </span>
         </p>
       </section>
 
