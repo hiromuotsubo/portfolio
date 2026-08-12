@@ -1152,28 +1152,43 @@
     filter: blur(0);
     transform: translate(-50%, -50%) scale(var(--outro-card-scale));
   }
-  66% {
+  62% {
     top: var(--outro-glyph-center-y);
     left: var(--outro-glyph-center-x);
     width: 100%;
     height: 100%;
-    opacity: 0.48;
-    filter: blur(9px);
+    opacity: 0.82;
+    filter: blur(2px) contrast(.96);
     transform: translate(-50%, -50%) scale(var(--outro-card-scale));
+    -webkit-mask-image: none;
+    mask-image: none;
   }
-  74%, 100% {
+  69% {
+    top: var(--outro-glyph-center-y);
+    left: var(--outro-glyph-center-x);
+    width: 100%;
+    height: 100%;
+    opacity: 0.32;
+    filter: blur(8px) contrast(.88);
+    transform: translate(-50%, -50%) scale(var(--outro-card-scale));
+    -webkit-mask-image: radial-gradient(ellipse at 47% 46%, #000 0 34%, rgba(0, 0, 0, .72) 56%, transparent 88%);
+    mask-image: radial-gradient(ellipse at 47% 46%, #000 0 34%, rgba(0, 0, 0, .72) 56%, transparent 88%);
+  }
+  76%, 100% {
     top: var(--outro-glyph-center-y);
     left: var(--outro-glyph-center-x);
     width: 100%;
     height: 100%;
     opacity: 0;
-    filter: blur(22px);
+    filter: blur(14px) contrast(.78);
     transform: translate(-50%, -50%) scale(var(--outro-card-scale));
+    -webkit-mask-image: radial-gradient(ellipse at 47% 46%, #000 0 8%, rgba(0, 0, 0, .36) 30%, transparent 64%);
+    mask-image: radial-gradient(ellipse at 47% 46%, #000 0 8%, rgba(0, 0, 0, .36) 30%, transparent 64%);
   }
 }
 
 @keyframes outro-copy-in {
-  0%, 74% {
+  0%, 72% {
     opacity: 0;
   }
   86%, 100% {
@@ -5206,19 +5221,6 @@ textarea,
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .journey-3d.is-outro .journey-outro__m--snapshot {
-    animation: none;
-    opacity: 0;
-  }
-
-  .journey-3d.is-outro .journey-outro__phrase {
-    animation: none;
-    opacity: 1;
-    transform: none;
-  }
-}
-
 /* Page changes emerge from the same mist that shapes Journey. */
 .portfolio-mist-transition {
   position: fixed;
@@ -6008,5 +6010,149 @@ textarea,
 
   .journey-ui__operation.is-hold > span {
     right: calc(100% + 14px);
+  }
+}
+
+/* Final cohesion overrides. Kept last so the selected editorial grid and
+   quiet air transition win over the historical study rules above. */
+@media (min-width: 901px) {
+  .portfolio-site.is-page-about .portfolio-story,
+  .portfolio-site.is-page-project .portfolio-story {
+    grid-template-columns: minmax(300px, 31vw) minmax(0, 1fr);
+  }
+
+  .portfolio-site.is-page-about .portfolio-story__panels,
+  .portfolio-site.is-page-project .portfolio-story__panels {
+    padding-inline: clamp(58px, 6.4vw, 112px) clamp(74px, 9vw, 156px);
+  }
+
+  .portfolio-site.is-page-about .portfolio-story__panels .portfolio-panel,
+  .portfolio-site.is-page-project .portfolio-story__panels .portfolio-panel,
+  .portfolio-site.is-page-about .portfolio-story__panels .portfolio-panel.is-active,
+  .portfolio-site.is-page-project .portfolio-story__panels .portfolio-panel.is-active {
+    width: min(100%, 1040px);
+    margin-inline: 0 auto;
+    padding-inline: 0;
+  }
+
+  .portfolio-site.is-page-about .portfolio-story__panels .portfolio-figure,
+  .portfolio-site.is-page-project .portfolio-story__panels .portfolio-figure {
+    width: min(100%, 980px) !important;
+  }
+
+  .portfolio-site.is-page-about .portfolio-story__panels .portfolio-panel__copy,
+  .portfolio-site.is-page-project .portfolio-story__panels .portfolio-panel__copy {
+    width: min(100%, 720px) !important;
+  }
+
+  .portfolio-site.is-page-about .portfolio-story__panels .portfolio-panel__copy h3,
+  .portfolio-site.is-page-project .portfolio-story__panels .portfolio-panel__copy h3 {
+    max-width: 15ch;
+  }
+
+  .portfolio-site.is-page-about .portfolio-story__panels .portfolio-panel__copy p,
+  .portfolio-site.is-page-project .portfolio-story__panels .portfolio-panel__copy p {
+    max-width: 56ch;
+  }
+
+  .portfolio-site.is-page-about .portfolio-panel__copy a,
+  .portfolio-site.is-page-project .portfolio-panel__copy button {
+    width: min(100%, 560px);
+  }
+}
+
+.portfolio-site.is-page-project .portfolio-figure img {
+  filter: saturate(.9) contrast(.96) brightness(1.015);
+}
+
+.portfolio-site.is-page-project .portfolio-figure.is-dark img {
+  filter: saturate(.84) contrast(.94) brightness(.98);
+}
+
+.portfolio-site .portfolio-mist-transition {
+  background:
+    linear-gradient(112deg, rgba(240, 238, 230, .94), rgba(228, 237, 229, .9)),
+    repeating-radial-gradient(ellipse at 32% 46%, rgba(105, 167, 133, .05) 0 1px, transparent 1px 6px);
+  clip-path: inset(0) !important;
+}
+
+.portfolio-site .portfolio-mist-transition::before,
+.portfolio-site .portfolio-mist-transition::after,
+.portfolio-site .portfolio-mist-transition i {
+  display: none;
+}
+
+html[data-portfolio-route-transition='cover'] .portfolio-site::after,
+html[data-portfolio-route-transition='reveal'] .portfolio-site::after {
+  position: fixed;
+  z-index: 140;
+  inset: 0;
+  content: '';
+  pointer-events: auto;
+  background: rgba(240, 238, 230, .94);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+html[data-portfolio-route-transition='cover'] .portfolio-site::after {
+  animation: portfolio-air-cover 330ms ease both;
+}
+
+html[data-portfolio-route-transition='reveal'] .portfolio-site::after {
+  animation: portfolio-air-reveal 390ms ease both;
+}
+
+.portfolio-mist-transition.is-cover {
+  animation: portfolio-air-cover 330ms cubic-bezier(.4, 0, .3, 1) both;
+}
+
+.portfolio-mist-transition.is-reveal {
+  animation: portfolio-air-reveal 390ms cubic-bezier(.2, .7, .2, 1) both;
+}
+
+.portfolio-site.is-mist-cover .portfolio-page-transition {
+  animation: portfolio-content-breathe-out 330ms cubic-bezier(.4, 0, .3, 1) both;
+}
+
+.portfolio-site.is-mist-reveal .portfolio-page-transition {
+  animation: portfolio-content-breathe-in 390ms cubic-bezier(.2, .7, .2, 1) both;
+}
+
+@keyframes portfolio-air-cover {
+  from { visibility: visible; opacity: 0; }
+  to { visibility: visible; opacity: 1; }
+}
+
+@keyframes portfolio-air-reveal {
+  from { visibility: visible; opacity: 1; }
+  to { visibility: hidden; opacity: 0; }
+}
+
+@keyframes portfolio-content-breathe-out {
+  from { opacity: 1; filter: blur(0); transform: scale(1); }
+  to { opacity: .28; filter: blur(5px); transform: scale(.996); }
+}
+
+@keyframes portfolio-content-breathe-in {
+  from { opacity: .18; filter: blur(6px); transform: scale(1.004); }
+  to { opacity: 1; filter: blur(0); transform: scale(1); }
+}
+
+.journey-3d.is-outro .journey-outro__phrase {
+  font-kerning: normal;
+  font-feature-settings: 'kern' 1;
+  letter-spacing: normal;
+}
+
+.journey-outro__m--snapshot {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .portfolio-mist-transition.is-cover,
+  .portfolio-mist-transition.is-reveal,
+  .portfolio-site.is-mist-cover .portfolio-page-transition,
+  .portfolio-site.is-mist-reveal .portfolio-page-transition {
+    animation-duration: 90ms !important;
   }
 }

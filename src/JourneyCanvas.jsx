@@ -375,9 +375,9 @@ export default function JourneyCanvas({
         <JourneyScene
           progress={presentationMode ? 28 : progress}
           skyConnectionProgress={presentationMode ? 0 : skyConnectionProgress}
-          activeGate={activeGate}
-          holdProgress={holdProgress}
-          fogCompleted={fogCompleted}
+          activeGate={presentationMode ? null : activeGate}
+          holdProgress={presentationMode ? 0 : holdProgress}
+          fogCompleted={presentationMode ? true : fogCompleted}
           presentationMode={presentationMode}
           onListenerPose={onListenerPose}
           quality={quality}

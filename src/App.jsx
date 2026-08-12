@@ -43,6 +43,8 @@ const ENDING_SETTLE_MS = 1500
 const ENDING_CAPTURE_MAX_ATTEMPTS = 3
 const ENDING_COPY = 'Thank you so much.'
 const ENDING_M_INDEX = ENDING_COPY.indexOf('m')
+const PORTFOLIO_TRANSITION_MS = 720
+const PORTFOLIO_ROUTE_SWITCH_MS = 330
 const PORTFOLIO_PAGES = ['home', 'about', 'project', 'contact']
 const PORTFOLIO_PATHS = {
   home: '/',
@@ -204,6 +206,11 @@ const PORTFOLIO_IMAGE_URLS = [
   '/portfolio/journey-river.jpg',
   '/portfolio/journey-storyboard.jpg',
   '/portfolio/journey-night.jpg',
+  '/portfolio/project-inspiration-v2.png',
+  '/portfolio/project-space-v3.webp',
+  '/portfolio/project-atmosphere-v3.webp',
+  '/portfolio/project-interaction-v3.webp',
+  '/portfolio/project-emotion-v3.webp',
 ]
 
 function useAmbientAudio(progress, fogCompleted) {
@@ -635,8 +642,8 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
       ? `${event.clientY}px`
       : `${(targetBounds?.top ?? window.innerHeight / 2) + (targetBounds?.height ?? 0) / 2}px`
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    const switchDelay = reduceMotion ? 90 : 1050
-    const finishDelay = reduceMotion ? 190 : 2100
+    const switchDelay = reduceMotion ? 80 : PORTFOLIO_ROUTE_SWITCH_MS
+    const finishDelay = reduceMotion ? 170 : PORTFOLIO_TRANSITION_MS
 
     transitioningRef.current = true
     transitionTimersRef.current.forEach(window.clearTimeout)
@@ -849,23 +856,23 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
       <div className="portfolio-story__panels">
         <article id="origin" className={panelClassName('origin')} data-story-panel="origin">
           <PortfolioImage src="/portfolio/project-inspiration-v2.png" alt="A Kamikochi field photograph used as a reference for Journey" caption="FIELD REFERENCE / KAMIKOCHI" />
-          <div className="portfolio-panel__copy"><span className="portfolio-kicker">INSPIRATION</span><h3>A photograph captured the view,<br />not the feeling.</h3><p>Six weeks in Kamikochi taught me that photographs preserve scenery, but not experience. Journey recreates that experience through space, interaction and time rather than visual accuracy.</p></div>
+          <div className="portfolio-panel__copy"><span className="portfolio-kicker">INSPIRATION</span><h3>A photograph captured the view, not the feeling.</h3><p>Six weeks in Kamikochi taught me that photographs can preserve a view, but not the feeling of being there.<br />Journey begins from that gap.<br />Rather than reproducing the landscape exactly, it rebuilds the experience through space, interaction and time.</p></div>
         </article>
         <article id="contrast" className={panelClassName('contrast')} data-story-panel="contrast">
-          <PortfolioImage src="/portfolio/project-contrast-v2.png" alt="Journey beginning inside a dark cave and opening toward the valley" caption="CAVE TO VALLEY" className="is-dark" />
-          <div className="portfolio-panel__copy"><span className="portfolio-kicker">SPACE</span><h3>Emotion begins with space.</h3><p>The cave narrows the view.<br />The valley feels larger because of it.</p></div>
+          <PortfolioImage src="/portfolio/project-space-v3.webp" alt="Journey beginning inside a dark cave and opening toward the valley" caption="CAVE TO VALLEY" className="is-dark" />
+          <div className="portfolio-panel__copy"><span className="portfolio-kicker">SPACE</span><h3>Emotion begins with space.</h3><p>The cave narrows the view.<br />Darkness holds the landscape back.<br />Emerging into the valley makes its scale feel greater by contrast.</p></div>
         </article>
         <article id="terrain" className={panelClassName('terrain')} data-story-panel="terrain">
-          <PortfolioImage src="/portfolio/project-goal-v2.png" alt="The finished Journey valley beside its Blender terrain wireframe" caption="BLENDER TERRAIN / WEBGL LIGHTING" />
-          <div className="portfolio-panel__copy"><span className="portfolio-kicker">ATMOSPHERE</span><h3>Light lets the landscape breathe.</h3><p>Light shifts.<br />Mist drifts.<br />The same landscape feels different without ever becoming another place.</p></div>
+          <PortfolioImage src="/portfolio/project-atmosphere-v3.webp" alt="The Journey valley transforming from daylight through dusk" caption="DAY / DUSK / ATMOSPHERE" />
+          <div className="portfolio-panel__copy"><span className="portfolio-kicker">ATMOSPHERE</span><h3>Light lets the landscape breathe.</h3><p>Day fades into dusk.<br />Dusk deepens into night.<br />Light, mist and color slowly transform the same valley over time.</p></div>
         </article>
         <article id="interaction" className={panelClassName('interaction')} data-story-panel="interaction">
-          <PortfolioImage src="/portfolio/project-interaction-v2.png" alt="The HOLD interaction placed within the night-time Journey landscape" caption="HOLD / WORLD RESPONSE" className="is-dark" />
-          <div className="portfolio-panel__copy"><span className="portfolio-kicker">INTERACTION</span><h3>The landscape responds when you<br />slow down.</h3><p>Scroll moves forward.<br />HOLD creates stillness.<br />Looking around reveals quiet details hidden in the landscape.</p></div>
+          <PortfolioImage src="/portfolio/project-interaction-v3.webp" alt="Tall meadow grass responding to the Journey cursor wind" caption="HOLD / CURSOR WIND" />
+          <div className="portfolio-panel__copy"><span className="portfolio-kicker">INTERACTION</span><h3>The landscape responds when you slow down.</h3><p>Scroll moves you forward.<br />HOLD lets the moment linger.<br />Move the cursor to stir the wind, and the grass moves with it.</p></div>
         </article>
         <article id="emotion" className={panelClassName('emotion', 'is-emotion-panel')} data-story-panel="emotion">
-          <PortfolioImage src="/portfolio/project-emotion-v2.png" alt="A small figure beneath the Journey night sky" caption="EMOTION / AFTERGLOW" className="is-dark" />
-          <div className="portfolio-panel__copy"><span className="portfolio-kicker">EMOTION</span><h3>Wonder grows in quiet moments.</h3><p>The journey ends beneath an immense night sky.<br />Nothing changes around.<br />Only the way you feel.</p><button type="button" onClick={onReplay}>EXPERIENCE AGAIN <ShortArrow /></button></div>
+          <PortfolioImage src="/portfolio/project-emotion-v3.webp" alt="A small figure beneath the Journey mountains and immense night sky" caption="EMOTION / FINAL WIDE" className="is-dark" />
+          <div className="portfolio-panel__copy"><span className="portfolio-kicker">EMOTION</span><h3>Wonder grows in quiet moments.</h3><p>The journey ends beneath an immense night sky.<br />A small figure stands against the mountains.<br />For a moment, the landscape feels larger—and we feel smaller within it.</p><button type="button" onClick={onReplay}>EXPERIENCE AGAIN <ShortArrow /></button></div>
         </article>
         <footer className="portfolio-story__end">
           <span>END OF PROJECT</span>
@@ -1693,18 +1700,39 @@ function LegacyApp() {
     }
   }, [clearEndingCapture])
 
+  const portfolioRouteTransitionRef = useRef(null)
+
+  const transitionPortfolioRoute = useCallback((page, options = {}) => {
+    const nextPage = PORTFOLIO_PAGES.includes(page) ? page : 'home'
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    window.clearTimeout(portfolioRouteTransitionRef.current)
+    document.documentElement.dataset.portfolioRouteTransition = 'cover'
+    portfolioRouteTransitionRef.current = window.setTimeout(() => {
+      openPortfolioPage(nextPage, options)
+      document.documentElement.dataset.portfolioRouteTransition = 'reveal'
+      portfolioRouteTransitionRef.current = window.setTimeout(() => {
+        delete document.documentElement.dataset.portfolioRouteTransition
+      }, reduceMotion ? 100 : PORTFOLIO_ROUTE_SWITCH_MS)
+    }, reduceMotion ? 80 : PORTFOLIO_ROUTE_SWITCH_MS)
+  }, [openPortfolioPage])
+
+  useEffect(() => () => {
+    window.clearTimeout(portfolioRouteTransitionRef.current)
+    delete document.documentElement.dataset.portfolioRouteTransition
+  }, [])
+
   useEffect(() => {
     const syncRoute = () => {
       const route = getRouteFromLocation()
       if (route.view === 'journey') {
         resetExperience()
       } else {
-        openPortfolioPage(route.page, { updateHistory: false })
+        transitionPortfolioRoute(route.page, { updateHistory: false })
       }
     }
     window.addEventListener('popstate', syncRoute)
     return () => window.removeEventListener('popstate', syncRoute)
-  }, [openPortfolioPage, resetExperience])
+  }, [resetExperience, transitionPortfolioRoute])
 
   return (
     <main
@@ -1783,14 +1811,6 @@ function LegacyApp() {
         <p className="journey-outro__copy" aria-hidden="true">
           <span ref={endingCopyRef} className="journey-outro__phrase">
             {ENDING_COPY}
-          </span>
-          <span
-            className="journey-outro__m journey-outro__m--snapshot"
-            style={endingFrameSource ? {
-              backgroundImage: `url("${endingFrameSource}")`,
-            } : undefined}
-          >
-            m
           </span>
         </p>
       </section>

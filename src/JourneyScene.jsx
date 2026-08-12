@@ -250,9 +250,15 @@ function buildStarField(count, radius, milkyWay = false) {
       Math.sin(pathProgress * 2.35 - 0.42) * 20 +
       pathProgress * 10
     const pathWidth = 6 + Math.pow(pathProgress, 1.75) * 145
+    const edgeBiasSeed = seededRandom(index + 9300)
+    const horizontalSpread = Math.sign(edgeBiasSeed - 0.5) * Math.pow(
+      Math.abs(edgeBiasSeed - 0.5) * 2,
+      0.74,
+    )
     const horizontal = milkyWay
       ? pathCenter + (seededRandom(index + 1) - 0.5) * pathWidth
-      : (seededRandom(index + 1) - 0.5) * radius * 1.28
+      : horizontalSpread * radius * 0.98 +
+        Math.sin(index * 1.913) * (6 + seededRandom(index + 11200) * 18)
     const vertical = milkyWay
       ? -42 + pathProgress * 338 + (seededRandom(index + 2500) - 0.5) * 9
       : -34 + seededRandom(index + 800) * 315
@@ -260,7 +266,7 @@ function buildStarField(count, radius, milkyWay = false) {
       horizontal,
       vertical,
       depth: -radius - seededRandom(index + 1700) * (milkyWay ? 95 : 190),
-      size: 0.7 + seededRandom(index + 3600) * 1.8,
+      size: 0.58 + Math.pow(seededRandom(index + 3600), 1.7) * 2.18,
       pathProgress,
     })
   }
@@ -5531,7 +5537,7 @@ function CloudbreakLight({ spriteRef, materialRef }) {
   )
 }
 
-function ValleyFogBanks({ groupRef, materialRefs, layers = 7 }) {
+function ValleyFogBanks({ groupRef, materialRefs, layers = 7, mobile = false }) {
   const textures = useMemo(
     () => [createCloudTexture(18400), createCloudTexture(22100), createCloudTexture(26700)],
     [],
@@ -5548,8 +5554,16 @@ function ValleyFogBanks({ groupRef, materialRefs, layers = 7 }) {
       { position: [40, 34, -198], scale: [210, 51, 1], opacity: 0.2, speed: 0.14 },
       { position: [-12, 42, -244], scale: [232, 58, 1], opacity: 0.17, speed: 0.11 },
     ]
-    return presets.slice(0, Math.max(3, Math.min(layers, presets.length)))
-  }, [layers])
+    const activeBanks = presets.slice(0, Math.max(3, Math.min(layers, presets.length)))
+    if (!mobile) return activeBanks
+    return activeBanks.slice(0, 4).map((bank, index) => ({
+      ...bank,
+      position: [bank.position[0] * 0.52, bank.position[1] - 4 - index * 0.8, bank.position[2]],
+      scale: [bank.scale[0] * 1.32, bank.scale[1] * 0.42, 1],
+      opacity: bank.opacity * 0.56,
+      speed: bank.speed * 0.72,
+    }))
+  }, [layers, mobile])
 
   return (
     <group ref={groupRef}>
@@ -5575,7 +5589,7 @@ function ValleyFogBanks({ groupRef, materialRefs, layers = 7 }) {
             color="#dce8df"
             transparent
             opacity={0}
-            alphaTest={0.006}
+            alphaTest={mobile ? 0 : 0.006}
             depthWrite={false}
             depthTest
             toneMapped={false}
@@ -6028,7 +6042,10 @@ export default function JourneyScene({
           endingWide * ENDING_CAMERA.pullBack +
           portraitFactor * THREE.MathUtils.lerp(0.38, 1.05, portraitVista),
       )
-      camera.position.addScaledVector(cameraScratch.right, horizontalBob)
+      camera.position.addScaledVector(
+        cameraScratch.right,
+        horizontalBob - portraitFactor * THREE.MathUtils.lerp(0.16, 0.58, portraitVista),
+      )
       camera.position.y +=
         verticalBob +
         vistaComposition * LOOKDEV_V2_COMPOSITION.cameraLift +
@@ -6040,6 +6057,10 @@ export default function JourneyScene({
         vistaComposition * LOOKDEV_V2_COMPOSITION.targetLift +
         endingLift * ENDING_CAMERA.lift +
         portraitFactor * (1 - endingLift) * 0.08
+      cameraScratch.target.addScaledVector(
+        cameraScratch.right,
+        -portraitFactor * THREE.MathUtils.lerp(0.12, 0.38, portraitVista),
+      )
       camera.up.set(0, 1, 0)
       camera.lookAt(cameraScratch.target)
       const desiredFov =
@@ -6174,7 +6195,7 @@ export default function JourneyScene({
           const breathing = 0.86 + Math.sin(state.clock.elapsedTime * 0.13 + index * 1.31) * 0.14
           if (material) {
             material.opacity =
-              valleyMist * 1.78 *
+              valleyMist * (portraitFactor > 0.5 ? 1.05 : 1.78) *
               (bank.userData.opacity ?? 0.2) *
               breathing *
               (1 - night * 0.46)
@@ -6394,7 +6415,7 @@ export default function JourneyScene({
       : smoothstep(20, 27, progress) * (1 - smoothstep(52, 64, progress))
     if (cloudbreakMaterialRef.current) {
       cloudbreakMaterialRef.current.opacity =
-        openValley * (1 - night) * (0.012 + cloudbreakDiscovery * 0.3)
+        openValley * (1 - night) * (0.006 + cloudbreakDiscovery * 0.19)
       cloudbreakMaterialRef.current.color
         .set('#fff4c7')
         .lerp(frameColors.cloudbreakSunset, sunset * 0.72)
@@ -6625,6 +6646,7 @@ export default function JourneyScene({
         groupRef={valleyFogGroupRef}
         materialRefs={valleyFogMaterialRefs}
         layers={quality.fogLayers}
+        mobile={size.width / Math.max(size.height, 1) < 0.82}
       />
       <OpenValleyAtmosphere
         groupRef={openValleyAtmosphereRef}
