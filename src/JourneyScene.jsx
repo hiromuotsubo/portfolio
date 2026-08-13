@@ -13,6 +13,7 @@ import {
 
 // Versioned query prevents a previously cached GLB from reviving removed assets.
 const MODEL_URL = '/journey/models/journey-v17-runtime-optimized.glb?v=1-selective-runtime'
+const CAVE_LOOKDEV_URL = '/journey/models/journey-cave-lookdev-v002.glb?v=3-blender-breakup'
 const PHASE2_ENVIRONMENT_URL = '/journey/models/journey-phase2-environment.glb?v=5-distance-forest'
 const ALPINE_BIOME_MACRO_URL = '/journey/textures/surface/alpine-biome-macro-v1.jpg'
 
@@ -58,13 +59,13 @@ const LOOKDEV_V2_COMPOSITION = {
 }
 
 const CAVE_LOOK = {
-  exposure: 2.68,
-  sunIntensity: 0.74,
-  skyIntensity: 0.68,
-  ambientIntensity: 0.26,
-  guideLightIntensity: 1.22,
-  exitLightIntensity: 1.65,
-  materialTint: '#56615a',
+  exposure: 2.82,
+  sunIntensity: 0.82,
+  skyIntensity: 0.78,
+  ambientIntensity: 0.31,
+  guideLightIntensity: 1.42,
+  exitLightIntensity: 1.92,
+  materialTint: '#637069',
 }
 
 const clamp01 = (value) => Math.min(1, Math.max(0, value))
@@ -122,9 +123,22 @@ function applyCaveSurfaceDetail(material) {
         '#include <roughnessmap_fragment>',
         '#include <roughnessmap_fragment>\nroughnessFactor = clamp(roughnessFactor - journeyCaveMoisture * 0.1, 0.72, 1.0);',
       )
+      .replace(
+        '#include <emissivemap_fragment>',
+        [
+          '#include <emissivemap_fragment>',
+          '// Stable indirect cave fill: the spatial bands preserve shaded',
+          '// depth while preventing the unlit inner faces from collapsing',
+          '// into one flat black silhouette.',
+          'float journeyCaveIndirect = 0.42 +',
+          '  sin(vJourneyCaveWorldPosition.x * 0.23 + vJourneyCaveWorldPosition.z * 0.11) * 0.18 +',
+          '  sin(vJourneyCaveWorldPosition.y * 0.58 - vJourneyCaveWorldPosition.z * 0.07) * 0.1;',
+          'totalEmissiveRadiance += vec3(0.15, 0.18, 0.162) * clamp(journeyCaveIndirect, 0.12, 0.74);',
+        ].join('\n'),
+      )
   }
   material.customProgramCacheKey = () => (
-    `${previousCacheKey?.() ?? ''}|journey-cave-surface-v2`
+    `${previousCacheKey?.() ?? ''}|journey-cave-surface-v3`
   )
 }
 
@@ -2701,9 +2715,10 @@ function buildRiverAuroraGeometry() {
   return buildNaturalRiverGeometry({ count: 96, widthScale: 0.72, yOffset: 0.055 })
 }
 
-function prepareWorld(source, biomeMacroTexture) {
+function prepareWorld(source, biomeMacroTexture, caveLookdevSource) {
   const root = source.clone(true)
   root.updateMatrixWorld(true)
+  const caveLookdevShell = caveLookdevSource?.getObjectByName('CAVE_HQ_INTERIOR_SHELL')
   const groups = {
     cave: [],
     meadow: [],
@@ -2747,6 +2762,12 @@ function prepareWorld(source, biomeMacroTexture) {
     })
 
     if (identity.includes('CAVE_') || identity.includes('WEB_CAVE')) {
+      if (identity.includes('CAVE_HQ_INTERIOR_SHELL') && caveLookdevShell?.geometry) {
+        object.geometry = caveLookdevShell.geometry
+        object.geometry.computeBoundingBox()
+        object.geometry.computeBoundingSphere()
+        object.userData.journeyCaveLookdevVersion = 'v002-blender-surface'
+      }
       groups.cave.push(object)
       // The cave is behind the final valley camera and cannot contribute to
       // the river surface. Excluding it from the secondary planar pass keeps
@@ -2771,8 +2792,9 @@ function prepareWorld(source, biomeMacroTexture) {
         if ('clearcoat' in material) material.clearcoat = 0
         if ('specularIntensity' in material) material.specularIntensity = 0.12
         if ('emissive' in material) {
-          material.emissive.set('#151d19')
-          material.emissiveIntensity = 0.055
+          const isInteriorShell = identity.includes('CAVE_HQ_INTERIOR_SHELL')
+          material.emissive.set(isInteriorShell ? '#2d3d36' : '#202d28')
+          material.emissiveIntensity = isInteriorShell ? 0.3 : 0.12
         }
         applyCaveSurfaceDetail(material)
         material.userData.journeyCaveBaseColor = material.color?.clone()
@@ -5693,6 +5715,32 @@ function CloudbreakLight({ spriteRef, materialRef }) {
   )
 }
 
+function CaveExitGlow({ spriteRef, materialRef }) {
+  const texture = useMemo(() => createCloudTexture(53091), [])
+  useEffect(() => () => texture.dispose(), [texture])
+
+  return (
+    <sprite
+      ref={spriteRef}
+      position={[0, 4.4, -5.85]}
+      scale={[15.5, 11.8, 1]}
+      renderOrder={-3}
+      frustumCulled={false}
+    >
+      <spriteMaterial
+        ref={materialRef}
+        map={texture}
+        color="#d9e6d4"
+        transparent
+        opacity={0}
+        depthWrite={false}
+        depthTest={false}
+        toneMapped={false}
+      />
+    </sprite>
+  )
+}
+
 function ValleyFogBanks({ groupRef, materialRefs, layers = 7, mobile = false }) {
   const textures = useMemo(
     () => [createCloudTexture(18400), createCloudTexture(22100), createCloudTexture(26700)],
@@ -5870,6 +5918,7 @@ export default function JourneyScene({
     [ktx2Loader],
   )
   const gltf = useGLTF(MODEL_URL, true, true, configureLoader)
+  const caveLookdevGltf = useGLTF(CAVE_LOOKDEV_URL)
   const phase2Gltf = useGLTF(PHASE2_ENVIRONMENT_URL)
   const loadedBiomeMacroTexture = useTexture(ALPINE_BIOME_MACRO_URL)
   const biomeMacroTexture = useMemo(() => {
@@ -5883,8 +5932,8 @@ export default function JourneyScene({
     return loadedBiomeMacroTexture
   }, [loadedBiomeMacroTexture])
   const { root, groups } = useMemo(
-    () => prepareWorld(gltf.scene, biomeMacroTexture),
-    [biomeMacroTexture, gltf.scene],
+    () => prepareWorld(gltf.scene, biomeMacroTexture, caveLookdevGltf.scene),
+    [biomeMacroTexture, caveLookdevGltf.scene, gltf.scene],
   )
   const { root: phase2Root, groups: phase2Groups } = useMemo(
     () => preparePhase2Environment(phase2Gltf.scene, biomeMacroTexture),
@@ -5957,7 +6006,7 @@ export default function JourneyScene({
       cloudSunset: new THREE.Color('#ffd0ba'),
       cloudTone: new THREE.Color('#879da3'),
       cloud: new THREE.Color(),
-      valleyFogBase: new THREE.Color('#dbe5dc'),
+      valleyFogBase: new THREE.Color('#cddbd3'),
       valleyFogSunset: new THREE.Color('#e7b3a2'),
       valleyFogNight: new THREE.Color('#7189ad'),
       valleyFog: new THREE.Color(),
@@ -6013,6 +6062,8 @@ export default function JourneyScene({
   const ambientRef = useRef(null)
   const caveGuideLightRef = useRef(null)
   const caveExitLightRef = useRef(null)
+  const caveExitGlowRef = useRef(null)
+  const caveExitGlowMaterialRef = useRef(null)
   const mysticLightRef = useRef(null)
   const riverMysticLightRef = useRef(null)
   const starMaterialRef = useRef(null)
@@ -6189,6 +6240,9 @@ export default function JourneyScene({
       20,
       cameraProgress,
     )
+    const portraitCaveComposition = portraitFactor * (
+      1 - smoothstep(JOURNEY_CAVE_SEQUENCE.fogGate, 20, cameraProgress)
+    )
     if (camera?.isCamera) {
       const sampledPosition = cameraSampler?.position?.evaluate(clipTime)
       const sampledQuaternion = cameraSampler?.quaternion?.evaluate(clipTime)
@@ -6326,7 +6380,7 @@ export default function JourneyScene({
         (presentationMode ? -1.8 : 0) -
           vistaComposition * LOOKDEV_V2_COMPOSITION.pullBack -
           endingWide * ENDING_CAMERA.pullBack +
-          portraitComposition * THREE.MathUtils.lerp(0.38, 1.05, portraitVista),
+          portraitComposition * THREE.MathUtils.lerp(-0.72, -1.55, portraitVista),
       )
       camera.position.addScaledVector(
         cameraScratch.right,
@@ -6355,7 +6409,8 @@ export default function JourneyScene({
         vistaComposition * LOOKDEV_V2_COMPOSITION.fov +
         endingWide * ENDING_CAMERA.fov +
         (presentationMode ? 15 : 0) +
-        portraitComposition * THREE.MathUtils.lerp(7.5, 4.5, portraitVista)
+        portraitCaveComposition * 4 +
+        portraitComposition * 7
       if (Math.abs(camera.fov - desiredFov) > 0.001) {
         camera.fov = desiredFov
         camera.updateProjectionMatrix()
@@ -6399,6 +6454,8 @@ export default function JourneyScene({
           camera.quaternion.toArray().map((value) => Number(value.toFixed(7))),
         )
         captureDataset.journeyCameraFov = camera.fov.toFixed(6)
+        captureDataset.journeyPortraitFactor = portraitFactor.toFixed(6)
+        captureDataset.journeyPortraitComposition = portraitComposition.toFixed(6)
         captureDataset.journeyCaveCameraCorrection = JSON.stringify(
           cameraScratch.correction.toArray().slice(0, 2)
             .map((value) => Number(value.toFixed(5))),
@@ -6576,6 +6633,7 @@ export default function JourneyScene({
 
     const valleyFogArrival = getJourneyFogArrival(progress)
     const holdFogRemaining = 1 - clamp01(fogClearProgress)
+    const holdClear = clamp01(fogClearProgress)
     const valleyMist = valleyFogArrival * holdFogRemaining
     if (valleyFogGroupRef.current) {
       const valleyFogVisible = valleyMist > 0.002 && !diagnostics.fog
@@ -6631,7 +6689,7 @@ export default function JourneyScene({
 
     const daylightExposure = THREE.MathUtils.lerp(
       CAVE_LOOK.exposure,
-      1.30,
+      THREE.MathUtils.lerp(1.34, 1.42, holdClear),
       caveRelease,
     )
     state.gl.toneMappingExposure = THREE.MathUtils.lerp(
@@ -6642,7 +6700,6 @@ export default function JourneyScene({
 
     const openAirFogDensity = THREE.MathUtils.lerp(0.00102, 0.00078, night)
     const preHoldFog = THREE.MathUtils.lerp(0.018, 0.012, valleyFogArrival)
-    const holdClear = clamp01(fogClearProgress)
     const entranceFog = THREE.MathUtils.lerp(
       preHoldFog,
       openAirFogDensity,
@@ -6674,7 +6731,7 @@ export default function JourneyScene({
     if (sunRef.current) {
       const dayIntensity = THREE.MathUtils.lerp(
         CAVE_LOOK.sunIntensity,
-        1.55,
+        THREE.MathUtils.lerp(1.55, 1.62, holdClear),
         caveDaylight,
       )
       sunRef.current.intensity = THREE.MathUtils.lerp(dayIntensity, 0.52, night)
@@ -6688,7 +6745,7 @@ export default function JourneyScene({
     if (skyLightRef.current) {
       const dayIntensity = THREE.MathUtils.lerp(
         CAVE_LOOK.skyIntensity,
-        1.5,
+        THREE.MathUtils.lerp(1.5, 1.62, holdClear),
         caveDaylight,
       )
       skyLightRef.current.intensity = THREE.MathUtils.lerp(dayIntensity, 1.08, night)
@@ -6704,7 +6761,7 @@ export default function JourneyScene({
     if (ambientRef.current) {
       const dayIntensity = THREE.MathUtils.lerp(
         CAVE_LOOK.ambientIntensity,
-        0.34,
+        THREE.MathUtils.lerp(0.35, 0.43, holdClear),
         caveDaylight,
       )
       ambientRef.current.intensity = THREE.MathUtils.lerp(dayIntensity, 0.23, night)
@@ -6725,6 +6782,26 @@ export default function JourneyScene({
       // approaches, instead of lifting the whole cave or flashing at a story
       // threshold.
       caveExitLightRef.current.intensity = CAVE_LOOK.exitLightIntensity * caveExitBounce
+    }
+    if (caveExitGlowMaterialRef.current) {
+      const approachGlow = smoothstep(3.2, 10.8, progress) *
+        (1 - smoothstep(12.7, JOURNEY_CAVE_SEQUENCE.fogGate, progress))
+      caveExitGlowMaterialRef.current.opacity = approachGlow * 0.58
+      if (caveExitGlowRef.current) caveExitGlowRef.current.visible = approachGlow > 0.002
+    }
+    if (qaCaptureEnabled) {
+      document.documentElement.dataset.journeyExposure =
+        state.gl.toneMappingExposure.toFixed(6)
+      document.documentElement.dataset.journeySunIntensity =
+        (sunRef.current?.intensity ?? 0).toFixed(6)
+      document.documentElement.dataset.journeySkyIntensity =
+        (skyLightRef.current?.intensity ?? 0).toFixed(6)
+      document.documentElement.dataset.journeyAmbientIntensity =
+        (ambientRef.current?.intensity ?? 0).toFixed(6)
+      document.documentElement.dataset.journeyCaveLookdev =
+        groups.cave.some((object) => object.userData.journeyCaveLookdevVersion)
+          ? 'v002-blender-surface'
+          : 'production'
     }
 
     const starOpacity = starWeight
@@ -7075,6 +7152,10 @@ export default function JourneyScene({
         distance={34}
         decay={1.82}
         color="#91aaa1"
+      />
+      <CaveExitGlow
+        spriteRef={caveExitGlowRef}
+        materialRef={caveExitGlowMaterialRef}
       />
       <pointLight
         ref={mysticLightRef}

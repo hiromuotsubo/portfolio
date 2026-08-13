@@ -547,7 +547,7 @@
 .valley-mist {
   z-index: 4;
   inset: 34% -9% -12%;
-  opacity: calc(var(--valley-mist) * 0.2);
+  opacity: calc(var(--valley-mist) * 0.14);
   background:
     radial-gradient(ellipse at 48% 28%, rgba(230, 241, 235, 0.7), rgba(188, 213, 210, 0.28) 34%, transparent 68%),
     radial-gradient(ellipse at 12% 64%, rgba(218, 235, 231, 0.44), transparent 52%),
@@ -596,7 +596,7 @@
 
 .cave-grade {
   z-index: 4;
-  opacity: calc(var(--cave-depth) * 0.43);
+  opacity: calc(var(--cave-depth) * 0.3);
   background:
     linear-gradient(to bottom, rgba(10, 12, 14, 0.4), transparent 24%, transparent 67%, rgba(8, 10, 12, 0.52)),
     radial-gradient(
@@ -608,6 +608,15 @@
     );
   mix-blend-mode: multiply;
   transition: opacity 120ms linear;
+}
+
+@media (max-width: 700px) {
+  .cave-grade {
+    /* Portrait crops concentrate the cave's dark perimeter. Keep the same
+       authored rock and depth cue, but avoid multiplying it into a featureless
+       silhouette on mobile. */
+    opacity: calc(var(--cave-depth) * 0.25);
+  }
 }
 
 .soft-vignette {
