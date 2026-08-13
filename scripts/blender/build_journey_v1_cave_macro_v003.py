@@ -228,14 +228,23 @@ def build_floor(material):
 
 
 def build_puddle(material):
-    center_x = 1.34
-    center_y = -13.2
-    points = 28
+    # Keep the damp detail subordinate to the space. The previous high-frequency
+    # radius modulation read as a black star-shaped prop at the opening frame.
+    # A broader harmonic outline sits farther into the cave and follows the
+    # floor depression without becoming a foreground silhouette.
+    center_x = 1.72
+    center_y = -6.8
+    points = 48
     vertices = [(center_x, center_y, floor_height(center_x, center_y) + 0.018)]
     faces = []
     for index in range(points):
         angle = math.tau * index / points
-        radius = 1.0 + math.sin(index * 1.91) * 0.18 + math.sin(index * 3.13 + 0.7) * 0.08
+        radius = (
+            1.0
+            + math.sin(angle * 2.0 + 0.42) * 0.12
+            + math.sin(angle * 3.0 - 0.78) * 0.065
+            + math.sin(angle * 5.0 + 1.3) * 0.028
+        )
         x = center_x + math.cos(angle) * 0.92 * radius
         y = center_y + math.sin(angle) * 1.48 * radius
         z = floor_height(x, y) + 0.024
@@ -253,8 +262,8 @@ OUTPUT_ROOT.mkdir(parents=True, exist_ok=True)
 bpy.ops.wm.open_mainfile(filepath=str(SOURCE_BLEND))
 removed_names = remove_previous_cave_objects()
 
-stone = make_material("MAT_JOURNEY_CAVE_MACRO_V003", (0.075, 0.085, 0.082), 0.91)
-floor = make_material("MAT_JOURNEY_CAVE_FLOOR_V003", (0.064, 0.069, 0.064), 0.94)
+stone = make_material("MAT_JOURNEY_CAVE_MACRO_V003", (0.042, 0.049, 0.046), 0.91)
+floor = make_material("MAT_JOURNEY_CAVE_FLOOR_V003", (0.038, 0.043, 0.039), 0.94)
 water = make_material("MAT_JOURNEY_CAVE_PUDDLE_V003", (0.022, 0.048, 0.046), 0.26)
 if water.node_tree:
     bsdf = next((node for node in water.node_tree.nodes if node.type == "BSDF_PRINCIPLED"), None)

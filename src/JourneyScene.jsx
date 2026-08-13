@@ -59,11 +59,11 @@ const LOOKDEV_V2_COMPOSITION = {
 }
 
 const CAVE_LOOK = {
-  exposure: 1.54,
-  sunIntensity: 0.22,
-  skyIntensity: 0.34,
-  ambientIntensity: 0.11,
-  guideLightIntensity: 0.52,
+  exposure: 1.24,
+  sunIntensity: 0.14,
+  skyIntensity: 0.19,
+  ambientIntensity: 0.065,
+  guideLightIntensity: 0.18,
   exitLightIntensity: 2.16,
   materialTint: '#252d2b',
 }
@@ -2793,8 +2793,8 @@ function prepareWorld(source, biomeMacroTexture, caveLookdevSource) {
       color: object.name.includes('PUDDLE')
         ? '#12211f'
         : object.name.includes('FLOOR')
-          ? '#3d433c'
-          : '#555d56',
+          ? '#252b26'
+          : '#29312d',
       roughness: object.name.includes('PUDDLE') ? 0.36 : 0.92,
       metalness: 0,
     })
@@ -3099,9 +3099,9 @@ function prepareWorld(source, biomeMacroTexture, caveLookdevSource) {
       material.emissiveIntensity = 0.035
       object.renderOrder = 1
     } else {
-      material.color.lerp(new THREE.Color(CAVE_LOOK.materialTint), 0.34)
-      material.emissive.set(object.name.includes('FLOOR') ? '#121814' : '#19211d')
-      material.emissiveIntensity = object.name.includes('FLOOR') ? 0.08 : 0.12
+      material.color.lerp(new THREE.Color(CAVE_LOOK.materialTint), 0.58)
+      material.emissive.set(object.name.includes('FLOOR') ? '#0a0e0b' : '#101612')
+      material.emissiveIntensity = object.name.includes('FLOOR') ? 0.035 : 0.055
       applyCaveSurfaceDetail(material)
     }
     material.userData.journeyCaveBaseOpacity = material.opacity
@@ -6977,10 +6977,10 @@ export default function JourneyScene({
     }
     const caveGrazingPresence = 1 - smoothstep(10.5, 14.1, progress)
     if (caveLeftGrazingLightRef.current) {
-      caveLeftGrazingLightRef.current.intensity = caveGrazingPresence * 3.15
+      caveLeftGrazingLightRef.current.intensity = caveGrazingPresence * 0.68
     }
     if (caveRightGrazingLightRef.current) {
-      caveRightGrazingLightRef.current.intensity = caveGrazingPresence * 2.3
+      caveRightGrazingLightRef.current.intensity = caveGrazingPresence * 0.46
     }
     if (caveExitLightRef.current) {
       // A stable source just beyond the opening lets exterior daylight wrap
@@ -7359,16 +7359,16 @@ export default function JourneyScene({
       />
       <pointLight
         ref={caveLeftGrazingLightRef}
-        position={[-2.7, 3.4, 13.5]}
-        intensity={3.15}
+        position={[-2.7, 3.4, 8.4]}
+        intensity={0.68}
         distance={24}
         decay={1.62}
         color="#918c78"
       />
       <pointLight
         ref={caveRightGrazingLightRef}
-        position={[2.5, 4.7, 5.8]}
-        intensity={2.3}
+        position={[2.5, 4.7, 1.8]}
+        intensity={0.46}
         distance={22}
         decay={1.68}
         color="#6f8d86"
