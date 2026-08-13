@@ -6,7 +6,6 @@ import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader.js'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { getJourneyTimeOfDay } from './journeyVisualState.js'
 import {
-  getJourneyCavePresence,
   getJourneyFogArrival,
   getJourneyOutdoorPresence,
   JOURNEY_CAVE_SEQUENCE,
@@ -77,8 +76,9 @@ const smoothstep = (edge0, edge1, value) => {
 // Geometry-derived camera corrections. Horizontal values are 72% of the
 // measured free-space midpoint, retaining natural asymmetry while avoiding
 // either wall. Vertical values keep the eye roughly 2.75–2.9 scene units over
-// the sampled cave floor. Once the portal is physically crossed, both offsets
-// ease back to the authored outdoor viewpoint before the fog HOLD begins.
+// the sampled cave floor. These are authored samples, never live ray hits: the
+// cubic interpolant below has continuous velocity through every sample and
+// therefore cannot react to small rock/floor facets.
 const CAVE_CAMERA_CORRECTIONS = Object.freeze([
   Object.freeze({ progress: 0, x: 0, y: 0 }),
   Object.freeze({ progress: 1.5, x: 0.24, y: 0 }),
@@ -89,9 +89,35 @@ const CAVE_CAMERA_CORRECTIONS = Object.freeze([
   Object.freeze({ progress: 10, x: -0.41, y: -0.55 }),
   Object.freeze({ progress: 11, x: -0.88, y: -1.18 }),
   Object.freeze({ progress: 11.75, x: -1.23, y: -1.5 }),
-  Object.freeze({ progress: 12.08, x: -1.2, y: -1.46 }),
+  Object.freeze({ progress: 12.08, x: -1.1, y: -1.32 }),
   Object.freeze({ progress: 13.5, x: 0, y: 0 }),
 ])
+
+const CAVE_CAMERA_TANGENT_SCALE = 0.52
+const CAVE_PORTAL_FADE_START_Z = -1.08
+const CAVE_PORTAL_FADE_END_Z = -2.42
+
+const sampleCaveCameraTangent = (index, axis) => {
+  if (index <= 0 || index >= CAVE_CAMERA_CORRECTIONS.length - 1) return 0
+  const previous = CAVE_CAMERA_CORRECTIONS[index - 1]
+  const next = CAVE_CAMERA_CORRECTIONS[index + 1]
+  return (
+    ((next[axis] - previous[axis]) / (next.progress - previous.progress)) *
+    CAVE_CAMERA_TANGENT_SCALE
+  )
+}
+
+const sampleCubicHermite = (start, end, startTangent, endTangent, alpha) => {
+  const alpha2 = alpha * alpha
+  const alpha3 = alpha2 * alpha
+  const duration = end.progress - start.progress
+  return (
+    (2 * alpha3 - 3 * alpha2 + 1) * start.value +
+    (alpha3 - 2 * alpha2 + alpha) * startTangent * duration +
+    (-2 * alpha3 + 3 * alpha2) * end.value +
+    (alpha3 - alpha2) * endTangent * duration
+  )
+}
 
 const sampleCaveCameraCorrection = (progress, target) => {
   const first = CAVE_CAMERA_CORRECTIONS[0]
@@ -99,11 +125,24 @@ const sampleCaveCameraCorrection = (progress, target) => {
   for (let index = 1; index < CAVE_CAMERA_CORRECTIONS.length; index += 1) {
     const next = CAVE_CAMERA_CORRECTIONS[index]
     if (progress > next.progress) continue
-    const previous = CAVE_CAMERA_CORRECTIONS[index - 1]
-    const alpha = smoothstep(previous.progress, next.progress, progress)
+    const previousIndex = index - 1
+    const previous = CAVE_CAMERA_CORRECTIONS[previousIndex]
+    const alpha = clamp01((progress - previous.progress) / (next.progress - previous.progress))
     return target.set(
-      THREE.MathUtils.lerp(previous.x, next.x, alpha),
-      THREE.MathUtils.lerp(previous.y, next.y, alpha),
+      sampleCubicHermite(
+        { progress: previous.progress, value: previous.x },
+        { progress: next.progress, value: next.x },
+        sampleCaveCameraTangent(previousIndex, 'x'),
+        sampleCaveCameraTangent(index, 'x'),
+        alpha,
+      ),
+      sampleCubicHermite(
+        { progress: previous.progress, value: previous.y },
+        { progress: next.progress, value: next.y },
+        sampleCaveCameraTangent(previousIndex, 'y'),
+        sampleCaveCameraTangent(index, 'y'),
+        alpha,
+      ),
       0,
     )
   }
@@ -283,6 +322,7 @@ const seededRandom = (seed) => {
 function buildStarField(count, radius, milkyWay = false) {
   const positions = new Float32Array(count * 3)
   const sizes = new Float32Array(count)
+  const revealSeeds = new Float32Array(count)
   const stars = []
 
   for (let index = 0; index < count; index += 1) {
@@ -319,11 +359,20 @@ function buildStarField(count, radius, milkyWay = false) {
     positions[index * 3 + 1] = star.vertical
     positions[index * 3 + 2] = star.depth
     sizes[index] = star.size
+    // A handful of brighter field stars arrive first, followed by the wider
+    // dimmer population. Milky Way timing remains owned by its path reveal.
+    revealSeeds[index] = milkyWay
+      ? 0
+      : clamp01(
+        Math.pow(seededRandom(index + 14800), 0.92) -
+        ((star.size - 0.58) / 2.18) * 0.065,
+      )
   })
 
   const geometry = new THREE.BufferGeometry()
   geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
   geometry.setAttribute('aSize', new THREE.BufferAttribute(sizes, 1))
+  geometry.setAttribute('aJourneyRevealSeed', new THREE.BufferAttribute(revealSeeds, 1))
   return geometry
 }
 
@@ -425,10 +474,13 @@ function createStarFieldMaterial(milkyWay = false) {
     },
     vertexShader: `
       attribute float aSize;
+      attribute float aJourneyRevealSeed;
       uniform float uJourneySize;
       varying float vJourneyStarSeed;
+      varying float vJourneyRevealSeed;
       void main() {
         vJourneyStarSeed = aSize;
+        vJourneyRevealSeed = aJourneyRevealSeed;
         gl_PointSize = uJourneySize * (0.72 + aSize * 0.68);
         gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
       }
@@ -438,12 +490,19 @@ function createStarFieldMaterial(milkyWay = false) {
       uniform float uJourneyTime;
       uniform vec3 uJourneyColor;
       varying float vJourneyStarSeed;
+      varying float vJourneyRevealSeed;
       void main() {
         float distanceFromCenter = length(gl_PointCoord - vec2(0.5));
         float softStar = 1.0 - smoothstep(0.12, 0.5, distanceFromCenter);
         float core = 1.0 - smoothstep(0.0, 0.16, distanceFromCenter);
         float twinkle = 0.88 + 0.12 * sin(uJourneyTime * 0.72 + vJourneyStarSeed * 8.7);
-        float alpha = (softStar * 0.68 + core * 0.42) * uJourneyOpacity * twinkle;
+        float populationReveal = smoothstep(
+          vJourneyRevealSeed,
+          min(1.0, vJourneyRevealSeed + 0.075),
+          uJourneyOpacity
+        );
+        float alpha = (softStar * 0.68 + core * 0.42) *
+          uJourneyOpacity * populationReveal * twinkle;
         if (alpha < 0.008) discard;
         gl_FragColor = vec4(uJourneyColor * (0.92 + core * 0.48), alpha);
       }
@@ -3735,7 +3794,7 @@ function createNaturalRiverReflectionMaterial(reflectionTexture) {
   return material
 }
 
-function NaturalRiverCorridor({ progress, qualityScale = 1 }) {
+function NaturalRiverCorridor({ progress, qualityScale = 1, reflectionDisabled = false }) {
   const corridorRef = useRef(null)
   const reflectionMeshRef = useRef(null)
   const bedMaterialRef = useRef(null)
@@ -3757,7 +3816,7 @@ function NaturalRiverCorridor({ progress, qualityScale = 1 }) {
     () => new URLSearchParams(window.location.search).get('capture') === '1',
     [],
   )
-  const planarReflectionEnabled = qualityScale >= 0.9
+  const planarReflectionEnabled = qualityScale >= 0.9 && !reflectionDisabled
   const reflectionResolution = planarReflectionEnabled ? 320 : 2
   const bedGeometry = useMemo(
     () => buildNaturalRiverGeometry({ count: 100, widthScale: 1.025, yOffset: -0.24 }),
@@ -3982,11 +4041,12 @@ function NaturalRiverCorridor({ progress, qualityScale = 1 }) {
       Math.abs(reflectionState.fov - camera.fov) > 0.001 ||
       Math.abs(reflectionState.aspect - camera.aspect) > 0.00001
     const storyChanged = Math.abs(reflectionState.progress - progress) > 0.0001
+    const movingRefreshDue = state.clock.elapsedTime - reflectionState.time >= 1 / 30
     const idleRefreshDue = state.clock.elapsedTime - reflectionState.time > 0.38
     if (
       planarReflectionEnabled &&
       reveal > 0.01 &&
-      (cameraChanged || storyChanged || idleRefreshDue)
+      (((cameraChanged || storyChanged) && movingRefreshDue) || idleRefreshDue)
     ) {
       const planeY = 0.14
       camera.getWorldDirection(reflectionForward)
@@ -4963,7 +5023,7 @@ function buildMeadowSeeds() {
   return { nearGrass, midGrass, foregroundGrass, flowers }
 }
 
-function ValleyMeadow({ progress, travelWindRef, qualityScale = 1 }) {
+function ValleyMeadow({ diagnostics = {}, progress, travelWindRef, qualityScale = 1 }) {
   const groundRef = useRef(null)
   const nearGrassRef = useRef(null)
   const midGrassRef = useRef(null)
@@ -5298,7 +5358,11 @@ function ValleyMeadow({ progress, travelWindRef, qualityScale = 1 }) {
 
   useFrame((state, delta) => {
     const reveal = smoothstep(17.5, 24.5, progress)
-    const { sunsetWeight: sunset, nightWeight: night } = getJourneyTimeOfDay(progress)
+    const {
+      dayWeight,
+      sunsetWeight: sunset,
+      nightWeight: night,
+    } = getJourneyTimeOfDay(progress)
     const windDelta = Math.min(delta, 0.05)
     windImpulses.forEach((impulse) => {
       if (impulse.strength <= 0) return
@@ -5340,8 +5404,14 @@ function ValleyMeadow({ progress, travelWindRef, qualityScale = 1 }) {
       uniforms.uJourneySunset.value = sunset
       uniforms.uJourneyNight.value = night
       uniforms.uJourneyTime.value = state.clock.elapsedTime
-      uniforms.uJourneyAmbientWind.value = reduceMotion ? 0 : travelWindRef.current * 0.6 + 0.16
-      uniforms.uJourneyMotionScale.value = reduceMotion ? 0 : 1
+      const timeOfDayWind =
+        dayWeight * 0.16 +
+        sunset * (0.19 + Math.sin(state.clock.elapsedTime * 0.17) * 0.012) +
+        night * 0.105
+      uniforms.uJourneyAmbientWind.value = reduceMotion
+        ? 0
+        : travelWindRef.current * 0.6 + timeOfDayWind
+      uniforms.uJourneyMotionScale.value = reduceMotion || diagnostics.wind ? 0 : 1
       let activeImpulseCount = 0
       windImpulses.forEach((impulse) => {
         if (impulse.strength <= 0.001) return
@@ -5369,11 +5439,15 @@ function ValleyMeadow({ progress, travelWindRef, qualityScale = 1 }) {
     groundUniforms.uJourneyNight.value = night
     groundUniforms.uJourneySunset.value = sunset
     if (groundRef.current) groundRef.current.visible = reveal > 0.01
-    if (nearGrassRef.current) nearGrassRef.current.visible = reveal > 0.01
-    if (midGrassRef.current) midGrassRef.current.visible = reveal > 0.01
-    if (foregroundGrassRef.current) foregroundGrassRef.current.visible = reveal > 0.01
-    if (flowerRef.current) flowerRef.current.visible = reveal > 0.01
-    if (flowerPointsRef.current) flowerPointsRef.current.visible = reveal > 0.01
+    if (nearGrassRef.current) nearGrassRef.current.visible = reveal > 0.01 && !diagnostics.grass
+    if (midGrassRef.current) midGrassRef.current.visible = reveal > 0.01 && !diagnostics.grass
+    if (foregroundGrassRef.current) {
+      foregroundGrassRef.current.visible = reveal > 0.01 && !diagnostics.grass
+    }
+    if (flowerRef.current) flowerRef.current.visible = reveal > 0.01 && !diagnostics.flowers
+    if (flowerPointsRef.current) {
+      flowerPointsRef.current.visible = reveal > 0.01 && !diagnostics.flowers
+    }
   })
 
   return (
@@ -5743,6 +5817,7 @@ export default function JourneyScene({
   presentationMode = false,
   onListenerPose,
   quality = { name: 'high', particles: 1, shadows: true, fogLayers: 7 },
+  diagnostics = {},
 }) {
   const renderer = useThree((state) => state.gl)
   const ktx2Loader = useMemo(
@@ -5810,7 +5885,14 @@ export default function JourneyScene({
       correction: new THREE.Vector3(),
       futureCorrection: new THREE.Vector3(),
       futurePosition: new THREE.Vector3(),
+      previousCorrection: new THREE.Vector3(),
+      previousPosition: new THREE.Vector3(),
       centerlineForward: new THREE.Vector3(),
+      previousAuthoredForward: new THREE.Vector3(),
+      nextAuthoredForward: new THREE.Vector3(),
+      authoredForward: new THREE.Vector3(),
+      sampledQuaternion: new THREE.Quaternion(),
+      euler: new THREE.Euler(0, 0, 0, 'YXZ'),
     }),
     [],
   )
@@ -5858,14 +5940,13 @@ export default function JourneyScene({
       motesNight: new THREE.Color('#8ab8ff'),
       mysticSunset: new THREE.Color('#ffb178'),
       mysticNight: new THREE.Color('#7aa5e8'),
+      clearRiverSunset: new THREE.Color('#829489'),
       clearRiverNight: new THREE.Color('#163f65'),
+      riverSunset: new THREE.Color('#748a80'),
       riverNight: new THREE.Color('#153f65'),
+      clearRiverAttenuationSunset: new THREE.Color('#879b89'),
       clearRiverAttenuationNight: new THREE.Color('#1b5477'),
     }),
-    [],
-  )
-  const reduceMotion = useMemo(
-    () => window.matchMedia('(prefers-reduced-motion: reduce)').matches,
     [],
   )
   const discoveryPreview = useMemo(
@@ -5877,6 +5958,7 @@ export default function JourneyScene({
     [],
   )
   const previousProgressRef = useRef(progress)
+  const shadowProgressRef = useRef(-Infinity)
   const travelWindRef = useRef(0)
   const gateCueRef = useRef({ type: null, elapsed: 0 })
   const sunRef = useRef(null)
@@ -5913,6 +5995,9 @@ export default function JourneyScene({
   const riverReactionRef = useRef({ age: 0, fading: false })
   const interactionRef = useRef({ capturedGate: null })
   const cavePresenceRef = useRef(Number.NaN)
+  const cavePortalCameraZRef = useRef(23)
+  const cameraMotionSamplesRef = useRef([])
+  const cameraMotionAuditRef = useRef({ previous: null, samples: [] })
   const { set, size, scene } = useThree()
 
   // Keep Three's authored-clip evaluation active even though the two camera
@@ -5960,6 +6045,13 @@ export default function JourneyScene({
       starWeight,
     } = timeOfDay
     const eveningProgress = sunset + night
+    if (
+      quality.shadows &&
+      Math.abs(progress - shadowProgressRef.current) >= 0.18
+    ) {
+      state.gl.shadowMap.needsUpdate = true
+      shadowProgressRef.current = progress
+    }
     const progressVelocity = Math.abs(progress - previousProgressRef.current) /
       Math.max(delta, 0.001)
     const travelWindTarget = THREE.MathUtils.clamp(progressVelocity * 0.085, 0, 1)
@@ -6052,7 +6144,6 @@ export default function JourneyScene({
       camera.position.x += cameraScratch.correction.x
       camera.position.y += cameraScratch.correction.y
 
-      const walkStrength = reduceMotion ? 0 : 1 - smoothstep(11.3, 13.5, progress)
       const openVista = smoothstep(18, 25, cameraProgress)
       const vistaComposition = smoothstep(
         LOOKDEV_V2_COMPOSITION.vistaStart,
@@ -6074,44 +6165,83 @@ export default function JourneyScene({
         ENDING_CAMERA.wideEnd,
         cameraProgress,
       )
-      const stride = progress * Math.PI * 1.16
-      const horizontalBob = Math.sin(stride * 0.5) * 0.012 * walkStrength
-      const verticalBob = Math.abs(Math.sin(stride)) * 0.011 * walkStrength
       cameraScratch.forward
         .set(0, 0, -1)
         .applyQuaternion(camera.quaternion)
         .normalize()
       if (
+        cameraSampler?.quaternion &&
+        clip &&
+        progress < JOURNEY_CAVE_SEQUENCE.fogGate + 2.5
+      ) {
+        const previousProgress = Math.max(0, progress - 0.48)
+        const nextProgress = Math.min(JOURNEY_CAVE_SEQUENCE.fogGate, progress + 0.48)
+        const previousQuaternionSample = cameraSampler.quaternion.evaluate(
+          clip.duration * storyProgressToClipProgress(previousProgress),
+        )
+        cameraScratch.sampledQuaternion.fromArray(previousQuaternionSample).normalize()
+        cameraScratch.previousAuthoredForward
+          .set(0, 0, -1)
+          .applyQuaternion(cameraScratch.sampledQuaternion)
+        const nextQuaternionSample = cameraSampler.quaternion.evaluate(
+          clip.duration * storyProgressToClipProgress(nextProgress),
+        )
+        cameraScratch.sampledQuaternion.fromArray(nextQuaternionSample).normalize()
+        cameraScratch.nextAuthoredForward
+          .set(0, 0, -1)
+          .applyQuaternion(cameraScratch.sampledQuaternion)
+        cameraScratch.authoredForward
+          .copy(cameraScratch.previousAuthoredForward)
+          .addScaledVector(cameraScratch.forward, 2)
+          .add(cameraScratch.nextAuthoredForward)
+          .normalize()
+        cameraScratch.forward.copy(cameraScratch.authoredForward)
+      }
+      if (
         cameraSampler?.position &&
         clip &&
         progress > 1.5 &&
-        progress < JOURNEY_CAVE_SEQUENCE.fogGate
+        progress < JOURNEY_CAVE_SEQUENCE.fogGate + 2.5
       ) {
-        const futureProgress = Math.min(
-          JOURNEY_CAVE_SEQUENCE.fogGate,
-          progress + 0.85,
+        const previousProgress = Math.max(
+          0,
+          progress - 1.15,
         )
+        const futureProgress = Math.min(
+          JOURNEY_CAVE_SEQUENCE.fogGate + 4.8,
+          progress + 2.6,
+        )
+        const previousClipTime = clip.duration * storyProgressToClipProgress(previousProgress)
         const futureClipTime = clip.duration * storyProgressToClipProgress(futureProgress)
+        const previousSample = cameraSampler.position.evaluate(previousClipTime)
+        if (previousSample) cameraScratch.previousPosition.fromArray(previousSample)
         const futureSample = cameraSampler.position.evaluate(futureClipTime)
-        if (futureSample) {
+        if (previousSample && futureSample) {
+          sampleCaveCameraCorrection(previousProgress, cameraScratch.previousCorrection)
+          cameraScratch.previousPosition.x += cameraScratch.previousCorrection.x
+          cameraScratch.previousPosition.y += cameraScratch.previousCorrection.y
           cameraScratch.futurePosition.fromArray(futureSample)
           sampleCaveCameraCorrection(futureProgress, cameraScratch.futureCorrection)
           cameraScratch.futurePosition.x += cameraScratch.futureCorrection.x
           cameraScratch.futurePosition.y += cameraScratch.futureCorrection.y
           cameraScratch.centerlineForward
             .copy(cameraScratch.futurePosition)
-            .sub(camera.position)
-          cameraScratch.centerlineForward.y = 0
+            .sub(cameraScratch.previousPosition)
           if (cameraScratch.centerlineForward.lengthSq() > 0.000001) {
+            cameraScratch.centerlineForward.normalize()
+            // Preserve the deliberately smoothed authored eye-line while the
+            // horizontal component follows the cave's continuous center path.
             const authoredPitch = cameraScratch.forward.y
-            cameraScratch.centerlineForward.normalize().multiplyScalar(
-              Math.sqrt(Math.max(0, 1 - authoredPitch * authoredPitch)),
+            cameraScratch.centerlineForward.y = THREE.MathUtils.lerp(
+              cameraScratch.centerlineForward.y,
+              authoredPitch,
+              0.72,
             )
-            cameraScratch.centerlineForward.y = authoredPitch
+            cameraScratch.centerlineForward.normalize()
             const centerlineLook =
               smoothstep(1.5, 4, progress) *
-              (1 - smoothstep(11.35, JOURNEY_CAVE_SEQUENCE.portalCleared, progress)) *
-              0.72
+              (1 - smoothstep(13.15, JOURNEY_CAVE_SEQUENCE.fogGate + 2.5, progress)) *
+              0.58
             cameraScratch.forward
               .lerp(cameraScratch.centerlineForward, centerlineLook)
               .normalize()
@@ -6131,10 +6261,9 @@ export default function JourneyScene({
       )
       camera.position.addScaledVector(
         cameraScratch.right,
-        horizontalBob - portraitFactor * THREE.MathUtils.lerp(0.12, 0.46, portraitVista),
+        -portraitFactor * THREE.MathUtils.lerp(0.12, 0.46, portraitVista),
       )
       camera.position.y +=
-        verticalBob +
         vistaComposition * LOOKDEV_V2_COMPOSITION.cameraLift +
         endingLift * ENDING_CAMERA.cameraLift +
         portraitFactor * THREE.MathUtils.lerp(-0.08, 0.18, portraitVista)
@@ -6150,6 +6279,7 @@ export default function JourneyScene({
       )
       camera.up.set(0, 1, 0)
       camera.lookAt(cameraScratch.target)
+      cavePortalCameraZRef.current = camera.position.z
       const desiredFov =
         camera.userData.journeyBaseFov +
         openVista * 4.5 +
@@ -6186,6 +6316,66 @@ export default function JourneyScene({
           cameraScratch.correction.toArray().slice(0, 2)
             .map((value) => Number(value.toFixed(5))),
         )
+        captureDataset.journeyPortalCameraZ = camera.position.z.toFixed(6)
+        cameraScratch.euler.setFromQuaternion(camera.quaternion, 'YXZ')
+        const motionSamples = cameraMotionSamplesRef.current
+        motionSamples.push({
+          time: state.clock.elapsedTime,
+          delta,
+          progress,
+          position: camera.position.toArray(),
+          yaw: cameraScratch.euler.y,
+          pitch: cameraScratch.euler.x,
+        })
+        if (motionSamples.length > 2400) motionSamples.splice(0, motionSamples.length - 2400)
+        const motionAudit = cameraMotionAuditRef.current
+        const previousMotion = motionAudit.previous
+        if (
+          previousMotion &&
+          progress <= JOURNEY_CAVE_SEQUENCE.fogGate + 0.001 &&
+          Math.abs(progress - previousMotion.progress) > 0.000001
+        ) {
+          const wrapAngle = (value) => THREE.MathUtils.euclideanModulo(
+            value + Math.PI,
+            Math.PI * 2,
+          ) - Math.PI
+          const sample = {
+            progress,
+            frameDelta: delta,
+            progressDelta: progress - previousMotion.progress,
+            xDelta: camera.position.x - previousMotion.position[0],
+            yDelta: camera.position.y - previousMotion.position[1],
+            zDelta: camera.position.z - previousMotion.position[2],
+            yawDelta: wrapAngle(cameraScratch.euler.y - previousMotion.yaw),
+            pitchDelta: wrapAngle(cameraScratch.euler.x - previousMotion.pitch),
+          }
+          sample.positionDelta = Math.hypot(sample.xDelta, sample.yDelta, sample.zDelta)
+          motionAudit.samples.push(sample)
+          if (motionAudit.samples.length > 1800) motionAudit.samples.shift()
+          if (motionAudit.samples.length % 20 === 0) {
+            const largest = (key) => motionAudit.samples.reduce(
+              (best, candidate) => (
+                Math.abs(candidate[key]) > Math.abs(best?.[key] ?? 0) ? candidate : best
+              ),
+              null,
+            )
+            captureDataset.journeyCameraMotionAudit = JSON.stringify({
+              frames: motionAudit.samples.length,
+              position: largest('positionDelta'),
+              x: largest('xDelta'),
+              y: largest('yDelta'),
+              z: largest('zDelta'),
+              yaw: largest('yawDelta'),
+              pitch: largest('pitchDelta'),
+            })
+          }
+        }
+        motionAudit.previous = {
+          progress,
+          position: camera.position.toArray(),
+          yaw: cameraScratch.euler.y,
+          pitch: cameraScratch.euler.x,
+        }
         window.__JOURNEY_V1_CAPTURE__ = {
           progress,
           cameraProgress,
@@ -6199,6 +6389,7 @@ export default function JourneyScene({
             quaternion: camera.quaternion.toArray(),
             fov: camera.fov,
           },
+          motionSamples,
           project: (x, y, z) => {
             const point = new THREE.Vector3(x, y, z).project(camera)
             return {
@@ -6291,7 +6482,7 @@ export default function JourneyScene({
     const holdFogRemaining = 1 - clamp01(fogClearProgress)
     const valleyMist = valleyFogArrival * holdFogRemaining
     if (valleyFogGroupRef.current) {
-      const valleyFogVisible = valleyMist > 0.002
+      const valleyFogVisible = valleyMist > 0.002 && !diagnostics.fog
       valleyFogGroupRef.current.visible = valleyFogVisible
       if (valleyFogVisible) {
         const fogColor = frameColors.valleyFog
@@ -6321,7 +6512,7 @@ export default function JourneyScene({
     }
     if (openValleyAtmosphereRef.current) {
       const atmospherePresence = smoothstep(18, 26, progress)
-      const atmosphereVisible = atmospherePresence > 0.002
+      const atmosphereVisible = atmospherePresence > 0.002 && !diagnostics.fog
       openValleyAtmosphereRef.current.visible = atmosphereVisible
       if (atmosphereVisible) {
         const atmosphereColor = frameColors.atmosphere
@@ -6368,10 +6559,12 @@ export default function JourneyScene({
       state.scene.fog.color
         .set('#050909')
         .lerp(openAirFog, caveRelease)
-      state.scene.fog.density = Math.max(
-        openAirFogDensity,
-        entranceFog * (1 - travelWindRef.current * 0.08),
-      )
+      state.scene.fog.density = diagnostics.fog
+        ? 0
+        : Math.max(
+          openAirFogDensity,
+          entranceFog * (1 - travelWindRef.current * 0.08),
+        )
       if (qaCaptureEnabled) {
         document.documentElement.dataset.journeyFogDensity =
           state.scene.fog.density.toFixed(7)
@@ -6436,7 +6629,9 @@ export default function JourneyScene({
       starMaterialRef.current.uniforms.uJourneyOpacity.value = starOpacity
       starMaterialRef.current.uniforms.uJourneyTime.value = state.clock.elapsedTime
     }
-    if (starPointsRef.current) starPointsRef.current.visible = starOpacity > 0.002
+    if (starPointsRef.current) {
+      starPointsRef.current.visible = starOpacity > 0.002 && !diagnostics.stars
+    }
     if (qaCaptureEnabled) {
       document.documentElement.dataset.journeyStarsVisible = String(starOpacity > 0.002)
     }
@@ -6449,14 +6644,14 @@ export default function JourneyScene({
       uniforms.uJourneyOpacity.value =
         smoothstep(0, 0.08, skyConnectionProgress) * bridgeFade
       uniforms.uJourneyTime.value = state.clock.elapsedTime
-      skyBridgeRef.current.visible = bridgeReveal > 0.002
+      skyBridgeRef.current.visible = bridgeReveal > 0.002 && !diagnostics.stars
     }
     if (milkyMaterialRef.current) {
       milkyMaterialRef.current.uniforms.uJourneyOpacity.value = milkyWayReveal * 0.94
       milkyMaterialRef.current.uniforms.uJourneyTime.value = state.clock.elapsedTime
     }
     if (milkyPointsRef.current) {
-      milkyPointsRef.current.visible = milkyWayReveal > 0.002
+      milkyPointsRef.current.visible = milkyWayReveal > 0.002 && !diagnostics.stars
       milkyPointsRef.current.geometry.setDrawRange(
         0,
         Math.floor(milkyPointsRef.current.geometry.attributes.position.count * milkyWayReveal),
@@ -6607,6 +6802,10 @@ export default function JourneyScene({
         if ('color' in material) {
           material.color
             .set(isClearRiver ? '#5f998e' : '#4f8c85')
+            .lerp(
+              isClearRiver ? frameColors.clearRiverSunset : frameColors.riverSunset,
+              sunset * 0.22,
+            )
             .lerp(isClearRiver ? frameColors.clearRiverNight : frameColors.riverNight, night)
         }
         if ('opacity' in material) {
@@ -6628,6 +6827,7 @@ export default function JourneyScene({
           material.clearcoatRoughness = THREE.MathUtils.lerp(0.14, 0.04, night)
           material.attenuationColor
             .set('#6aa99c')
+            .lerp(frameColors.clearRiverAttenuationSunset, sunset * 0.2)
             .lerp(frameColors.clearRiverAttenuationNight, night)
         }
         if ('emissive' in material) {
@@ -6660,11 +6860,24 @@ export default function JourneyScene({
       uniforms.uJourneyTime.value = state.clock.elapsedTime
       mesh.visible = night > 0.06 && riverGlow > 0.01
     })
-    const cavePresence = getJourneyCavePresence(progress)
+    // Portal culling follows the actual camera crossing, not a story-progress
+    // threshold. The rock frame remains solid through the portal plane, then
+    // fades only while it travels behind/outside the screen. Reverse traversal
+    // evaluates the same signed distance in the opposite direction.
+    const cavePresence = progress <= JOURNEY_CAVE_SEQUENCE.fogGate + 0.001
+      ? smoothstep(
+        CAVE_PORTAL_FADE_END_Z,
+        CAVE_PORTAL_FADE_START_Z,
+        cavePortalCameraZRef.current,
+      )
+      : 0
+    if (qaCaptureEnabled) {
+      document.documentElement.dataset.journeyCaveGeometryPresence = cavePresence.toFixed(7)
+    }
     if (cavePresence !== cavePresenceRef.current) {
       const caveVisible = cavePresence > 0.004
       groups.cave.forEach((object) => {
-        object.visible = caveVisible
+        object.visible = caveVisible && !diagnostics.cave
         const materials = Array.isArray(object.material) ? object.material : [object.material]
         materials.forEach((material) => {
           const baseOpacity = material.userData.journeyCaveBaseOpacity ?? 1
@@ -6687,8 +6900,13 @@ export default function JourneyScene({
       <primitive object={root} />
       <primitive object={phase2Root} />
       <FarRidgeCrown progress={progress} biomeMacroTexture={biomeMacroTexture} />
-      <NaturalRiverCorridor progress={progress} qualityScale={quality.particles} />
+      <NaturalRiverCorridor
+        progress={progress}
+        qualityScale={quality.particles}
+        reflectionDisabled={diagnostics.reflection}
+      />
       <ValleyMeadow
+        diagnostics={diagnostics}
         progress={progress}
         travelWindRef={travelWindRef}
         qualityScale={quality.particles}
@@ -6710,9 +6928,9 @@ export default function JourneyScene({
         ref={sunRef}
         position={[-90, 130, -40]}
         intensity={3.2}
-        castShadow={quality.shadows}
-        shadow-mapSize-width={quality.name === 'high' ? 2048 : 1024}
-        shadow-mapSize-height={quality.name === 'high' ? 2048 : 1024}
+        castShadow={quality.shadows && !diagnostics.shadows}
+        shadow-mapSize-width={quality.name === 'high' ? 1536 : 1024}
+        shadow-mapSize-height={quality.name === 'high' ? 1536 : 1024}
         shadow-camera-near={0.5}
         shadow-camera-far={420}
         shadow-camera-left={-150}

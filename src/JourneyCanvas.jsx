@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useRef, useState } from 'react'
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Preload } from '@react-three/drei'
 import * as THREE from 'three'
@@ -7,7 +7,7 @@ import JourneyScene from './JourneyScene.jsx'
 const QUALITY_PRESETS = {
   low: { name: 'low', dpr: 0.65, particles: 0.52, shadows: false, fogLayers: 3 },
   medium: { name: 'medium', dpr: 0.9, particles: 0.76, shadows: false, fogLayers: 5 },
-  high: { name: 'high', dpr: 1.15, particles: 1, shadows: true, fogLayers: 7 },
+  high: { name: 'high', dpr: 0.9, particles: 1, shadows: true, fogLayers: 7 },
 }
 
 const getInitialQuality = () => {
@@ -19,21 +19,48 @@ const getInitialQuality = () => {
   return 'high'
 }
 
-function FixedQualityController({ tier }) {
+const getPerformanceDiagnostics = () => {
+  const search = new URLSearchParams(window.location.search)
+  if (search.get('capture') !== '1') {
+    return { disabled: Object.freeze({}), dpr: null, label: 'baseline' }
+  }
+  const disabled = Object.freeze(Object.fromEntries(
+    (search.get('perfOff') ?? '')
+      .split(',')
+      .map((value) => value.trim().toLowerCase())
+      .filter(Boolean)
+      .map((value) => [value, true]),
+  ))
+  const requestedDprValue = search.get('perfDpr')
+  const requestedDpr = Number(requestedDprValue)
+  const dpr = requestedDprValue !== null && Number.isFinite(requestedDpr)
+    ? THREE.MathUtils.clamp(requestedDpr, 0.5, 1.5)
+    : null
+  return {
+    disabled,
+    dpr,
+    label: search.get('perfOff') || (dpr ? `dpr-${dpr}` : 'baseline'),
+  }
+}
+
+function FixedQualityController({ quality }) {
   const { gl, setDpr } = useThree()
 
   useEffect(() => {
-    const quality = QUALITY_PRESETS[tier]
     setDpr(quality.dpr)
     gl.shadowMap.enabled = quality.shadows
     gl.shadowMap.type = THREE.PCFShadowMap
+    // The light and all shadow casters are story-authored. Re-rendering the
+    // same 2K map every idle frame is pure duplicate work; JourneyScene marks
+    // it dirty when the authored state actually advances.
+    gl.shadowMap.autoUpdate = false
     gl.shadowMap.needsUpdate = true
-  }, [gl, setDpr, tier])
+  }, [gl, quality, setDpr])
 
   return null
 }
 
-function JourneyPerformanceProbe({ quality }) {
+function JourneyPerformanceProbe({ diagnostics, quality }) {
   // Exact opt-in keeps production free of telemetry work while allowing the
   // deployed build itself—not only Vite dev mode—to be measured during QA.
   const enabled = new URLSearchParams(window.location.search).get('capture') === '1'
@@ -89,6 +116,13 @@ function JourneyPerformanceProbe({ quality }) {
       sample.maxTriangles = 0
       return
     }
+    if (document.documentElement.dataset.journeyVisualReady !== 'true') {
+      sample.elapsed = 0
+      sample.deltas.length = 0
+      sample.maxCalls = 0
+      sample.maxTriangles = 0
+      return
+    }
     sample.elapsed += frameDelta
     sample.deltas.push(frameDelta)
     sample.maxCalls = Math.max(sample.maxCalls, gl.info.render.calls)
@@ -102,6 +136,7 @@ function JourneyPerformanceProbe({ quality }) {
     const report = {
       source: 'JourneyPerformanceProbe',
       report: sample.reportIndex + 1,
+      diagnostic: diagnostics.label,
       quality: quality.name,
       seconds: Number(sample.elapsed.toFixed(3)),
       frames: sample.deltas.length,
@@ -350,10 +385,18 @@ export default function JourneyCanvas({
   onListenerPose,
 }) {
   const [qualityTier] = useState(getInitialQuality)
+  const [diagnostics] = useState(getPerformanceDiagnostics)
   const [performanceProbeEnabled] = useState(
     () => new URLSearchParams(window.location.search).get('capture') === '1',
   )
-  const quality = QUALITY_PRESETS[qualityTier]
+  const quality = useMemo(() => {
+    const baseQuality = QUALITY_PRESETS[qualityTier]
+    return Object.freeze({
+      ...baseQuality,
+      dpr: diagnostics.dpr ?? baseQuality.dpr,
+      shadows: baseQuality.shadows && !diagnostics.disabled.shadows,
+    })
+  }, [diagnostics, qualityTier])
 
   return (
     <Canvas
@@ -367,11 +410,11 @@ export default function JourneyCanvas({
         gl.toneMapping = THREE.ACESFilmicToneMapping
         gl.toneMappingExposure = 1.06
         gl.outputColorSpace = THREE.SRGBColorSpace
-        gl.shadowMap.enabled = true
+        gl.shadowMap.enabled = quality.shadows
         gl.shadowMap.type = THREE.PCFShadowMap
       }}
     >
-      <FixedQualityController tier={qualityTier} />
+      <FixedQualityController quality={quality} />
       <Suspense fallback={null}>
         <JourneyScene
           progress={presentationMode ? 28 : progress}
@@ -383,8 +426,11 @@ export default function JourneyCanvas({
           presentationMode={presentationMode}
           onListenerPose={onListenerPose}
           quality={quality}
+          diagnostics={diagnostics.disabled}
         />
-        {performanceProbeEnabled && <JourneyPerformanceProbe quality={quality} />}
+        {performanceProbeEnabled && (
+          <JourneyPerformanceProbe diagnostics={diagnostics} quality={quality} />
+        )}
         <Preload all />
         <JourneyVisualReadyBridge onProgress={onAssetsProgress} quality={quality} />
         <JourneyFrameCapture

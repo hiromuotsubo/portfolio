@@ -19,10 +19,21 @@ const JourneyV3 = lazy(() => import('./journey-v3/JourneyV3.jsx'))
 // Enter → cave → valley experience on `/journey`.
 const journeySearch = new URLSearchParams(window.location.search)
 const PUBLIC_SHOWCASE = journeySearch.get('showcase') === 'day'
+const requestedPreviewProgressValue = journeySearch.get('previewProgress')
+const requestedPreviewProgress = Number(requestedPreviewProgressValue)
+const DEV_PREVIEW_PROGRESS = (
+  (import.meta.env.DEV || ['localhost', '127.0.0.1'].includes(window.location.hostname)) &&
+  requestedPreviewProgressValue !== null &&
+  Number.isFinite(requestedPreviewProgress)
+) ? clampPreviewProgress(requestedPreviewProgress) : null
 const DEV_PREVIEW = (import.meta.env.DEV || ['localhost', '127.0.0.1'].includes(window.location.hostname) || PUBLIC_SHOWCASE)
   ? (PUBLIC_SHOWCASE ? 'day' : journeySearch.get('preview'))
   : null
-const PREVIEW_PROGRESS = {
+function clampPreviewProgress(value) {
+  return Math.min(100, Math.max(0, value))
+}
+
+const PREVIEW_PROGRESS = DEV_PREVIEW_PROGRESS ?? ({
   cave: 5,
   foghold: JOURNEY_CAVE_SEQUENCE.fogGate,
   fogclear: JOURNEY_CAVE_SEQUENCE.fogGate,
@@ -38,14 +49,14 @@ const PREVIEW_PROGRESS = {
   wide: 96,
   portfolio: 28,
   outro: 100,
-}[DEV_PREVIEW] ?? 0
+}[DEV_PREVIEW] ?? 0)
 const PREVIEW_GATE = {
   foghold: 'fog',
   riverready: 'river',
   riverhold: 'river',
 }[DEV_PREVIEW] ?? null
 const PREVIEW_HOLD_PROGRESS = ['foghold', 'riverhold'].includes(DEV_PREVIEW) ? 0.62 : 0
-const PREVIEW_ENTERED = Boolean(DEV_PREVIEW)
+const PREVIEW_ENTERED = Boolean(DEV_PREVIEW || DEV_PREVIEW_PROGRESS !== null)
 const PREVIEW_FOG_COMPLETED = (
   DEV_PREVIEW === 'fogclear' || (
     PREVIEW_GATE !== 'fog' &&
