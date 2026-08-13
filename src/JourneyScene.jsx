@@ -13,7 +13,7 @@ import {
 
 // Versioned query prevents a previously cached GLB from reviving removed assets.
 const MODEL_URL = '/journey/models/journey-v17-runtime-optimized.glb?v=1-selective-runtime'
-const CAVE_LOOKDEV_URL = '/journey/models/journey-cave-lookdev-v002.glb?v=3-blender-breakup'
+const CAVE_LOOKDEV_URL = '/journey/models/journey-cave-macro-v003.glb?v=8-macro-space'
 const PHASE2_ENVIRONMENT_URL = '/journey/models/journey-phase2-environment.glb?v=5-distance-forest'
 const ALPINE_BIOME_MACRO_URL = '/journey/textures/surface/alpine-biome-macro-v1.jpg'
 
@@ -59,14 +59,20 @@ const LOOKDEV_V2_COMPOSITION = {
 }
 
 const CAVE_LOOK = {
-  exposure: 2.82,
-  sunIntensity: 0.82,
-  skyIntensity: 0.78,
-  ambientIntensity: 0.31,
-  guideLightIntensity: 1.42,
-  exitLightIntensity: 1.92,
-  materialTint: '#637069',
+  exposure: 1.54,
+  sunIntensity: 0.22,
+  skyIntensity: 0.34,
+  ambientIntensity: 0.11,
+  guideLightIntensity: 0.52,
+  exitLightIntensity: 2.16,
+  materialTint: '#252d2b',
 }
+
+const CAVE_CAMERA = Object.freeze({
+  x: 0,
+  y: 2.34375,
+  fov: 39.760707,
+})
 
 const clamp01 = (value) => Math.min(1, Math.max(0, value))
 
@@ -77,6 +83,7 @@ const smoothstep = (edge0, edge1, value) => {
 
 const CAVE_PORTAL_FADE_START_Z = -1.08
 const CAVE_PORTAL_FADE_END_Z = -2.42
+const CAVE_CAMERA_RELEASE_END = 18
 
 function applyCaveSurfaceDetail(material) {
   const previousCompile = material.onBeforeCompile
@@ -95,7 +102,27 @@ function applyCaveSurfaceDetail(material) {
     shader.fragmentShader = shader.fragmentShader
       .replace(
         '#include <common>',
-        '#include <common>\nvarying vec3 vJourneyCaveWorldPosition;',
+        [
+          '#include <common>',
+          'varying vec3 vJourneyCaveWorldPosition;',
+          'float journeyCaveHash(vec3 point) {',
+          '  point = fract(point * 0.1031);',
+          '  point += dot(point, point.yzx + 33.33);',
+          '  return fract((point.x + point.y) * point.z);',
+          '}',
+          'float journeyCaveNoise(vec3 point) {',
+          '  vec3 cell = floor(point);',
+          '  vec3 local = fract(point);',
+          '  local = local * local * (3.0 - 2.0 * local);',
+          '  return mix(',
+          '    mix(mix(journeyCaveHash(cell), journeyCaveHash(cell + vec3(1, 0, 0)), local.x),',
+          '      mix(journeyCaveHash(cell + vec3(0, 1, 0)), journeyCaveHash(cell + vec3(1, 1, 0)), local.x), local.y),',
+          '    mix(mix(journeyCaveHash(cell + vec3(0, 0, 1)), journeyCaveHash(cell + vec3(1, 0, 1)), local.x),',
+          '      mix(journeyCaveHash(cell + vec3(0, 1, 1)), journeyCaveHash(cell + vec3(1, 1, 1)), local.x), local.y),',
+          '    local.z',
+          '  );',
+          '}',
+        ].join('\n'),
       )
       .replace(
         '#include <map_fragment>',
@@ -111,12 +138,38 @@ function applyCaveSurfaceDetail(material) {
           ') * 0.5 + 0.5;',
           'float journeyCaveMoisture = smoothstep(0.2, 0.92, journeyCaveBroad) *',
           '  smoothstep(0.18, 0.82, journeyCaveStrata);',
-          'diffuseColor.rgb *= mix(0.78, 1.08, clamp(journeyCaveBroad, 0.0, 1.0));',
+          'float journeyCaveMacroNoise = journeyCaveNoise(vJourneyCaveWorldPosition * 0.34);',
+          'float journeyCaveMesoNoise = journeyCaveNoise(',
+          '  vJourneyCaveWorldPosition * 1.12 + vec3(13.7, -8.4, 21.9)',
+          ');',
+          'float journeyCaveStone = journeyCaveMacroNoise * 0.68 + journeyCaveMesoNoise * 0.32;',
+          'diffuseColor.rgb *= mix(0.58, 1.17, clamp(journeyCaveBroad, 0.0, 1.0));',
+          'float journeyCaveLayer = smoothstep(0.28, 0.74, journeyCaveStrata);',
+          'diffuseColor.rgb *= mix(0.72, 1.08, journeyCaveLayer);',
+          'diffuseColor.rgb *= mix(0.52, 1.32, journeyCaveStone);',
+          'diffuseColor.rgb = mix(',
+          '  diffuseColor.rgb * vec3(0.82, 0.76, 0.68),',
+          '  diffuseColor.rgb * vec3(0.78, 0.98, 0.9),',
+          '  journeyCaveMoisture * (0.32 + journeyCaveMesoNoise * 0.34)',
+          ');',
           'diffuseColor.rgb = mix(',
           '  diffuseColor.rgb,',
           '  diffuseColor.rgb * vec3(0.78, 0.94, 0.87),',
           '  journeyCaveMoisture * 0.22',
           ');',
+        ].join('\n'),
+      )
+      .replace(
+        '#include <normal_fragment_maps>',
+        [
+          '#include <normal_fragment_maps>',
+          'vec3 journeyCaveNormalWarp = vec3(',
+          '  sin(vJourneyCaveWorldPosition.y * 1.47 + vJourneyCaveWorldPosition.z * 0.38),',
+          '  sin(vJourneyCaveWorldPosition.x * 1.24 - vJourneyCaveWorldPosition.z * 0.71 + 1.2),',
+          '  sin(vJourneyCaveWorldPosition.x * 0.92 + vJourneyCaveWorldPosition.y * 1.08 - 0.6)',
+          ');',
+          'journeyCaveNormalWarp += (journeyCaveMesoNoise - 0.5) * vec3(0.42, 0.26, 0.38);',
+          'normal = normalize(normal + journeyCaveNormalWarp * 0.22);',
         ].join('\n'),
       )
       .replace(
@@ -133,7 +186,19 @@ function applyCaveSurfaceDetail(material) {
           'float journeyCaveIndirect = 0.42 +',
           '  sin(vJourneyCaveWorldPosition.x * 0.23 + vJourneyCaveWorldPosition.z * 0.11) * 0.18 +',
           '  sin(vJourneyCaveWorldPosition.y * 0.58 - vJourneyCaveWorldPosition.z * 0.07) * 0.1;',
-          'totalEmissiveRadiance += vec3(0.15, 0.18, 0.162) * clamp(journeyCaveIndirect, 0.12, 0.74);',
+          'float journeyCaveBounce = (0.24 + clamp(journeyCaveBroad, 0.0, 1.0) * 1.08) *',
+          '  mix(0.72, 1.08, journeyCaveStrata);',
+          'float journeyCaveFissure = 1.0 - smoothstep(',
+          '  0.035, 0.18, abs(journeyCaveStrata - 0.46)',
+          ');',
+          'vec3 journeyCaveBounceColor = mix(',
+          '  vec3(0.016, 0.019, 0.017),',
+          '  vec3(0.092, 0.101, 0.088),',
+          '  clamp(journeyCaveBroad * 0.72 + journeyCaveStrata * 0.28, 0.0, 1.0)',
+          ');',
+          'journeyCaveBounceColor *= 1.0 - journeyCaveFissure * 0.46;',
+          'totalEmissiveRadiance += journeyCaveBounceColor *',
+          '  clamp(journeyCaveIndirect, 0.24, 0.88) * journeyCaveBounce;',
         ].join('\n'),
       )
   }
@@ -2718,7 +2783,28 @@ function buildRiverAuroraGeometry() {
 function prepareWorld(source, biomeMacroTexture, caveLookdevSource) {
   const root = source.clone(true)
   root.updateMatrixWorld(true)
-  const caveLookdevShell = caveLookdevSource?.getObjectByName('CAVE_HQ_INTERIOR_SHELL')
+  const caveCandidateObjects = []
+  caveLookdevSource?.traverse((object) => {
+    if (!object.isMesh || !object.name.includes('CAVE_MACRO_')) return
+    const candidate = object.clone(true)
+    candidate.geometry = object.geometry.clone()
+    candidate.material = new THREE.MeshStandardMaterial({
+      name: `MAT_${object.name}`,
+      color: object.name.includes('PUDDLE')
+        ? '#12211f'
+        : object.name.includes('FLOOR')
+          ? '#3d433c'
+          : '#555d56',
+      roughness: object.name.includes('PUDDLE') ? 0.36 : 0.92,
+      metalness: 0,
+    })
+    candidate.position.copy(object.position)
+    candidate.quaternion.copy(object.quaternion)
+    candidate.scale.copy(object.scale)
+    candidate.updateMatrix()
+    candidate.updateMatrixWorld(true)
+    caveCandidateObjects.push(candidate)
+  })
   const groups = {
     cave: [],
     meadow: [],
@@ -2762,11 +2848,10 @@ function prepareWorld(source, biomeMacroTexture, caveLookdevSource) {
     })
 
     if (identity.includes('CAVE_') || identity.includes('WEB_CAVE')) {
-      if (identity.includes('CAVE_HQ_INTERIOR_SHELL') && caveLookdevShell?.geometry) {
-        object.geometry = caveLookdevShell.geometry
-        object.geometry.computeBoundingBox()
-        object.geometry.computeBoundingSphere()
-        object.userData.journeyCaveLookdevVersion = 'v002-blender-surface'
+      if (caveCandidateObjects.length) {
+        object.visible = false
+        object.userData.journeyCaveSourceReplaced = true
+        return
       }
       groups.cave.push(object)
       // The cave is behind the final valley camera and cannot contribute to
@@ -2786,15 +2871,15 @@ function prepareWorld(source, biomeMacroTexture, caveLookdevSource) {
         // geometry and lighting, but render the inner faces so the cave is a
         // readable place rather than an all-black loading-like interval.
         material.side = THREE.DoubleSide
-        material.color?.lerp(new THREE.Color(CAVE_LOOK.materialTint), 0.7)
+        material.color?.lerp(new THREE.Color(CAVE_LOOK.materialTint), 0.88)
         if ('roughness' in material) material.roughness = 0.9
         if ('metalness' in material) material.metalness = 0
         if ('clearcoat' in material) material.clearcoat = 0
         if ('specularIntensity' in material) material.specularIntensity = 0.12
         if ('emissive' in material) {
           const isInteriorShell = identity.includes('CAVE_HQ_INTERIOR_SHELL')
-          material.emissive.set(isInteriorShell ? '#2d3d36' : '#202d28')
-          material.emissiveIntensity = isInteriorShell ? 0.3 : 0.12
+          material.emissive.set(isInteriorShell ? '#101614' : '#0c1110')
+          material.emissiveIntensity = isInteriorShell ? 0.11 : 0.045
         }
         applyCaveSurfaceDetail(material)
         material.userData.journeyCaveBaseColor = material.color?.clone()
@@ -2991,6 +3076,41 @@ function prepareWorld(source, biomeMacroTexture, caveLookdevSource) {
       material.needsUpdate = true
     })
   })
+
+  caveCandidateObjects.forEach((object) => {
+    root.add(object)
+    groups.cave.push(object)
+    object.frustumCulled = true
+    object.castShadow = !object.name.includes('PUDDLE')
+    object.receiveShadow = false
+    object.userData.journeySkipPlanarReflection = true
+    object.userData.journeyCaveLookdevVersion = 'v003-macro-space'
+    const material = object.material
+    material.dithering = true
+    material.transparent = true
+    material.side = THREE.DoubleSide
+    material.depthWrite = !object.name.includes('PUDDLE')
+    material.envMapIntensity = object.name.includes('PUDDLE') ? 0.48 : 0.16
+    if (object.name.includes('PUDDLE')) {
+      material.clearcoat = 0.34
+      material.clearcoatRoughness = 0.24
+      material.specularIntensity = 0.42
+      material.emissive.set('#07110f')
+      material.emissiveIntensity = 0.035
+      object.renderOrder = 1
+    } else {
+      material.color.lerp(new THREE.Color(CAVE_LOOK.materialTint), 0.34)
+      material.emissive.set(object.name.includes('FLOOR') ? '#121814' : '#19211d')
+      material.emissiveIntensity = object.name.includes('FLOOR') ? 0.08 : 0.12
+      applyCaveSurfaceDetail(material)
+    }
+    material.userData.journeyCaveBaseOpacity = material.opacity
+    material.userData.journeyCaveBaseColor = material.color.clone()
+    material.userData.journeyCaveBaseEmissive = material.emissive.clone()
+    material.userData.journeyCaveBaseEmissiveIntensity = material.emissiveIntensity
+  })
+
+  root.updateMatrixWorld(true)
 
   const riverGlow = new THREE.Mesh(buildRiverAuroraGeometry(), createRiverGlowMaterial())
   riverGlow.name = 'JOURNEY_RIVER_AURORA_OVERLAY'
@@ -5723,19 +5843,19 @@ function CaveExitGlow({ spriteRef, materialRef }) {
     <sprite
       ref={spriteRef}
       position={[0, 4.4, -5.85]}
-      scale={[15.5, 11.8, 1]}
+      scale={[9.6, 7.4, 1]}
       renderOrder={-3}
       frustumCulled={false}
     >
       <spriteMaterial
         ref={materialRef}
         map={texture}
-        color="#d9e6d4"
+        color="#a8b9ae"
         transparent
         opacity={0}
         depthWrite={false}
-        depthTest={false}
-        toneMapped={false}
+        depthTest
+        toneMapped
       />
     </sprite>
   )
@@ -5981,11 +6101,17 @@ export default function JourneyScene({
       nextAuthoredForward: new THREE.Vector3(),
       authoredForward: new THREE.Vector3(),
       introForward: new THREE.Vector3(),
+      authoredPosition: new THREE.Vector3(),
+      authoredQuaternion: new THREE.Quaternion(),
       sampledQuaternion: new THREE.Quaternion(),
       holdPosition: new THREE.Vector3(),
       holdQuaternion: new THREE.Quaternion(),
       holdFov: 0,
       holdPoseCaptured: false,
+      introStartZ: null,
+      introFogZ: null,
+      introQuaternion: new THREE.Quaternion(),
+      introPoseCaptured: false,
       euler: new THREE.Euler(0, 0, 0, 'YXZ'),
     }),
     [],
@@ -5996,6 +6122,7 @@ export default function JourneyScene({
       sunsetSky: new THREE.Color('#d66e5f'),
       nightSky: new THREE.Color('#17385f'),
       sky: new THREE.Color(),
+      caveBackground: new THREE.Color('#07100f'),
       skyTopSunset: new THREE.Color('#6f7796'),
       skyTopNight: new THREE.Color('#08172f'),
       skyHorizonSunset: new THREE.Color('#e6a07f'),
@@ -6061,6 +6188,8 @@ export default function JourneyScene({
   const skyLightRef = useRef(null)
   const ambientRef = useRef(null)
   const caveGuideLightRef = useRef(null)
+  const caveLeftGrazingLightRef = useRef(null)
+  const caveRightGrazingLightRef = useRef(null)
   const caveExitLightRef = useRef(null)
   const caveExitGlowRef = useRef(null)
   const caveExitGlowMaterialRef = useRef(null)
@@ -6248,7 +6377,60 @@ export default function JourneyScene({
       const sampledQuaternion = cameraSampler?.quaternion?.evaluate(clipTime)
       if (sampledPosition) camera.position.fromArray(sampledPosition)
       if (sampledQuaternion) camera.quaternion.fromArray(sampledQuaternion).normalize()
+      cameraScratch.authoredPosition.copy(camera.position)
+      cameraScratch.authoredQuaternion.copy(camera.quaternion)
       cameraScratch.correction.set(0, 0, 0)
+
+      if (!cameraScratch.introPoseCaptured && cameraSampler?.position) {
+        const introStart = Array.from(cameraSampler.position.evaluate(
+          clip.duration * storyProgressToClipProgress(0),
+        ) ?? camera.position.toArray())
+        const introFog = Array.from(cameraSampler.position.evaluate(
+          clip.duration * storyProgressToClipProgress(JOURNEY_CAVE_SEQUENCE.fogGate),
+        ) ?? camera.position.toArray())
+        cameraScratch.introStartZ = introStart?.[2] ?? camera.position.z
+        cameraScratch.introFogZ = introFog?.[2] ?? camera.position.z
+        cameraScratch.introForward.set(0, 0.035, -1).normalize()
+        cameraScratch.target
+          .set(CAVE_CAMERA.x, CAVE_CAMERA.y, cameraScratch.introStartZ)
+          .add(cameraScratch.introForward)
+        camera.position.set(CAVE_CAMERA.x, CAVE_CAMERA.y, cameraScratch.introStartZ)
+        camera.up.set(0, 1, 0)
+        camera.lookAt(cameraScratch.target)
+        cameraScratch.introQuaternion.copy(camera.quaternion)
+        cameraScratch.introPoseCaptured = true
+      }
+
+      const introLocked = progress <= JOURNEY_CAVE_SEQUENCE.fogGate + 0.001
+      const introReleaseActive =
+        !introLocked && progress < CAVE_CAMERA_RELEASE_END && cameraScratch.introPoseCaptured
+      const introAuthoredTransition = introLocked || introReleaseActive
+      let introRelease = 0
+      if (introLocked && cameraScratch.introPoseCaptured) {
+        const introTravel = smoothstep(0, JOURNEY_CAVE_SEQUENCE.fogGate, progress)
+        camera.position.set(
+          CAVE_CAMERA.x,
+          CAVE_CAMERA.y,
+          THREE.MathUtils.lerp(
+            cameraScratch.introStartZ,
+            cameraScratch.introFogZ,
+            introTravel,
+          ),
+        )
+        camera.quaternion.copy(cameraScratch.introQuaternion)
+      } else if (introReleaseActive) {
+        introRelease = smoothstep(
+          JOURNEY_CAVE_SEQUENCE.fogGate,
+          CAVE_CAMERA_RELEASE_END,
+          progress,
+        )
+        camera.position
+          .set(CAVE_CAMERA.x, CAVE_CAMERA.y, cameraScratch.introFogZ)
+          .lerp(cameraScratch.authoredPosition, introRelease)
+        camera.quaternion
+          .copy(cameraScratch.introQuaternion)
+          .slerp(cameraScratch.authoredQuaternion, introRelease)
+      }
 
       const openVista = smoothstep(18, 25, cameraProgress)
       const vistaComposition = smoothstep(
@@ -6276,6 +6458,7 @@ export default function JourneyScene({
         .applyQuaternion(camera.quaternion)
         .normalize()
       if (
+        !introAuthoredTransition &&
         cameraSampler?.quaternion &&
         clip &&
         progress < JOURNEY_CAVE_SEQUENCE.fogGate + 2.5
@@ -6304,6 +6487,7 @@ export default function JourneyScene({
         cameraScratch.forward.copy(cameraScratch.authoredForward)
       }
       if (
+        !introAuthoredTransition &&
         cameraSampler?.position &&
         clip &&
         progress > 1.5 &&
@@ -6355,17 +6539,17 @@ export default function JourneyScene({
       // while keeping the authored position and eye height intact. Ease back
       // to the authored exit direction over a long interval so the portal,
       // Fog and HOLD pose share one continuous orientation.
-      const introHeading = 1 - smoothstep(
+      const introHeading = !introAuthoredTransition ? 1 - smoothstep(
         10.8,
         JOURNEY_CAVE_SEQUENCE.fogGate,
         progress,
-      )
+      ) : 0
       if (introHeading > 0.0001) {
         cameraScratch.introForward
           // The corridor is centered on X=0 and travels toward -Z. A slight
           // fixed upward eye-line keeps the portal ahead readable without
           // reintroducing authored yaw, roll or look-target drift.
-          .set(0, 0.18, -1)
+          .set(0, 0.035, -1)
           .normalize()
         cameraScratch.forward
           .lerp(cameraScratch.introForward, introHeading * 0.94)
@@ -6375,42 +6559,48 @@ export default function JourneyScene({
         .set(1, 0, 0)
         .crossVectors(cameraScratch.forward, cameraScratch.up)
         .normalize()
-      camera.position.addScaledVector(
-        cameraScratch.forward,
-        (presentationMode ? -1.8 : 0) -
-          vistaComposition * LOOKDEV_V2_COMPOSITION.pullBack -
-          endingWide * ENDING_CAMERA.pullBack +
-          portraitComposition * THREE.MathUtils.lerp(-0.72, -1.55, portraitVista),
-      )
-      camera.position.addScaledVector(
-        cameraScratch.right,
-        -portraitComposition * THREE.MathUtils.lerp(0.12, 0.46, portraitVista),
-      )
-      camera.position.y +=
-        vistaComposition * LOOKDEV_V2_COMPOSITION.cameraLift +
-        endingLift * ENDING_CAMERA.cameraLift +
-        portraitComposition * THREE.MathUtils.lerp(-0.08, 0.18, portraitVista)
-      cameraScratch.target.copy(camera.position).add(cameraScratch.forward)
-      cameraScratch.target.y +=
-        (presentationMode ? 0.12 : 0) +
-        vistaComposition * LOOKDEV_V2_COMPOSITION.targetLift +
-        endingLift * ENDING_CAMERA.lift +
-        portraitComposition * (1 - endingLift) * 0.08
-      cameraScratch.target.addScaledVector(
-        cameraScratch.right,
-        -portraitComposition * THREE.MathUtils.lerp(0.02, 0.08, portraitVista),
-      )
-      camera.up.set(0, 1, 0)
-      camera.lookAt(cameraScratch.target)
+      if (!introAuthoredTransition) {
+        camera.position.addScaledVector(
+          cameraScratch.forward,
+          (presentationMode ? -1.8 : 0) -
+            vistaComposition * LOOKDEV_V2_COMPOSITION.pullBack -
+            endingWide * ENDING_CAMERA.pullBack +
+            portraitComposition * THREE.MathUtils.lerp(-0.72, -1.55, portraitVista),
+        )
+        camera.position.addScaledVector(
+          cameraScratch.right,
+          -portraitComposition * THREE.MathUtils.lerp(0.12, 0.46, portraitVista),
+        )
+        camera.position.y +=
+          vistaComposition * LOOKDEV_V2_COMPOSITION.cameraLift +
+          endingLift * ENDING_CAMERA.cameraLift +
+          portraitComposition * THREE.MathUtils.lerp(-0.08, 0.18, portraitVista)
+        cameraScratch.target.copy(camera.position).add(cameraScratch.forward)
+        cameraScratch.target.y +=
+          (presentationMode ? 0.12 : 0) +
+          vistaComposition * LOOKDEV_V2_COMPOSITION.targetLift +
+          endingLift * ENDING_CAMERA.lift +
+          portraitComposition * (1 - endingLift) * 0.08
+        cameraScratch.target.addScaledVector(
+          cameraScratch.right,
+          -portraitComposition * THREE.MathUtils.lerp(0.02, 0.08, portraitVista),
+        )
+        camera.up.set(0, 1, 0)
+        camera.lookAt(cameraScratch.target)
+      }
       cavePortalCameraZRef.current = camera.position.z
-      const desiredFov =
-        camera.userData.journeyBaseFov +
+      const authoredDesiredFov = camera.userData.journeyBaseFov +
         openVista * 4.5 +
         vistaComposition * LOOKDEV_V2_COMPOSITION.fov +
         endingWide * ENDING_CAMERA.fov +
         (presentationMode ? 15 : 0) +
         portraitCaveComposition * 4 +
         portraitComposition * 7
+      const desiredFov = introLocked
+        ? CAVE_CAMERA.fov
+        : introReleaseActive
+          ? THREE.MathUtils.lerp(CAVE_CAMERA.fov, authoredDesiredFov, introRelease)
+          : authoredDesiredFov
       if (Math.abs(camera.fov - desiredFov) > 0.001) {
         camera.fov = desiredFov
         camera.updateProjectionMatrix()
@@ -6572,7 +6762,10 @@ export default function JourneyScene({
       frameColors.nightSky,
       timeOfDay,
     )
-    state.scene.background = skyColor
+    const caveBackgroundReveal = smoothstep(7.6, 12.15, progress)
+    state.scene.background = frameColors.caveBackground
+      .set('#07100f')
+      .lerp(skyColor, caveBackgroundReveal)
 
     if (skyAtmosphereMaterialRef.current) {
       const uniforms = skyAtmosphereMaterialRef.current.uniforms
@@ -6596,6 +6789,9 @@ export default function JourneyScene({
         )
         .normalize()
       uniforms.uJourneyNight.value = night
+    }
+    if (skyAtmosphereRef.current) {
+      skyAtmosphereRef.current.visible = caveBackgroundReveal > 0.002
     }
 
     if (cloudGroupRef.current) {
@@ -6699,7 +6895,10 @@ export default function JourneyScene({
     )
 
     const openAirFogDensity = THREE.MathUtils.lerp(0.00102, 0.00078, night)
-    const preHoldFog = THREE.MathUtils.lerp(0.018, 0.012, valleyFogArrival)
+    // Keep the dark opening legible as rock. Dense atmospheric fog only
+    // arrives after the physical portal crossing, then clears during HOLD.
+    const caveAirFog = 0.0034
+    const preHoldFog = THREE.MathUtils.lerp(caveAirFog, 0.012, valleyFogArrival)
     const entranceFog = THREE.MathUtils.lerp(
       preHoldFog,
       openAirFogDensity,
@@ -6776,6 +6975,13 @@ export default function JourneyScene({
       caveGuideLightRef.current.intensity =
         (1 - smoothstep(8, 16, progress)) * CAVE_LOOK.guideLightIntensity
     }
+    const caveGrazingPresence = 1 - smoothstep(10.5, 14.1, progress)
+    if (caveLeftGrazingLightRef.current) {
+      caveLeftGrazingLightRef.current.intensity = caveGrazingPresence * 3.15
+    }
+    if (caveRightGrazingLightRef.current) {
+      caveRightGrazingLightRef.current.intensity = caveGrazingPresence * 2.3
+    }
     if (caveExitLightRef.current) {
       // A stable source just beyond the opening lets exterior daylight wrap
       // onto the portal wall/floor. It rises gradually as the viewer
@@ -6786,7 +6992,7 @@ export default function JourneyScene({
     if (caveExitGlowMaterialRef.current) {
       const approachGlow = smoothstep(3.2, 10.8, progress) *
         (1 - smoothstep(12.7, JOURNEY_CAVE_SEQUENCE.fogGate, progress))
-      caveExitGlowMaterialRef.current.opacity = approachGlow * 0.58
+      caveExitGlowMaterialRef.current.opacity = approachGlow * 0.16
       if (caveExitGlowRef.current) caveExitGlowRef.current.visible = approachGlow > 0.002
     }
     if (qaCaptureEnabled) {
@@ -6800,7 +7006,7 @@ export default function JourneyScene({
         (ambientRef.current?.intensity ?? 0).toFixed(6)
       document.documentElement.dataset.journeyCaveLookdev =
         groups.cave.some((object) => object.userData.journeyCaveLookdevVersion)
-          ? 'v002-blender-surface'
+          ? 'v003-macro-space'
           : 'production'
     }
 
@@ -6953,7 +7159,11 @@ export default function JourneyScene({
       riverMysticLightRef.current.intensity =
         night * (riverGlow * 1.35 + skyConnectionProgress * 1.8)
     }
+    const sourceValleyPresence = progress > JOURNEY_CAVE_SEQUENCE.fogGate + 0.001
+      ? 1
+      : valleyFogArrival * holdClear
     groups.mountains.forEach((mesh) => {
+      mesh.visible = sourceValleyPresence > 0.002
       const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
       materials.forEach((material) => {
         if ('emissiveIntensity' in material) {
@@ -6976,6 +7186,8 @@ export default function JourneyScene({
       canopy.material.opacity = 0
     })
     groups.water.forEach((mesh, index) => {
+      const valleyRiverReveal = smoothstep(16.5, 23.5, progress)
+      mesh.visible = valleyRiverReveal > 0.01
       const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
       materials.forEach((material) => {
         const isClearRiver = material.name === 'MAT_JOURNEY_CLEAR_RIVER'
@@ -6989,7 +7201,7 @@ export default function JourneyScene({
             .lerp(isClearRiver ? frameColors.clearRiverNight : frameColors.riverNight, night)
         }
         if ('opacity' in material) {
-          material.opacity = THREE.MathUtils.lerp(
+          material.opacity = valleyRiverReveal * THREE.MathUtils.lerp(
             isClearRiver ? 0.18 : 0.76,
             isClearRiver ? 0.32 : 0.38,
             night,
@@ -7141,9 +7353,25 @@ export default function JourneyScene({
       <pointLight
         ref={caveGuideLightRef}
         intensity={CAVE_LOOK.guideLightIntensity}
-        distance={58}
-        decay={1.7}
-        color="#c7ccd0"
+        distance={34}
+        decay={1.82}
+        color="#87928d"
+      />
+      <pointLight
+        ref={caveLeftGrazingLightRef}
+        position={[-2.7, 3.4, 13.5]}
+        intensity={3.15}
+        distance={24}
+        decay={1.62}
+        color="#918c78"
+      />
+      <pointLight
+        ref={caveRightGrazingLightRef}
+        position={[2.5, 4.7, 5.8]}
+        intensity={2.3}
+        distance={22}
+        decay={1.68}
+        color="#6f8d86"
       />
       <pointLight
         ref={caveExitLightRef}

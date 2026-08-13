@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Preload } from '@react-three/drei'
 import * as THREE from 'three'
@@ -175,6 +175,66 @@ function JourneyPerformanceProbe({ diagnostics, quality }) {
   return null
 }
 
+function JourneyEndingRendererProbe({ active }) {
+  const { gl } = useThree()
+  const sampleRef = useRef(null)
+
+  useEffect(() => {
+    if (!active) return
+    sampleRef.current = {
+      startedAt: performance.now(),
+      frames: 0,
+      maxCalls: 0,
+      maxTriangles: 0,
+    }
+    window.__JOURNEY_ENDING_RENDERER__ = {
+      status: 'sampling',
+      frames: 0,
+      maxCalls: 0,
+      maxTriangles: 0,
+      programs: gl.info.programs?.length ?? 0,
+      textures: gl.info.memory.textures,
+      geometries: gl.info.memory.geometries,
+    }
+  }, [active, gl])
+
+  useFrame(() => {
+    const sample = sampleRef.current
+    if (!active || !sample) return
+    sample.frames += 1
+    sample.maxCalls = Math.max(sample.maxCalls, gl.info.render.calls)
+    sample.maxTriangles = Math.max(sample.maxTriangles, gl.info.render.triangles)
+    window.__JOURNEY_ENDING_RENDERER__ = {
+      status: 'sampling',
+      seconds: Number(((performance.now() - sample.startedAt) / 1000).toFixed(3)),
+      frames: sample.frames,
+      maxCalls: sample.maxCalls,
+      maxTriangles: sample.maxTriangles,
+      programs: gl.info.programs?.length ?? 0,
+      textures: gl.info.memory.textures,
+      geometries: gl.info.memory.geometries,
+    }
+  })
+
+  return null
+}
+
+function JourneyRenderModeBridge({ presentationMode }) {
+  const { invalidate } = useThree()
+
+  useLayoutEffect(() => {
+    if (!presentationMode) return undefined
+    // Home is a stable Day Clear artwork. Two demand renders settle the prop
+    // switch and material uniforms before the memory overlay releases it,
+    // without restarting the complete Journey animation loop underneath.
+    invalidate()
+    const frame = window.requestAnimationFrame(() => invalidate())
+    return () => window.cancelAnimationFrame(frame)
+  }, [invalidate, presentationMode])
+
+  return null
+}
+
 
 const nextAnimationFrame = () => new Promise((resolve) => {
   window.requestAnimationFrame(resolve)
@@ -338,7 +398,7 @@ function JourneyVisualReadyBridge({ onProgress, quality }) {
   return null
 }
 
-function JourneyFrameCapture({ captureRequest, paused, onCaptured }) {
+function JourneyFrameCapture({ captureRequest, paused, presentationMode, onCaptured }) {
   const capturedRequestRef = useRef(0)
   const frozenRequestRef = useRef(0)
 
@@ -347,9 +407,10 @@ function JourneyFrameCapture({ captureRequest, paused, onCaptured }) {
   }, [captureRequest])
 
   useFrame((state) => {
-    if (paused || frozenRequestRef.current) return
+    if ((paused || frozenRequestRef.current) && !presentationMode) return
     state.gl.setRenderTarget(null)
     state.gl.render(state.scene, state.camera)
+    if (presentationMode) return
     if (!captureRequest || capturedRequestRef.current === captureRequest) return
 
     try {
@@ -380,6 +441,8 @@ export default function JourneyCanvas({
   presentationMode,
   endingCaptureRequest,
   endingPaused,
+  endingActive,
+  endingPerformanceLegacy,
   onEndingCaptured,
   onAssetsProgress,
   onListenerPose,
@@ -403,7 +466,15 @@ export default function JourneyCanvas({
       className="journey-canvas"
       dpr={quality.dpr}
       shadows={quality.shadows ? { enabled: true, type: THREE.PCFShadowMap } : false}
-      frameloop="always"
+      frameloop={
+        endingPerformanceLegacy
+          ? 'always'
+          : presentationMode
+            ? 'demand'
+            : endingPaused
+              ? 'never'
+              : 'always'
+      }
       camera={{ position: [0, 2.35, 23], fov: 40, near: 0.05, far: 1200 }}
       gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
       onCreated={({ gl }) => {
@@ -415,6 +486,7 @@ export default function JourneyCanvas({
       }}
     >
       <FixedQualityController quality={quality} />
+      <JourneyRenderModeBridge presentationMode={presentationMode} />
       <Suspense fallback={null}>
         <JourneyScene
           progress={presentationMode ? 28 : progress}
@@ -431,11 +503,15 @@ export default function JourneyCanvas({
         {performanceProbeEnabled && (
           <JourneyPerformanceProbe diagnostics={diagnostics} quality={quality} />
         )}
+        {performanceProbeEnabled && (
+          <JourneyEndingRendererProbe active={endingActive} />
+        )}
         <Preload all />
         <JourneyVisualReadyBridge onProgress={onAssetsProgress} quality={quality} />
         <JourneyFrameCapture
           captureRequest={endingCaptureRequest}
           paused={endingPaused}
+          presentationMode={presentationMode}
           onCaptured={onEndingCaptured}
         />
       </Suspense>

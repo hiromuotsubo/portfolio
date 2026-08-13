@@ -6320,7 +6320,7 @@ html[data-portfolio-route-transition='reveal'] .portfolio-site::after {
     radial-gradient(ellipse 58% 36% at 16% 48%, rgba(176, 207, 194, .4), transparent 74%),
     radial-gradient(ellipse 66% 38% at 88% 52%, rgba(190, 216, 204, .38), transparent 72%),
     linear-gradient(to top, rgba(229, 234, 224, .9), rgba(180, 207, 195, .2) 66%, transparent 96%);
-  filter: blur(22px);
+  filter: none;
   transform: translate3d(0, 2.5%, 0) scale(1.035);
 }
 
@@ -6340,8 +6340,13 @@ html[data-portfolio-route-transition='reveal'] .portfolio-site::after {
   width: 62%;
   aspect-ratio: 2.8 / 1;
   border-radius: 48% 52% 43% 57% / 61% 42% 58% 39%;
-  background: rgba(216, 229, 219, .56);
-  filter: blur(46px);
+  background: radial-gradient(
+    ellipse at center,
+    rgba(216, 229, 219, .52) 0 24%,
+    rgba(205, 223, 212, .34) 48%,
+    transparent 78%
+  );
+  filter: none;
 }
 
 .journey-ending-frame__air i:first-child {
@@ -6365,18 +6370,37 @@ html[data-portfolio-route-transition='reveal'] .portfolio-site::after {
 }
 
 .journey-3d.is-outro .journey-ending-frame__landscape {
-  animation: memory-landscape-exposure 6.6s cubic-bezier(.42, 0, .18, 1) both;
-  will-change: opacity, filter;
+  animation: memory-landscape-opacity 6.6s cubic-bezier(.42, 0, .18, 1) both;
+  will-change: opacity;
 }
 
 .journey-3d.is-outro .journey-ending-frame__echo {
   animation: memory-mountain-echo 6.6s cubic-bezier(.42, 0, .18, 1) both;
-  will-change: opacity, filter;
+  will-change: opacity;
 }
 
 .journey-3d.is-outro .journey-ending-frame__air {
-  animation: memory-air-arrival 6.6s cubic-bezier(.42, 0, .18, 1) both;
+  animation: memory-air-arrival-lite 6.6s cubic-bezier(.42, 0, .18, 1) both;
+  will-change: opacity, transform;
+}
+
+/* Opt-in QA comparator: this restores the previous costly full-screen filter
+   path inside the same build so Ending measurements use identical assets,
+   viewport, timing and scene state. It is never enabled by normal navigation. */
+.journey-3d.is-ending-perf-legacy.is-outro .journey-ending-frame__landscape {
+  animation-name: memory-landscape-exposure;
+  will-change: opacity, filter;
+}
+
+.journey-3d.is-ending-perf-legacy.is-outro .journey-ending-frame__air {
+  filter: blur(22px);
+  animation-name: memory-air-arrival;
   will-change: opacity, transform, filter;
+}
+
+.journey-3d.is-ending-perf-legacy .journey-ending-frame__air i {
+  background: rgba(216, 229, 219, .56);
+  filter: blur(46px);
 }
 
 .journey-3d.is-outro .journey-ending-frame__air i:first-child {
@@ -6425,6 +6449,14 @@ html[data-portfolio-route-transition='reveal'] .portfolio-site::after {
   }
 }
 
+@keyframes memory-landscape-opacity {
+  0%, 24% { opacity: 1; }
+  43% { opacity: .94; }
+  62% { opacity: .62; }
+  78% { opacity: .22; }
+  100% { opacity: 0; }
+}
+
 @keyframes memory-mountain-echo {
   0%, 29% { opacity: 0; }
   49% { opacity: .2; }
@@ -6453,6 +6485,19 @@ html[data-portfolio-route-transition='reveal'] .portfolio-site::after {
   }
 }
 
+@keyframes memory-air-arrival-lite {
+  0%, 24% {
+    opacity: 0;
+    transform: translate3d(-1.6%, 3.5%, 0) scale(1.045);
+  }
+  47% { opacity: .28; }
+  68% { opacity: .72; }
+  86%, 100% {
+    opacity: 1;
+    transform: translate3d(1.2%, 0, 0) scale(1.025);
+  }
+}
+
 @keyframes memory-air-drift-left {
   from { transform: translate3d(-5%, 3%, 0) rotate(3deg) scale(.96); }
   to { transform: translate3d(14%, -3%, 0) rotate(-1deg) scale(1.08); }
@@ -6471,11 +6516,19 @@ html[data-portfolio-route-transition='reveal'] .portfolio-site::after {
       radial-gradient(ellipse 48% 34% at 8% 48%, rgba(176, 207, 194, .38), transparent 76%),
       radial-gradient(ellipse 52% 36% at 94% 54%, rgba(190, 216, 204, .38), transparent 74%),
       linear-gradient(to top, rgba(229, 234, 224, .92), rgba(180, 207, 195, .2) 69%, transparent 96%);
-    filter: blur(18px);
+    filter: none;
   }
 
   .journey-ending-frame__air i {
     width: 84%;
+    filter: none;
+  }
+
+  .journey-3d.is-ending-perf-legacy .journey-ending-frame__air {
+    filter: blur(18px);
+  }
+
+  .journey-3d.is-ending-perf-legacy .journey-ending-frame__air i {
     filter: blur(36px);
   }
 }

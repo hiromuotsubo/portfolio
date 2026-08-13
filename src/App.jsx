@@ -18,6 +18,7 @@ const JourneyV3 = lazy(() => import('./journey-v3/JourneyV3.jsx'))
 // that lets a reviewer see the finished valley without skipping the normal
 // Enter → cave → valley experience on `/journey`.
 const journeySearch = new URLSearchParams(window.location.search)
+const ENDING_PERFORMANCE_LEGACY = journeySearch.get('endingPerfLegacy') === '1'
 const PUBLIC_SHOWCASE = journeySearch.get('showcase') === 'day'
 const requestedPreviewProgressValue = journeySearch.get('previewProgress')
 const requestedPreviewProgress = Number(requestedPreviewProgressValue)
@@ -1274,8 +1275,89 @@ function LegacyApp() {
   }, [clearEndingCapture, showOutro])
 
   useEffect(() => {
+    if (!showOutro || journeySearch.get('capture') !== '1') return undefined
+    const deltas = []
+    const longTasks = []
+    const startedAt = performance.now()
+    let previousFrame = startedAt
+    let frame = null
+    let observer = null
+    let classMutations = 0
+    const mutationObserver = new MutationObserver((records) => {
+      classMutations += records.length
+    })
+    mutationObserver.observe(document.querySelector('main') ?? document.body, {
+      attributes: true,
+      attributeFilter: ['class'],
+      subtree: true,
+    })
+    try {
+      observer = new PerformanceObserver((list) => {
+        longTasks.push(...list.getEntries().map((entry) => ({
+          start: Number((entry.startTime - startedAt).toFixed(2)),
+          duration: Number(entry.duration.toFixed(2)),
+        })))
+      })
+      observer.observe({ type: 'longtask' })
+    } catch {
+      observer = null
+    }
+
+    const finish = () => {
+      const sorted = deltas.slice().sort((left, right) => left - right)
+      const percentile = (value) => sorted[
+        Math.min(sorted.length - 1, Math.floor(sorted.length * value))
+      ] ?? 0
+      const elapsed = (performance.now() - startedAt) / 1000
+      const report = {
+        source: 'JourneyEndingPerformanceProbe',
+        legacy: ENDING_PERFORMANCE_LEGACY,
+        seconds: Number(elapsed.toFixed(3)),
+        frames: deltas.length,
+        fps: Number((deltas.length / Math.max(elapsed, 0.001)).toFixed(2)),
+        frameMs: {
+          median: Number(percentile(0.5).toFixed(2)),
+          p95: Number(percentile(0.95).toFixed(2)),
+          p99: Number(percentile(0.99).toFixed(2)),
+          max: Number((sorted.at(-1) ?? 0).toFixed(2)),
+        },
+        slowFrameRatio: Number((
+          deltas.filter((value) => value > 1000 / 30).length /
+          Math.max(deltas.length, 1)
+        ).toFixed(4)),
+        longTasks,
+        classMutations,
+        renderer: window.__JOURNEY_ENDING_RENDERER__ ?? null,
+      }
+      window.__JOURNEY_ENDING_PERFORMANCE__ = report
+      document.documentElement.dataset.journeyEndingPerformance = JSON.stringify(report)
+      console.info(`[journey-ending-performance] ${JSON.stringify(report)}`)
+    }
+    const tick = (time) => {
+      deltas.push(time - previousFrame)
+      previousFrame = time
+      if (time - startedAt >= ENDING_MEMORY_COMPLETE_MS + 240) {
+        finish()
+        observer?.disconnect()
+        mutationObserver.disconnect()
+        return
+      }
+      frame = window.requestAnimationFrame(tick)
+    }
+    frame = window.requestAnimationFrame(tick)
+    return () => {
+      if (frame != null) window.cancelAnimationFrame(frame)
+      observer?.disconnect()
+      mutationObserver.disconnect()
+    }
+  }, [showOutro])
+
+  useEffect(() => {
     if (!showPortfolio) return undefined
-    const resizeCheckpoints = [0, 180, 420, 760, 1180, 1600, 1880]
+    // Layout is pre-mounted behind the frozen memory frame. One immediate and
+    // one post-transition resize are sufficient; seven synthetic resize
+    // events forced repeated R3F/layout work during the heaviest overlap.
+    const resizeCheckpoints = [0, 920]
     const timeouts = resizeCheckpoints.map((delay) =>
       window.setTimeout(() => window.dispatchEvent(new Event('resize')), delay),
     )
@@ -1881,7 +1963,7 @@ function LegacyApp() {
 
   return (
     <main
-      className={`journey-3d ${entered ? 'is-entered' : ''} ${PUBLIC_SHOWCASE ? 'is-showcase' : ''} ${activeGate ? `has-gate is-gate-${activeGate}` : ''} ${activeGate && holdProgress > 0 ? 'is-holding' : ''} ${endingCapturePreparing ? 'is-ending-preparing' : ''} ${endingFrameSource ? 'has-ending-frame' : ''} ${showOutro ? 'is-outro' : ''} ${showPortfolio ? 'is-portfolio' : ''} ${portfolioScrolled ? 'is-portfolio-scrolled' : ''}`}
+      className={`journey-3d ${entered ? 'is-entered' : ''} ${PUBLIC_SHOWCASE ? 'is-showcase' : ''} ${ENDING_PERFORMANCE_LEGACY ? 'is-ending-perf-legacy' : ''} ${activeGate ? `has-gate is-gate-${activeGate}` : ''} ${activeGate && holdProgress > 0 ? 'is-holding' : ''} ${endingCapturePreparing ? 'is-ending-preparing' : ''} ${endingFrameSource ? 'has-ending-frame' : ''} ${showOutro ? 'is-outro' : ''} ${showPortfolio ? 'is-portfolio' : ''} ${portfolioScrolled ? 'is-portfolio-scrolled' : ''}`}
       style={{
         '--cave-depth': caveDepth,
         '--open-air': openAir,
@@ -1904,7 +1986,9 @@ function LegacyApp() {
               fogCompleted={fogCompleted}
               presentationMode={showPortfolio}
               endingCaptureRequest={endingCaptureRequest}
-              endingPaused={Boolean(endingFrameSource) && !showPortfolio}
+              endingPaused={Boolean(endingFrameSource)}
+              endingActive={showOutro}
+              endingPerformanceLegacy={ENDING_PERFORMANCE_LEGACY}
               onEndingCaptured={handleEndingCaptured}
               onAssetsProgress={handleJourneyAssets}
               onListenerPose={updateListenerPose}
@@ -1956,7 +2040,7 @@ function LegacyApp() {
       <div className="valley-mist" aria-hidden="true" />
       <div className="soft-vignette" aria-hidden="true" />
 
-      {showPortfolio ? (
+      {showOutro || showPortfolio ? (
         <PortfolioSite
           onReplay={replayExperience}
           onNavigate={openPortfolioPage}
