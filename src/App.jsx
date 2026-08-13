@@ -1,6 +1,12 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import './App.css'
 import { getJourneyTimeOfDay } from './journeyVisualState.js'
+import {
+  getJourneyCavePresence,
+  getJourneyFogArrival,
+  getJourneyOutdoorPresence,
+  JOURNEY_STORY_SEQUENCE,
+} from './journeyStoryTimeline.js'
 
 const JourneyCanvas = lazy(() => import('./JourneyCanvas.jsx'))
 const JourneyV2 = lazy(() => import('./JourneyV2.jsx'))
@@ -11,13 +17,14 @@ const JourneyV3 = lazy(() => import('./journey-v3/JourneyV3.jsx'))
 // that lets a reviewer see the finished valley without skipping the normal
 // Enter → cave → valley experience on `/journey`.
 const journeySearch = new URLSearchParams(window.location.search)
+const STORY_DIAGNOSTICS_ENABLED = journeySearch.get('perf') === '1'
 const PUBLIC_SHOWCASE = journeySearch.get('showcase') === 'day'
 const DEV_PREVIEW = (import.meta.env.DEV || ['localhost', '127.0.0.1'].includes(window.location.hostname) || PUBLIC_SHOWCASE)
   ? (PUBLIC_SHOWCASE ? 'day' : journeySearch.get('preview'))
   : null
 const PREVIEW_PROGRESS = {
   cave: 5,
-  foghold: 13.5,
+  foghold: JOURNEY_STORY_SEQUENCE.fog.gate,
   day: 30,
   sunset: 46,
   night: 68,
@@ -38,6 +45,10 @@ const PREVIEW_GATE = {
 }[DEV_PREVIEW] ?? null
 const PREVIEW_HOLD_PROGRESS = ['foghold', 'riverhold'].includes(DEV_PREVIEW) ? 0.62 : 0
 const PREVIEW_ENTERED = Boolean(DEV_PREVIEW)
+const PREVIEW_FOG_COMPLETED = (
+  DEV_PREVIEW !== 'foghold' &&
+  PREVIEW_PROGRESS > JOURNEY_STORY_SEQUENCE.fog.gate
+)
 const ENDING_SETTLE_PROGRESS = 99.995
 const ENDING_SETTLE_MS = 1500
 const ENDING_CAPTURE_MAX_ATTEMPTS = 3
@@ -104,9 +115,9 @@ const EXPERIENCE_TUNING = {
 // Minimum forward time for each chapter. The final night chapter deliberately slows the exit.
 const EXPERIENCE_PACE = [
   { start: 0, end: 11.5, minSeconds: 4.5 }, // Walk through the cave.
-  { start: 11.5, end: 13.5, minSeconds: 1 }, // Reach the mist and respond immediately.
-  { start: 13.5, end: 20, minSeconds: 2.5 }, // Hold to clear the mist.
-  { start: 20, end: 38, minSeconds: 6.5 }, // Let the clear blue valley breathe.
+  { start: 11.5, end: 20.2, minSeconds: 2.8 }, // Cross the cave exit and settle outdoors.
+  { start: 20.2, end: 24.5, minSeconds: 1.6 }, // Meet the mist only after reaching open air.
+  { start: 24.5, end: 38, minSeconds: 5.5 }, // Let the clear blue valley breathe.
   { start: 38, end: 54, minSeconds: 7.5 }, // Day drifts gradually into evening.
   { start: 54, end: 70, minSeconds: 8 }, // Evening settles continuously into night.
   { start: 70, end: 80, minSeconds: 5.5 }, // Illuminate and connect the river after night arrives.
@@ -123,15 +134,17 @@ const getMaximumProgressRate = (progress) => {
 
 const GATES = {
   fog: {
-    at: 13.5,
-    end: 20,
-    duration: 2500,
+    at: JOURNEY_STORY_SEQUENCE.fog.gate,
+    end: JOURNEY_STORY_SEQUENCE.fog.gate,
+    duration: JOURNEY_STORY_SEQUENCE.fog.duration,
+    advanceStoryDuringHold: false,
     label: 'HOLD',
   },
   river: {
     at: 70,
     end: 76,
     duration: 3300,
+    advanceStoryDuringHold: true,
     label: 'HOLD',
   },
 }
@@ -983,7 +996,7 @@ function LegacyApp() {
     ['riverhold', 'river', 'forming', 'figure', 'final', 'wide', 'outro'].includes(DEV_PREVIEW) ? 1 : 0,
   )
   const [isSkyConnecting, setIsSkyConnecting] = useState(false)
-  const [fogCompleted, setFogCompleted] = useState(PREVIEW_PROGRESS >= 20)
+  const [fogCompleted, setFogCompleted] = useState(PREVIEW_FOG_COMPLETED)
   const [showOutro, setShowOutro] = useState(
     DEV_PREVIEW === 'portfolio' || INITIAL_VIEW === 'portfolio',
   )
@@ -1009,7 +1022,7 @@ function LegacyApp() {
   const gateRef = useRef(PREVIEW_GATE)
   const pendingGateRef = useRef(null)
   const inputCooldownUntilRef = useRef(0)
-  const fogCompletedRef = useRef(PREVIEW_PROGRESS >= 20)
+  const fogCompletedRef = useRef(PREVIEW_FOG_COMPLETED)
   const riverCompletedRef = useRef(false)
   const holdRef = useRef({ frame: null, startedAt: 0, pointerId: null })
   const skyConnectionRef = useRef({ frame: null, startedAt: 0 })
@@ -1026,7 +1039,60 @@ function LegacyApp() {
     DEV_PREVIEW === 'portfolio' || INITIAL_VIEW === 'portfolio',
   )
   const endingCopyRef = useRef(null)
+  const storyDiagnosticsRef = useRef({
+    wheelEvents: [],
+    frames: [],
+    lastPublishedAt: 0,
+  })
   const { ensureAudio, updateListenerPose } = useAmbientAudio(progress, fogCompleted)
+
+  useEffect(() => {
+    if (!STORY_DIAGNOSTICS_ENABLED) return undefined
+    const diagnostics = storyDiagnosticsRef.current
+    const getSnapshot = () => {
+      const frameTimes = diagnostics.frames.map((frame) => frame.deltaMs)
+      const sortedFrameTimes = [...frameTimes].sort((a, b) => a - b)
+      const p95Index = Math.max(0, Math.ceil(sortedFrameTimes.length * 0.95) - 1)
+      const averageFrameTime = frameTimes.length
+        ? frameTimes.reduce((total, value) => total + value, 0) / frameTimes.length
+        : 0
+      const capture = window.__JOURNEY_V1_CAPTURE__
+      return {
+        wheelEvents: [...diagnostics.wheelEvents],
+        frames: [...diagnostics.frames],
+        latest: {
+          timestamp: performance.now(),
+          targetProgress: targetRef.current,
+          storyProgress: progressRef.current,
+          cameraProgress: capture?.cameraProgress ?? capture?.progress ?? progressRef.current,
+          camera: capture?.camera ?? null,
+          activeGate: gateRef.current,
+          holdActive: Boolean(holdRef.current.frame),
+          scrollLock: Boolean(
+            gateRef.current ||
+            pendingGateRef.current ||
+            holdRef.current.frame ||
+            skyConnectionRef.current.frame ||
+            endingCommittedRef.current
+          ),
+        },
+        fps: averageFrameTime > 0 ? 1000 / averageFrameTime : 0,
+        p95FrameTime: sortedFrameTimes[p95Index] ?? 0,
+        sampleCount: frameTimes.length,
+      }
+    }
+    window.__JOURNEY_V1_STORY_DIAGNOSTICS__ = {
+      getSnapshot,
+      clear: () => {
+        diagnostics.wheelEvents.length = 0
+        diagnostics.frames.length = 0
+        diagnostics.lastPublishedAt = 0
+      },
+    }
+    return () => {
+      delete window.__JOURNEY_V1_STORY_DIAGNOSTICS__
+    }
+  }, [])
 
   const clearEndingCapture = useCallback(() => {
     activeEndingRequestRef.current = 0
@@ -1328,7 +1394,8 @@ function LegacyApp() {
     let frame
     let previous = performance.now()
     const tick = (time) => {
-      const elapsed = Math.min((time - previous) / 1000, 0.05)
+      const frameDeltaMs = Math.max(0, time - previous)
+      const elapsed = Math.min(frameDeltaMs / 1000, 0.05)
       previous = time
       const current = progressRef.current
       const target = targetRef.current
@@ -1356,12 +1423,71 @@ function LegacyApp() {
         pendingGateRef.current = null
         setGate(pendingGate)
       }
+      // Rearm only when the rendered reverse path reaches the fog's
+      // zero-opacity anchor. Rearming from the input target would expose the
+      // fog early while the camera was still easing toward this position.
+      if (
+        difference < 0 &&
+        fogCompletedRef.current &&
+        next <= JOURNEY_STORY_SEQUENCE.fog.revealStart
+      ) {
+        fogCompletedRef.current = false
+        setFogCompleted(false)
+      }
       // Keep the render loop alive for Three.js, but do not enqueue a React
       // update once the eased progress has settled. Updating on every frame
       // caused a feedback loop in narrow/short viewports and could stop input.
       if (Math.abs(next - current) > 0.0001) {
         progressRef.current = next
         setProgress(next)
+      }
+      if (STORY_DIAGNOSTICS_ENABLED) {
+        const diagnostics = storyDiagnosticsRef.current
+        const capture = window.__JOURNEY_V1_CAPTURE__
+        diagnostics.frames.push({
+          timestamp: time,
+          deltaMs: frameDeltaMs,
+          targetProgress: targetRef.current,
+          storyProgress: next,
+          cameraProgress: capture?.cameraProgress ?? capture?.progress ?? next,
+          activeGate: gateRef.current,
+          holdActive: Boolean(holdRef.current.frame),
+          scrollLock: Boolean(
+            gateRef.current ||
+            pendingGateRef.current ||
+            holdRef.current.frame ||
+            skyConnectionRef.current.frame ||
+            endingCommittedRef.current
+          ),
+        })
+        if (diagnostics.frames.length > 600) diagnostics.frames.shift()
+        if (time - diagnostics.lastPublishedAt >= 250) {
+          diagnostics.lastPublishedAt = time
+          const recentFrameTimes = diagnostics.frames
+            .slice(-180)
+            .map((sample) => sample.deltaMs)
+          const sortedFrameTimes = [...recentFrameTimes].sort((a, b) => a - b)
+          const p95Index = Math.max(0, Math.ceil(sortedFrameTimes.length * 0.95) - 1)
+          const averageFrameTime = recentFrameTimes.length
+            ? recentFrameTimes.reduce((total, value) => total + value, 0) / recentFrameTimes.length
+            : 0
+          const dataset = document.documentElement.dataset
+          dataset.journeyTargetProgress = targetRef.current.toFixed(4)
+          dataset.journeyStoryProgress = next.toFixed(4)
+          dataset.journeyActiveGate = gateRef.current ?? 'none'
+          dataset.journeyHoldActive = String(Boolean(holdRef.current.frame))
+          dataset.journeyScrollLock = String(Boolean(
+            gateRef.current ||
+            pendingGateRef.current ||
+            holdRef.current.frame ||
+            skyConnectionRef.current.frame ||
+            endingCommittedRef.current
+          ))
+          dataset.journeyFps = averageFrameTime > 0
+            ? (1000 / averageFrameTime).toFixed(2)
+            : '0'
+          dataset.journeyP95FrameTime = (sortedFrameTimes[p95Index] ?? 0).toFixed(2)
+        }
       }
       frame = requestAnimationFrame(tick)
     }
@@ -1375,7 +1501,38 @@ function LegacyApp() {
       if (portfolioRef.current) return
       event.preventDefault()
       const multiplier = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? window.innerHeight : 1
-      advance(event.deltaY * multiplier)
+      const normalizedDelta = event.deltaY * multiplier
+      const targetBefore = targetRef.current
+      const storyBefore = progressRef.current
+      advance(normalizedDelta)
+      if (STORY_DIAGNOSTICS_ENABLED) {
+        const diagnostics = storyDiagnosticsRef.current
+        diagnostics.wheelEvents.push({
+          timestamp: performance.now(),
+          eventTimestamp: event.timeStamp,
+          rawDelta: event.deltaY,
+          deltaMode: event.deltaMode,
+          normalizedDelta,
+          targetBefore,
+          targetAfter: targetRef.current,
+          storyBefore,
+          storyAfter: progressRef.current,
+          activeGate: gateRef.current,
+          holdActive: Boolean(holdRef.current.frame),
+          scrollLock: Boolean(
+            gateRef.current ||
+            pendingGateRef.current ||
+            holdRef.current.frame ||
+            skyConnectionRef.current.frame ||
+            endingCommittedRef.current
+          ),
+        })
+        if (diagnostics.wheelEvents.length > 240) diagnostics.wheelEvents.shift()
+        const dataset = document.documentElement.dataset
+        dataset.journeyLastWheelTimestamp = performance.now().toFixed(2)
+        dataset.journeyLastWheelEventTimestamp = event.timeStamp.toFixed(2)
+        dataset.journeyLastWheelDelta = normalizedDelta.toFixed(2)
+      }
     }
     const onTouchStart = (event) => {
       if (PUBLIC_SHOWCASE) return
@@ -1508,10 +1665,13 @@ function LegacyApp() {
       holdRef.current.pointerId = event?.pointerId ?? null
       holdRef.current.startedAt = performance.now()
       const config = GATES[type]
+      if (!config.advanceStoryDuringHold) setTarget(config.at)
       const tick = (time) => {
         const value = clamp((time - holdRef.current.startedAt) / config.duration, 0, 1)
         setHoldProgress(value)
-        setTarget(config.at + value * (config.end - config.at))
+        if (config.advanceStoryDuringHold) {
+          setTarget(config.at + value * (config.end - config.at))
+        }
         if (value >= 1) {
           finishHold(type)
           return
@@ -1576,17 +1736,13 @@ function LegacyApp() {
 
   const activeConfig = activeGate ? GATES[activeGate] : null
   const { nightWeight } = getJourneyTimeOfDay(progress)
-  const caveDepth = 1 - clamp((progress - 6.5) / 12, 0, 1)
-  const openAir = clamp((progress - 11.5) / 8.5, 0, 1)
+  const caveDepth = getJourneyCavePresence(progress)
+  const openAir = getJourneyOutdoorPresence(progress)
   const valleyMist = fogCompleted
     ? 0
-    : progress < 10
-      ? 0
-      : activeGate === 'fog'
-        ? 1 - holdProgress
-        : progress < GATES.fog.at
-          ? clamp((progress - 10) / (GATES.fog.at - 10), 0, 1)
-          : 1
+    : activeGate === 'fog'
+      ? 1 - holdProgress
+      : getJourneyFogArrival(progress)
   const queuedMessage = STORY_MESSAGES.find(
     (message) => progress >= message.start && progress <= message.end,
   )
