@@ -58,12 +58,13 @@ const LOOKDEV_V2_COMPOSITION = {
 }
 
 const CAVE_LOOK = {
-  exposure: 2.6,
+  exposure: 2.68,
   sunIntensity: 0.74,
-  skyIntensity: 0.62,
-  ambientIntensity: 0.22,
-  guideLightIntensity: 1.16,
-  materialTint: '#46504b',
+  skyIntensity: 0.68,
+  ambientIntensity: 0.26,
+  guideLightIntensity: 1.22,
+  exitLightIntensity: 1.65,
+  materialTint: '#56615a',
 }
 
 const clamp01 = (value) => Math.min(1, Math.max(0, value))
@@ -75,6 +76,57 @@ const smoothstep = (edge0, edge1, value) => {
 
 const CAVE_PORTAL_FADE_START_Z = -1.08
 const CAVE_PORTAL_FADE_END_Z = -2.42
+
+function applyCaveSurfaceDetail(material) {
+  const previousCompile = material.onBeforeCompile
+  const previousCacheKey = material.customProgramCacheKey?.bind(material)
+  material.onBeforeCompile = (shader, renderer) => {
+    previousCompile?.(shader, renderer)
+    shader.vertexShader = shader.vertexShader
+      .replace(
+        '#include <common>',
+        '#include <common>\nvarying vec3 vJourneyCaveWorldPosition;',
+      )
+      .replace(
+        '#include <worldpos_vertex>',
+        '#include <worldpos_vertex>\nvJourneyCaveWorldPosition = worldPosition.xyz;',
+      )
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        '#include <common>',
+        '#include <common>\nvarying vec3 vJourneyCaveWorldPosition;',
+      )
+      .replace(
+        '#include <map_fragment>',
+        [
+          '#include <map_fragment>',
+          'float journeyCaveBroad = 0.5 +',
+          '  sin(vJourneyCaveWorldPosition.x * 0.31 + vJourneyCaveWorldPosition.z * 0.17) * 0.27 +',
+          '  sin(vJourneyCaveWorldPosition.y * 0.53 - vJourneyCaveWorldPosition.z * 0.09 + 1.4) * 0.18;',
+          'float journeyCaveStrata = sin(',
+          '  vJourneyCaveWorldPosition.y * 1.15 +',
+          '  vJourneyCaveWorldPosition.x * 0.12 +',
+          '  sin(vJourneyCaveWorldPosition.z * 0.19) * 1.3',
+          ') * 0.5 + 0.5;',
+          'float journeyCaveMoisture = smoothstep(0.2, 0.92, journeyCaveBroad) *',
+          '  smoothstep(0.18, 0.82, journeyCaveStrata);',
+          'diffuseColor.rgb *= mix(0.78, 1.08, clamp(journeyCaveBroad, 0.0, 1.0));',
+          'diffuseColor.rgb = mix(',
+          '  diffuseColor.rgb,',
+          '  diffuseColor.rgb * vec3(0.78, 0.94, 0.87),',
+          '  journeyCaveMoisture * 0.22',
+          ');',
+        ].join('\n'),
+      )
+      .replace(
+        '#include <roughnessmap_fragment>',
+        '#include <roughnessmap_fragment>\nroughnessFactor = clamp(roughnessFactor - journeyCaveMoisture * 0.1, 0.72, 1.0);',
+      )
+  }
+  material.customProgramCacheKey = () => (
+    `${previousCacheKey?.() ?? ''}|journey-cave-surface-v2`
+  )
+}
 
 const blendTimeOfDayColor = (target, day, sunset, night, weights) => target.setRGB(
   day.r * weights.dayWeight + sunset.r * weights.sunsetWeight + night.r * weights.nightWeight,
@@ -2702,6 +2754,10 @@ function prepareWorld(source, biomeMacroTexture) {
       // of the fading shell during the cave-to-valley handoff.
       object.userData.journeySkipPlanarReflection = true
       object.castShadow = true
+      // The shell already provides physical occlusion. Receiving its own
+      // broad directional shadow crushed the inner faces to black near the
+      // portal, so let ambient/exit bounce describe the rock instead.
+      object.receiveShadow = false
       materials.forEach((material) => {
         material.userData.journeyCaveBaseOpacity = material.opacity
         material.transparent = true
@@ -2710,8 +2766,18 @@ function prepareWorld(source, biomeMacroTexture) {
         // readable place rather than an all-black loading-like interval.
         material.side = THREE.DoubleSide
         material.color?.lerp(new THREE.Color(CAVE_LOOK.materialTint), 0.7)
-        if ('roughness' in material) material.roughness = 0.96
+        if ('roughness' in material) material.roughness = 0.9
         if ('metalness' in material) material.metalness = 0
+        if ('clearcoat' in material) material.clearcoat = 0
+        if ('specularIntensity' in material) material.specularIntensity = 0.12
+        if ('emissive' in material) {
+          material.emissive.set('#151d19')
+          material.emissiveIntensity = 0.055
+        }
+        applyCaveSurfaceDetail(material)
+        material.userData.journeyCaveBaseColor = material.color?.clone()
+        material.userData.journeyCaveBaseEmissive = material.emissive?.clone()
+        material.userData.journeyCaveBaseEmissiveIntensity = material.emissiveIntensity ?? 0
       })
     }
 
@@ -4527,7 +4593,7 @@ function createMeadowMaterial(kind, alphaMap = null) {
     const bladeTip = kind === 'flower'
       ? 'clamp(transformed.y / 0.77, 0.0, 1.0)'
       : 'clamp(transformed.y, 0.0, 1.0)'
-    const pointerScale = kind === 'flower' ? '0.6' : '1.05'
+    const pointerScale = kind === 'flower' ? '0.68' : '1.16'
     const propagationDelay = kind === 'flower' ? '0.12' : '0.0'
     const nightFade = kind === 'flower' ? '0.72' : '0.58'
     const alphaMask = kind === 'flower'
@@ -4560,20 +4626,31 @@ function createMeadowMaterial(kind, alphaMap = null) {
           '#include <begin_vertex>',
           'float journeyBladeTip = ' + bladeTip + ';',
           'vec4 journeyBladeBase = modelMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);',
-          'float journeyGust = sin(uJourneyTime * 1.15 + aJourneyMeadowPhase * 11.0 + journeyBladeBase.z * 0.17) * 0.5 +',
-          '  sin(uJourneyTime * 0.48 + aJourneyMeadowPhase * 23.0 + journeyBladeBase.x * 0.11) * 0.5;',
+          'float journeyAmbientField =',
+          '  sin(uJourneyTime * 0.61 + aJourneyMeadowPhase * 7.0 + journeyBladeBase.z * 0.105) * 0.46 +',
+          '  sin(uJourneyTime * 0.29 - aJourneyMeadowPhase * 13.0 + journeyBladeBase.x * 0.086 - journeyBladeBase.z * 0.031) * 0.31 +',
+          '  sin(uJourneyTime * 0.87 + aJourneyMeadowPhase * 3.0 + journeyBladeBase.x * 0.025) * 0.17;',
           'vec2 journeyRawInstanceX = vec2(instanceMatrix[0].x, instanceMatrix[0].z);',
           'vec2 journeyRawInstanceZ = vec2(instanceMatrix[2].x, instanceMatrix[2].z);',
           'float journeyInstanceScaleX = max(length(journeyRawInstanceX), 0.001);',
           'float journeyInstanceScaleZ = max(length(journeyRawInstanceZ), 0.001);',
           'vec2 journeyInstanceX = journeyRawInstanceX / journeyInstanceScaleX;',
           'vec2 journeyInstanceZ = journeyRawInstanceZ / journeyInstanceScaleZ;',
-          'vec2 journeyWorldAmbient = normalize(vec2(0.62, 0.34));',
+          // Derive the tiny directional drift from the already-computed
+          // spatial field. This keeps the meadow asynchronous without adding
+          // another per-vertex trigonometric evaluation.
+          'float journeyAmbientTurn = journeyAmbientField * 0.22;',
+          'vec2 journeyWorldAmbient = normalize(vec2(',
+          '  0.82 - journeyAmbientTurn * 0.42,',
+          '  0.42 + journeyAmbientTurn * 0.82',
+          '));',
           'vec2 journeyLocalAmbient = vec2(',
           '  dot(journeyWorldAmbient, journeyInstanceX),',
           '  dot(journeyWorldAmbient, journeyInstanceZ)',
           ');',
-          'vec2 journeySway = journeyLocalAmbient * (0.038 + uJourneyAmbientWind * 0.096 + journeyGust * 0.046) * uJourneyMotionScale;',
+          'float journeyAmbientStrength = 0.04 + uJourneyAmbientWind * 0.12 +',
+          '  journeyAmbientField * 0.036;',
+          'vec2 journeySway = journeyLocalAmbient * max(0.016, journeyAmbientStrength) * uJourneyMotionScale;',
           'if (uJourneyReflectionPass < 0.5) {',
           'for (int journeyImpulseIndex = 0; journeyImpulseIndex < ' + MEADOW_WIND_IMPULSE_COUNT + '; journeyImpulseIndex++) {',
           '  if (float(journeyImpulseIndex) >= uJourneyActiveImpulseCount) break;',
@@ -4731,10 +4808,19 @@ uniform vec4 uJourneyWindDirection[${MEADOW_WIND_IMPULSE_COUNT}];`,
         '#include <begin_vertex>',
         `#include <begin_vertex>
 vec4 journeyPetalBase = modelMatrix * vec4(position, 1.0);
-float journeyPetalGust = sin(uJourneyTime * 1.15 + aJourneyMeadowPhase * 11.0 + journeyPetalBase.z * 0.17) * 0.5 +
-  sin(uJourneyTime * 0.48 + aJourneyMeadowPhase * 23.0 + journeyPetalBase.x * 0.11) * 0.5;
-	vec2 journeyPetalSway = normalize(vec2(0.62, 0.34)) *
-	  (0.038 + uJourneyAmbientWind * 0.096 + journeyPetalGust * 0.046) * uJourneyMotionScale;
+float journeyPetalField =
+  sin(uJourneyTime * 0.61 + aJourneyMeadowPhase * 7.0 + journeyPetalBase.z * 0.105) * 0.46 +
+  sin(uJourneyTime * 0.29 - aJourneyMeadowPhase * 13.0 + journeyPetalBase.x * 0.086 - journeyPetalBase.z * 0.031) * 0.31 +
+  sin(uJourneyTime * 0.87 + aJourneyMeadowPhase * 3.0 + journeyPetalBase.x * 0.025) * 0.17;
+float journeyPetalTurn = journeyPetalField * 0.22;
+vec2 journeyPetalAmbientDirection = normalize(vec2(
+  0.82 - journeyPetalTurn * 0.42,
+  0.42 + journeyPetalTurn * 0.82
+));
+float journeyPetalAmbientStrength = 0.04 + uJourneyAmbientWind * 0.12 +
+  journeyPetalField * 0.036;
+	vec2 journeyPetalSway = journeyPetalAmbientDirection *
+	  max(0.016, journeyPetalAmbientStrength) * uJourneyMotionScale;
 	if (uJourneyReflectionPass < 0.5) {
 	for (int journeyImpulseIndex = 0; journeyImpulseIndex < ${MEADOW_WIND_IMPULSE_COUNT}; journeyImpulseIndex++) {
 	  if (float(journeyImpulseIndex) >= uJourneyActiveImpulseCount) break;
@@ -5059,6 +5145,11 @@ function ValleyMeadow({ diagnostics = {}, progress, travelWindRef, qualityScale 
     () => new URLSearchParams(window.location.search).get('windDebug') === '1',
     [],
   )
+  const windRuntimeRef = useRef({
+    ambient: 0,
+    activeGusts: 0,
+    strongestGust: 0,
+  })
   const { camera, gl } = useThree()
 
   useEffect(() => {
@@ -5204,6 +5295,9 @@ function ValleyMeadow({ diagnostics = {}, progress, travelWindRef, qualityScale 
         maxAge: MEADOW_WIND_MAX_AGE,
       },
       getSnapshot: () => ({
+        ambient: windRuntimeRef.current.ambient,
+        activeGusts: windRuntimeRef.current.activeGusts,
+        strongestGust: windRuntimeRef.current.strongestGust,
         pointerEvents: impulseScratch.pointerEvents,
         lastPointerStage: impulseScratch.lastPointerStage,
         lastPointerSpeed: impulseScratch.lastPointerSpeed,
@@ -5232,6 +5326,9 @@ function ValleyMeadow({ diagnostics = {}, progress, travelWindRef, qualityScale 
       if (window.__JOURNEY_V1_WIND__ === debugState) delete window.__JOURNEY_V1_WIND__
       delete document.documentElement.dataset.journeyWindConstants
       delete document.documentElement.dataset.journeyWindSnapshot
+      delete document.documentElement.dataset.journeyAmbientWind
+      delete document.documentElement.dataset.journeyActiveGusts
+      delete document.documentElement.dataset.journeyStrongestGust
     }
   }, [impulseScratch, windDebugEnabled, windImpulses])
 
@@ -5325,7 +5422,10 @@ function ValleyMeadow({ diagnostics = {}, progress, travelWindRef, qualityScale 
           })),
       })
     }
-    ;[grassMaterial, flowerMaterial].forEach((material) => {
+    let frameAmbientWind = 0
+    let frameActiveGusts = 0
+    let frameStrongestGust = 0
+    ;[grassMaterial, flowerMaterial].forEach((material, materialIndex) => {
       const uniforms = material.userData.journeyMeadowUniforms
       uniforms.uJourneyReveal.value = reveal
       uniforms.uJourneySunset.value = sunset
@@ -5338,10 +5438,15 @@ function ValleyMeadow({ diagnostics = {}, progress, travelWindRef, qualityScale 
       uniforms.uJourneyAmbientWind.value = reduceMotion
         ? 0
         : travelWindRef.current * 0.6 + timeOfDayWind
+      if (materialIndex === 0) frameAmbientWind = uniforms.uJourneyAmbientWind.value
       uniforms.uJourneyMotionScale.value = reduceMotion || diagnostics.wind ? 0 : 1
       let activeImpulseCount = 0
       windImpulses.forEach((impulse) => {
         if (impulse.strength <= 0.001) return
+        if (materialIndex === 0) {
+          frameActiveGusts += 1
+          frameStrongestGust = Math.max(frameStrongestGust, impulse.strength)
+        }
         uniforms.uJourneyWindImpulse.value[activeImpulseCount].set(
           impulse.origin.x,
           impulse.origin.y,
@@ -5361,6 +5466,14 @@ function ValleyMeadow({ diagnostics = {}, progress, travelWindRef, qualityScale 
         uniforms.uJourneyWindImpulse.value[index].w = 0
       }
     })
+    windRuntimeRef.current.ambient = frameAmbientWind
+    windRuntimeRef.current.activeGusts = frameActiveGusts
+    windRuntimeRef.current.strongestGust = frameStrongestGust
+    if (windDebugEnabled) {
+      document.documentElement.dataset.journeyAmbientWind = frameAmbientWind.toFixed(6)
+      document.documentElement.dataset.journeyActiveGusts = String(frameActiveGusts)
+      document.documentElement.dataset.journeyStrongestGust = frameStrongestGust.toFixed(6)
+    }
     const groundUniforms = groundMaterial.userData.journeyMeadowGroundUniforms
     groundUniforms.uJourneyReveal.value = reveal
     groundUniforms.uJourneyNight.value = night
@@ -5818,6 +5931,7 @@ export default function JourneyScene({
       previousAuthoredForward: new THREE.Vector3(),
       nextAuthoredForward: new THREE.Vector3(),
       authoredForward: new THREE.Vector3(),
+      introForward: new THREE.Vector3(),
       sampledQuaternion: new THREE.Quaternion(),
       holdPosition: new THREE.Vector3(),
       holdQuaternion: new THREE.Quaternion(),
@@ -5860,6 +5974,8 @@ export default function JourneyScene({
       skyGroundNight: new THREE.Color('#111b2a'),
       ambientSunset: new THREE.Color('#b9877e'),
       ambientNight: new THREE.Color('#7185aa'),
+      caveExitTint: new THREE.Color('#718078'),
+      caveExitEmissive: new THREE.Color('#567067'),
       ridgeNearSunset: new THREE.Color('#826d63'),
       ridgeFarSunset: new THREE.Color('#aa9188'),
       ridgeNearNight: new THREE.Color('#29475e'),
@@ -5896,6 +6012,7 @@ export default function JourneyScene({
   const skyLightRef = useRef(null)
   const ambientRef = useRef(null)
   const caveGuideLightRef = useRef(null)
+  const caveExitLightRef = useRef(null)
   const mysticLightRef = useRef(null)
   const riverMysticLightRef = useRef(null)
   const starMaterialRef = useRef(null)
@@ -5926,6 +6043,7 @@ export default function JourneyScene({
   const riverReactionRef = useRef({ age: 0, fading: false })
   const interactionRef = useRef({ capturedGate: null })
   const cavePresenceRef = useRef(Number.NaN)
+  const caveExitBounceRef = useRef(Number.NaN)
   const cavePortalCameraZRef = useRef(23)
   const cameraMotionSamplesRef = useRef([])
   const cameraMotionAuditRef = useRef({ previous: null, samples: [] })
@@ -6066,6 +6184,11 @@ export default function JourneyScene({
     if (clip) mixer.setTime(clipTime)
     const viewportAspect = size.width / Math.max(size.height, 1)
     const portraitFactor = 1 - smoothstep(0.62, 0.95, viewportAspect)
+    const portraitComposition = portraitFactor * smoothstep(
+      JOURNEY_CAVE_SEQUENCE.fogGate,
+      20,
+      cameraProgress,
+    )
     if (camera?.isCamera) {
       const sampledPosition = cameraSampler?.position?.evaluate(clipTime)
       const sampledQuaternion = cameraSampler?.quaternion?.evaluate(clipTime)
@@ -6173,6 +6296,27 @@ export default function JourneyScene({
           }
         }
       }
+      // Use the authored corridor's settled heading as the intro eye-line.
+      // This removes the residual yaw/pitch performance from the camera clip
+      // while keeping the authored position and eye height intact. Ease back
+      // to the authored exit direction over a long interval so the portal,
+      // Fog and HOLD pose share one continuous orientation.
+      const introHeading = 1 - smoothstep(
+        10.8,
+        JOURNEY_CAVE_SEQUENCE.fogGate,
+        progress,
+      )
+      if (introHeading > 0.0001) {
+        cameraScratch.introForward
+          // The corridor is centered on X=0 and travels toward -Z. A slight
+          // fixed upward eye-line keeps the portal ahead readable without
+          // reintroducing authored yaw, roll or look-target drift.
+          .set(0, 0.18, -1)
+          .normalize()
+        cameraScratch.forward
+          .lerp(cameraScratch.introForward, introHeading * 0.94)
+          .normalize()
+      }
       cameraScratch.right
         .set(1, 0, 0)
         .crossVectors(cameraScratch.forward, cameraScratch.up)
@@ -6182,25 +6326,25 @@ export default function JourneyScene({
         (presentationMode ? -1.8 : 0) -
           vistaComposition * LOOKDEV_V2_COMPOSITION.pullBack -
           endingWide * ENDING_CAMERA.pullBack +
-          portraitFactor * THREE.MathUtils.lerp(0.38, 1.05, portraitVista),
+          portraitComposition * THREE.MathUtils.lerp(0.38, 1.05, portraitVista),
       )
       camera.position.addScaledVector(
         cameraScratch.right,
-        -portraitFactor * THREE.MathUtils.lerp(0.12, 0.46, portraitVista),
+        -portraitComposition * THREE.MathUtils.lerp(0.12, 0.46, portraitVista),
       )
       camera.position.y +=
         vistaComposition * LOOKDEV_V2_COMPOSITION.cameraLift +
         endingLift * ENDING_CAMERA.cameraLift +
-        portraitFactor * THREE.MathUtils.lerp(-0.08, 0.18, portraitVista)
+        portraitComposition * THREE.MathUtils.lerp(-0.08, 0.18, portraitVista)
       cameraScratch.target.copy(camera.position).add(cameraScratch.forward)
       cameraScratch.target.y +=
         (presentationMode ? 0.12 : 0) +
         vistaComposition * LOOKDEV_V2_COMPOSITION.targetLift +
         endingLift * ENDING_CAMERA.lift +
-        portraitFactor * (1 - endingLift) * 0.08
+        portraitComposition * (1 - endingLift) * 0.08
       cameraScratch.target.addScaledVector(
         cameraScratch.right,
-        -portraitFactor * THREE.MathUtils.lerp(0.02, 0.08, portraitVista),
+        -portraitComposition * THREE.MathUtils.lerp(0.02, 0.08, portraitVista),
       )
       camera.up.set(0, 1, 0)
       camera.lookAt(cameraScratch.target)
@@ -6211,7 +6355,7 @@ export default function JourneyScene({
         vistaComposition * LOOKDEV_V2_COMPOSITION.fov +
         endingWide * ENDING_CAMERA.fov +
         (presentationMode ? 15 : 0) +
-        portraitFactor * THREE.MathUtils.lerp(7.5, 4.5, portraitVista)
+        portraitComposition * THREE.MathUtils.lerp(7.5, 4.5, portraitVista)
       if (Math.abs(camera.fov - desiredFov) > 0.001) {
         camera.fov = desiredFov
         camera.updateProjectionMatrix()
@@ -6254,6 +6398,7 @@ export default function JourneyScene({
         captureDataset.journeyCameraQuaternion = JSON.stringify(
           camera.quaternion.toArray().map((value) => Number(value.toFixed(7))),
         )
+        captureDataset.journeyCameraFov = camera.fov.toFixed(6)
         captureDataset.journeyCaveCameraCorrection = JSON.stringify(
           cameraScratch.correction.toArray().slice(0, 2)
             .map((value) => Number(value.toFixed(5))),
@@ -6354,6 +6499,15 @@ export default function JourneyScene({
 
     const sunsetColorMix = smoothstep(0, 0.72, sunset)
     const caveRelease = getJourneyOutdoorPresence(progress)
+    // Exterior illumination arrives through the opening before the viewer is
+    // fully outdoors. This is deliberately separate from world visibility and
+    // Fog/HOLD timing: it reveals the route without advancing the story.
+    const caveDaylight = Math.max(
+      caveRelease,
+      smoothstep(7.8, JOURNEY_CAVE_SEQUENCE.fogGate, progress) * 0.82,
+    )
+    const caveExitBounce = smoothstep(4.5, 11.8, progress) *
+      (1 - smoothstep(13.15, 15.2, progress))
     const skyColor = blendTimeOfDayColor(
       frameColors.sky,
       frameColors.daySky,
@@ -6521,7 +6675,7 @@ export default function JourneyScene({
       const dayIntensity = THREE.MathUtils.lerp(
         CAVE_LOOK.sunIntensity,
         1.55,
-        caveRelease,
+        caveDaylight,
       )
       sunRef.current.intensity = THREE.MathUtils.lerp(dayIntensity, 0.52, night)
       sunRef.current.color
@@ -6535,7 +6689,7 @@ export default function JourneyScene({
       const dayIntensity = THREE.MathUtils.lerp(
         CAVE_LOOK.skyIntensity,
         1.5,
-        caveRelease,
+        caveDaylight,
       )
       skyLightRef.current.intensity = THREE.MathUtils.lerp(dayIntensity, 1.08, night)
       skyLightRef.current.color
@@ -6551,7 +6705,7 @@ export default function JourneyScene({
       const dayIntensity = THREE.MathUtils.lerp(
         CAVE_LOOK.ambientIntensity,
         0.34,
-        caveRelease,
+        caveDaylight,
       )
       ambientRef.current.intensity = THREE.MathUtils.lerp(dayIntensity, 0.23, night)
       ambientRef.current.color
@@ -6564,6 +6718,13 @@ export default function JourneyScene({
       caveGuideLightRef.current.position.copy(camera.position)
       caveGuideLightRef.current.intensity =
         (1 - smoothstep(8, 16, progress)) * CAVE_LOOK.guideLightIntensity
+    }
+    if (caveExitLightRef.current) {
+      // A stable source just beyond the opening lets exterior daylight wrap
+      // onto the portal wall/floor. It rises gradually as the viewer
+      // approaches, instead of lifting the whole cave or flashing at a story
+      // threshold.
+      caveExitLightRef.current.intensity = CAVE_LOOK.exitLightIntensity * caveExitBounce
     }
 
     const starOpacity = starWeight
@@ -6816,7 +6977,10 @@ export default function JourneyScene({
     if (qaCaptureEnabled) {
       document.documentElement.dataset.journeyCaveGeometryPresence = cavePresence.toFixed(7)
     }
-    if (cavePresence !== cavePresenceRef.current) {
+    if (
+      cavePresence !== cavePresenceRef.current ||
+      Math.abs(caveExitBounce - caveExitBounceRef.current) > 0.0001
+    ) {
       const caveVisible = cavePresence > 0.004
       groups.cave.forEach((object) => {
         object.visible = caveVisible && !diagnostics.cave
@@ -6824,12 +6988,27 @@ export default function JourneyScene({
         materials.forEach((material) => {
           const baseOpacity = material.userData.journeyCaveBaseOpacity ?? 1
           material.opacity = baseOpacity * cavePresence
+          const baseColor = material.userData.journeyCaveBaseColor
+          if (baseColor && material.color) {
+            material.color.copy(baseColor).lerp(frameColors.caveExitTint, caveExitBounce * 0.28)
+          }
+          const baseEmissive = material.userData.journeyCaveBaseEmissive
+          if (baseEmissive && material.emissive) {
+            material.emissive.copy(baseEmissive).lerp(
+              frameColors.caveExitEmissive,
+              caveExitBounce * 0.78,
+            )
+            material.emissiveIntensity =
+              (material.userData.journeyCaveBaseEmissiveIntensity ?? 0) +
+              caveExitBounce * 0.18
+          }
           // Keep the occlusion policy stable while opacity fades. The old
           // 0.18 cutoff made the cave abruptly stop writing depth mid-scroll.
           material.depthWrite = true
         })
       })
       cavePresenceRef.current = cavePresence
+      caveExitBounceRef.current = caveExitBounce
     }
   })
 
@@ -6888,6 +7067,14 @@ export default function JourneyScene({
         distance={58}
         decay={1.7}
         color="#c7ccd0"
+      />
+      <pointLight
+        ref={caveExitLightRef}
+        position={[0, 6.2, -5.4]}
+        intensity={0}
+        distance={34}
+        decay={1.82}
+        color="#91aaa1"
       />
       <pointLight
         ref={mysticLightRef}
