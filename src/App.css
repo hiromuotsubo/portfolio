@@ -21,6 +21,8 @@
   --outro-glyph-center-y: 50dvh;
   --outro-glyph-width: calc(var(--outro-letter-height) * 0.74);
   --outro-glyph-height: calc(var(--outro-letter-height) * 1.12);
+  --outro-scene-width: min(34vw, 520px);
+  --outro-scene-height: calc(var(--outro-scene-width) * 0.5625);
   --portfolio-card-width: min(54vw, 960px);
   --portfolio-card-height: calc(var(--portfolio-card-width) * 0.5625);
   --portfolio-start-scale: 0.32;
@@ -97,11 +99,62 @@
   line-height: 1;
 }
 
+.journey-outro__final-copy {
+  position: absolute;
+  opacity: 0;
+  white-space: nowrap;
+}
+
 .journey-outro__phrase {
+  display: inline-flex;
+  align-items: baseline;
   opacity: 0;
   white-space: nowrap;
   font-kerning: normal;
   letter-spacing: normal;
+}
+
+.journey-outro__scene-slot {
+  position: relative;
+  display: inline-block;
+  flex: 0 0 var(--outro-scene-width);
+  width: var(--outro-scene-width);
+  height: 1em;
+  vertical-align: baseline;
+  will-change: width, flex-basis;
+}
+
+.journey-outro__scene,
+.journey-outro__mountain {
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  left: 50%;
+  width: var(--outro-scene-width);
+  height: var(--outro-scene-height);
+  overflow: hidden;
+  opacity: 0;
+  transform: translate(-50%, -50%);
+  transform-origin: center;
+}
+
+.journey-outro__scene img,
+.journey-outro__mountain img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.journey-outro__mountain {
+  z-index: 2;
+  clip-path: polygon(
+    0 72%, 0 43%, 9% 41%, 18% 48%, 28% 44%, 36% 38%,
+    48% 53%, 58% 42%, 67% 46%, 77% 38%, 88% 47%, 100% 43%, 100% 72%
+  );
+  filter: contrast(1.3) saturate(.72) brightness(.72);
+  -webkit-mask-image: linear-gradient(to bottom, #000 0 66%, rgba(0, 0, 0, .76) 78%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 0 66%, rgba(0, 0, 0, .76) 78%, transparent 100%);
 }
 
 .journey-outro__ridge {
@@ -153,26 +206,22 @@
 
 .journey-outro__m {
   position: absolute;
-  top: var(--outro-glyph-center-y);
-  left: var(--outro-glyph-center-x);
-  display: grid;
-  place-items: center;
+  z-index: 3;
+  left: 50%;
+  bottom: 0;
+  display: inline-block;
   width: var(--outro-glyph-width);
-  height: var(--outro-glyph-height);
+  height: 1em;
   opacity: 0;
   white-space: nowrap;
   line-height: 1;
-  transform: translate(-50%, -50%);
+  transform: translateX(-50%);
 }
 
 .journey-outro__m--snapshot {
   color: transparent;
-  background-position: center;
-  /* Keep the captured frame at its final aspect-preserving card projection.
-     The image never changes source or stretches into the glyph. */
-  background-size:
-    calc(100vw * var(--outro-card-scale))
-    calc(100dvh * var(--outro-card-scale));
+  background-position: center 48%;
+  background-size: var(--outro-scene-width) var(--outro-scene-height);
   background-repeat: no-repeat;
   background-clip: text;
   -webkit-background-clip: text;
@@ -200,8 +249,8 @@
 
 .journey-3d.is-outro:not(.is-portfolio) .journey-ending-frame {
   z-index: 6;
-  animation: outro-ending-frame 6.4s cubic-bezier(.65, 0, .24, 1) both;
-  will-change: top, left, width, height, opacity, filter, transform;
+  animation: outro-ending-frame 6.4s ease both;
+  will-change: opacity;
 }
 
 .journey-3d.is-outro:not(.is-portfolio) .journey-scene-frame {
@@ -222,6 +271,26 @@
 
 .journey-3d.is-outro .journey-outro__phrase {
   animation: outro-copy-in 6.4s ease both;
+}
+
+.journey-3d.is-outro .journey-outro__final-copy {
+  animation: outro-final-copy-in 6.4s ease both;
+}
+
+.journey-3d.is-outro .journey-outro__scene-slot {
+  animation: outro-slot-close 6.4s cubic-bezier(.65, 0, .24, 1) both;
+}
+
+.journey-3d.is-outro .journey-outro__scene {
+  animation: outro-scene-morph 6.4s cubic-bezier(.54, 0, .24, 1) both;
+}
+
+.journey-3d.is-outro .journey-outro__mountain {
+  animation: outro-mountain-morph 6.4s cubic-bezier(.54, 0, .24, 1) both;
+}
+
+.journey-3d.is-outro .journey-outro__m--real {
+  animation: outro-real-m-in 6.4s ease both;
 }
 
 .journey-3d.is-outro .journey-outro__ridge {
@@ -1128,71 +1197,80 @@
   0% {
     opacity: 0;
   }
-  14%, 100% {
+  11%, 100% {
     opacity: 1;
   }
 }
 
 @keyframes outro-ending-frame {
-  0%, 14% {
-    top: 50%;
-    left: 50%;
-    width: 100%;
-    height: 100%;
+  0%, 8% {
     opacity: 1;
-    filter: blur(0);
-    transform: translate(-50%, -50%) scale(1);
   }
-  48%, 56% {
-    top: var(--outro-glyph-center-y);
-    left: var(--outro-glyph-center-x);
-    width: 100%;
-    height: 100%;
-    opacity: 1;
-    filter: blur(0);
-    transform: translate(-50%, -50%) scale(var(--outro-card-scale));
-  }
-  62% {
-    top: var(--outro-glyph-center-y);
-    left: var(--outro-glyph-center-x);
-    width: 100%;
-    height: 100%;
-    opacity: 0.82;
-    filter: blur(2px) contrast(.96);
-    transform: translate(-50%, -50%) scale(var(--outro-card-scale));
-    -webkit-mask-image: none;
-    mask-image: none;
-  }
-  69% {
-    top: var(--outro-glyph-center-y);
-    left: var(--outro-glyph-center-x);
-    width: 100%;
-    height: 100%;
-    opacity: 0.32;
-    filter: blur(8px) contrast(.88);
-    transform: translate(-50%, -50%) scale(var(--outro-card-scale));
-    -webkit-mask-image: radial-gradient(ellipse at 47% 46%, #000 0 34%, rgba(0, 0, 0, .72) 56%, transparent 88%);
-    mask-image: radial-gradient(ellipse at 47% 46%, #000 0 34%, rgba(0, 0, 0, .72) 56%, transparent 88%);
-  }
-  76%, 100% {
-    top: var(--outro-glyph-center-y);
-    left: var(--outro-glyph-center-x);
-    width: 100%;
-    height: 100%;
+  14%, 100% {
     opacity: 0;
-    filter: blur(14px) contrast(.78);
-    transform: translate(-50%, -50%) scale(var(--outro-card-scale));
-    -webkit-mask-image: radial-gradient(ellipse at 47% 46%, #000 0 8%, rgba(0, 0, 0, .36) 30%, transparent 64%);
-    mask-image: radial-gradient(ellipse at 47% 46%, #000 0 8%, rgba(0, 0, 0, .36) 30%, transparent 64%);
   }
 }
 
 @keyframes outro-copy-in {
-  0%, 72% {
+  0%, 7% {
     opacity: 0;
   }
-  86%, 100% {
+  13%, 92% {
     opacity: 1;
+  }
+  97%, 100% { opacity: 0; }
+}
+
+@keyframes outro-scene-morph {
+  0%, 8% {
+    opacity: 0;
+    filter: saturate(.85);
+    -webkit-mask-image: linear-gradient(#000, #000);
+    mask-image: linear-gradient(#000, #000);
+  }
+  14%, 40% {
+    opacity: 1;
+    filter: saturate(.92);
+    -webkit-mask-image: linear-gradient(#000, #000);
+    mask-image: linear-gradient(#000, #000);
+  }
+  52% {
+    opacity: .24;
+    filter: saturate(.58) contrast(1.05);
+    -webkit-mask-image: radial-gradient(ellipse at 50% 48%, #000 0 34%, rgba(0,0,0,.58) 58%, transparent 86%);
+    mask-image: radial-gradient(ellipse at 50% 48%, #000 0 34%, rgba(0,0,0,.58) 58%, transparent 86%);
+  }
+  62%, 100% {
+    opacity: 0;
+    filter: saturate(.45);
+    -webkit-mask-image: radial-gradient(ellipse at 50% 48%, #000 0 8%, transparent 55%);
+    mask-image: radial-gradient(ellipse at 50% 48%, #000 0 8%, transparent 55%);
+  }
+}
+
+@keyframes outro-mountain-morph {
+  0%, 34% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  45%, 60% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  70%, 100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(.72);
+  }
+}
+
+@keyframes outro-slot-close {
+  0%, 70% {
+    width: var(--outro-scene-width);
+    flex-basis: var(--outro-scene-width);
+  }
+  88%, 100% {
+    width: var(--outro-glyph-width);
+    flex-basis: var(--outro-glyph-width);
   }
 }
 
@@ -1218,18 +1296,29 @@
 }
 
 @keyframes outro-snapshot-m-in {
-  0%, 54% {
+  0%, 50% {
     opacity: 0;
-    filter: blur(7px);
+    filter: blur(2px);
   }
-  66%, 72% {
+  61%, 74% {
     opacity: 1;
     filter: blur(0);
   }
-  78%, 100% {
+  84%, 100% {
     opacity: 0;
     filter: blur(0);
   }
+}
+
+@keyframes outro-real-m-in {
+  0%, 69% { opacity: 0; }
+  83%, 92% { opacity: 1; }
+  96%, 100% { opacity: 0; }
+}
+
+@keyframes outro-final-copy-in {
+  0%, 91% { opacity: 0; }
+  96%, 100% { opacity: 1; }
 }
 
 @keyframes portfolio-surface-in {
@@ -1425,7 +1514,11 @@
 @media (prefers-reduced-motion: reduce) {
   .journey-ending-frame,
   .journey-outro,
+  .journey-outro__final-copy,
   .journey-outro__phrase,
+  .journey-outro__scene-slot,
+  .journey-outro__scene,
+  .journey-outro__mountain,
   .journey-outro__ridge,
   .journey-outro__ridge i,
   .journey-outro__m,
@@ -1438,21 +1531,39 @@
   }
 
   .journey-3d.is-outro:not(.is-portfolio) .journey-ending-frame {
-    top: var(--outro-glyph-center-y);
-    left: var(--outro-glyph-center-x);
-    width: var(--outro-glyph-width);
-    height: var(--outro-glyph-height);
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     opacity: 0;
-    transform: translate(-50%, -50%);
+    transform: none;
   }
 
   .journey-3d.is-outro .journey-outro__phrase {
-    opacity: 1;
+    opacity: 0;
     transform: none;
+  }
+
+  .journey-3d.is-outro .journey-outro__final-copy {
+    opacity: 1;
   }
 
   .journey-3d.is-outro .journey-outro__m--snapshot {
     opacity: 0;
+  }
+
+  .journey-3d.is-outro .journey-outro__scene,
+  .journey-3d.is-outro .journey-outro__mountain {
+    opacity: 0;
+  }
+
+  .journey-3d.is-outro .journey-outro__scene-slot {
+    width: var(--outro-glyph-width);
+    flex-basis: var(--outro-glyph-width);
+  }
+
+  .journey-3d.is-outro .journey-outro__m--real {
+    opacity: 1;
   }
 
   .journey-3d.is-portfolio .portfolio-home,
@@ -5154,6 +5265,17 @@ textarea,
   letter-spacing: normal;
 }
 
+.journey-outro__final-copy,
+.journey-outro__phrase,
+.journey-outro__scene-slot,
+.journey-outro__m {
+  font: inherit;
+  font-kerning: normal;
+  font-feature-settings: 'kern' 1;
+  letter-spacing: normal;
+  line-height: 1;
+}
+
 .journey-3d.is-outro:not(.is-portfolio) .journey-scene-frame {
   visibility: visible;
   opacity: 1;
@@ -6142,10 +6264,6 @@ html[data-portfolio-route-transition='reveal'] .portfolio-site::after {
   font-kerning: normal;
   font-feature-settings: 'kern' 1;
   letter-spacing: normal;
-}
-
-.journey-outro__m--snapshot {
-  display: none;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -73,81 +73,8 @@ const smoothstep = (edge0, edge1, value) => {
   return x * x * (3 - 2 * x)
 }
 
-// Geometry-derived camera corrections. Horizontal values are 72% of the
-// measured free-space midpoint, retaining natural asymmetry while avoiding
-// either wall. Vertical values keep the eye roughly 2.75–2.9 scene units over
-// the sampled cave floor. These are authored samples, never live ray hits: the
-// cubic interpolant below has continuous velocity through every sample and
-// therefore cannot react to small rock/floor facets.
-const CAVE_CAMERA_CORRECTIONS = Object.freeze([
-  Object.freeze({ progress: 0, x: 0, y: 0 }),
-  Object.freeze({ progress: 1.5, x: 0.24, y: 0 }),
-  Object.freeze({ progress: 2.5, x: 0.81, y: 0.01 }),
-  Object.freeze({ progress: 5, x: 0.7, y: 0.05 }),
-  Object.freeze({ progress: 7.5, x: 0.73, y: -0.03 }),
-  Object.freeze({ progress: 9, x: -0.1, y: -0.15 }),
-  Object.freeze({ progress: 10, x: -0.41, y: -0.55 }),
-  Object.freeze({ progress: 11, x: -0.88, y: -1.18 }),
-  Object.freeze({ progress: 11.75, x: -1.23, y: -1.5 }),
-  Object.freeze({ progress: 12.08, x: -1.1, y: -1.32 }),
-  Object.freeze({ progress: 13.5, x: 0, y: 0 }),
-])
-
-const CAVE_CAMERA_TANGENT_SCALE = 0.52
 const CAVE_PORTAL_FADE_START_Z = -1.08
 const CAVE_PORTAL_FADE_END_Z = -2.42
-
-const sampleCaveCameraTangent = (index, axis) => {
-  if (index <= 0 || index >= CAVE_CAMERA_CORRECTIONS.length - 1) return 0
-  const previous = CAVE_CAMERA_CORRECTIONS[index - 1]
-  const next = CAVE_CAMERA_CORRECTIONS[index + 1]
-  return (
-    ((next[axis] - previous[axis]) / (next.progress - previous.progress)) *
-    CAVE_CAMERA_TANGENT_SCALE
-  )
-}
-
-const sampleCubicHermite = (start, end, startTangent, endTangent, alpha) => {
-  const alpha2 = alpha * alpha
-  const alpha3 = alpha2 * alpha
-  const duration = end.progress - start.progress
-  return (
-    (2 * alpha3 - 3 * alpha2 + 1) * start.value +
-    (alpha3 - 2 * alpha2 + alpha) * startTangent * duration +
-    (-2 * alpha3 + 3 * alpha2) * end.value +
-    (alpha3 - alpha2) * endTangent * duration
-  )
-}
-
-const sampleCaveCameraCorrection = (progress, target) => {
-  const first = CAVE_CAMERA_CORRECTIONS[0]
-  if (progress <= first.progress) return target.set(first.x, first.y, 0)
-  for (let index = 1; index < CAVE_CAMERA_CORRECTIONS.length; index += 1) {
-    const next = CAVE_CAMERA_CORRECTIONS[index]
-    if (progress > next.progress) continue
-    const previousIndex = index - 1
-    const previous = CAVE_CAMERA_CORRECTIONS[previousIndex]
-    const alpha = clamp01((progress - previous.progress) / (next.progress - previous.progress))
-    return target.set(
-      sampleCubicHermite(
-        { progress: previous.progress, value: previous.x },
-        { progress: next.progress, value: next.x },
-        sampleCaveCameraTangent(previousIndex, 'x'),
-        sampleCaveCameraTangent(index, 'x'),
-        alpha,
-      ),
-      sampleCubicHermite(
-        { progress: previous.progress, value: previous.y },
-        { progress: next.progress, value: next.y },
-        sampleCaveCameraTangent(previousIndex, 'y'),
-        sampleCaveCameraTangent(index, 'y'),
-        alpha,
-      ),
-      0,
-    )
-  }
-  return target.set(0, 0, 0)
-}
 
 const blendTimeOfDayColor = (target, day, sunset, night, weights) => target.setRGB(
   day.r * weights.dayWeight + sunset.r * weights.sunsetWeight + night.r * weights.nightWeight,
@@ -5892,6 +5819,10 @@ export default function JourneyScene({
       nextAuthoredForward: new THREE.Vector3(),
       authoredForward: new THREE.Vector3(),
       sampledQuaternion: new THREE.Quaternion(),
+      holdPosition: new THREE.Vector3(),
+      holdQuaternion: new THREE.Quaternion(),
+      holdFov: 0,
+      holdPoseCaptured: false,
       euler: new THREE.Euler(0, 0, 0, 'YXZ'),
     }),
     [],
@@ -6140,9 +6071,7 @@ export default function JourneyScene({
       const sampledQuaternion = cameraSampler?.quaternion?.evaluate(clipTime)
       if (sampledPosition) camera.position.fromArray(sampledPosition)
       if (sampledQuaternion) camera.quaternion.fromArray(sampledQuaternion).normalize()
-      sampleCaveCameraCorrection(progress, cameraScratch.correction)
-      camera.position.x += cameraScratch.correction.x
-      camera.position.y += cameraScratch.correction.y
+      cameraScratch.correction.set(0, 0, 0)
 
       const openVista = smoothstep(18, 25, cameraProgress)
       const vistaComposition = smoothstep(
@@ -6217,13 +6146,9 @@ export default function JourneyScene({
         if (previousSample) cameraScratch.previousPosition.fromArray(previousSample)
         const futureSample = cameraSampler.position.evaluate(futureClipTime)
         if (previousSample && futureSample) {
-          sampleCaveCameraCorrection(previousProgress, cameraScratch.previousCorrection)
-          cameraScratch.previousPosition.x += cameraScratch.previousCorrection.x
-          cameraScratch.previousPosition.y += cameraScratch.previousCorrection.y
+          cameraScratch.previousCorrection.set(0, 0, 0)
           cameraScratch.futurePosition.fromArray(futureSample)
-          sampleCaveCameraCorrection(futureProgress, cameraScratch.futureCorrection)
-          cameraScratch.futurePosition.x += cameraScratch.futureCorrection.x
-          cameraScratch.futurePosition.y += cameraScratch.futureCorrection.y
+          cameraScratch.futureCorrection.set(0, 0, 0)
           cameraScratch.centerlineForward
             .copy(cameraScratch.futurePosition)
             .sub(cameraScratch.previousPosition)
@@ -6239,9 +6164,9 @@ export default function JourneyScene({
             )
             cameraScratch.centerlineForward.normalize()
             const centerlineLook =
-              smoothstep(1.5, 4, progress) *
-              (1 - smoothstep(13.15, JOURNEY_CAVE_SEQUENCE.fogGate + 2.5, progress)) *
-              0.58
+              smoothstep(0.8, 2.4, progress) *
+              (1 - smoothstep(12.35, JOURNEY_CAVE_SEQUENCE.fogGate, progress)) *
+              0.88
             cameraScratch.forward
               .lerp(cameraScratch.centerlineForward, centerlineLook)
               .normalize()
@@ -6290,6 +6215,23 @@ export default function JourneyScene({
       if (Math.abs(camera.fov - desiredFov) > 0.001) {
         camera.fov = desiredFov
         camera.updateProjectionMatrix()
+      }
+      const fogPoseLocked = activeGate === 'fog'
+      if (fogPoseLocked && !cameraScratch.holdPoseCaptured) {
+        cameraScratch.holdPosition.copy(camera.position)
+        cameraScratch.holdQuaternion.copy(camera.quaternion)
+        cameraScratch.holdFov = camera.fov
+        cameraScratch.holdPoseCaptured = true
+      } else if (!fogPoseLocked) {
+        cameraScratch.holdPoseCaptured = false
+      }
+      if (fogPoseLocked && cameraScratch.holdPoseCaptured) {
+        camera.position.copy(cameraScratch.holdPosition)
+        camera.quaternion.copy(cameraScratch.holdQuaternion)
+        if (Math.abs(camera.fov - cameraScratch.holdFov) > 0.000001) {
+          camera.fov = cameraScratch.holdFov
+          camera.updateProjectionMatrix()
+        }
       }
       camera.updateMatrixWorld()
       onListenerPose?.(camera)

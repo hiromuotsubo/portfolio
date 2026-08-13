@@ -67,6 +67,8 @@ const ENDING_SETTLE_PROGRESS = 99.995
 const ENDING_SETTLE_MS = 1500
 const ENDING_CAPTURE_MAX_ATTEMPTS = 3
 const ENDING_COPY = 'Thank you so much.'
+const ENDING_PREFIX = 'Thank you so\u00a0'
+const ENDING_SUFFIX = 'uch.'
 const ENDING_M_INDEX = ENDING_COPY.indexOf('m')
 const PORTFOLIO_TRANSITION_MS = 720
 const PORTFOLIO_ROUTE_SWITCH_MS = 330
@@ -1236,14 +1238,15 @@ function LegacyApp() {
         '(max-width: 720px), (max-aspect-ratio: 4 / 5)',
       ).matches
       const cardWidth = portraitEnding
-        ? clamp(window.innerWidth * 0.28, 112, 154)
-        : clamp(window.innerWidth * 0.19, 176, 304)
+        ? clamp(window.innerWidth * 0.4, 142, 180)
+        : clamp(window.innerWidth * 0.34, 320, 520)
       setEndingGlyphMetrics({
         centerX: bounds.left + bounds.width / 2,
         centerY: bounds.top + bounds.height / 2,
         width: bounds.width,
         height: bounds.height,
-        cardScale: cardWidth / Math.max(window.innerWidth, 1),
+        slotWidth: cardWidth,
+        slotHeight: cardWidth * 0.5625,
       })
 
       firstPaintFrame = window.requestAnimationFrame(() => {
@@ -1282,7 +1285,7 @@ function LegacyApp() {
       clearEndingCapture()
       setEndingCapturePreparing(false)
       setShowPortfolio(true)
-    }, 6800)
+    }, 7000)
     return () => window.clearTimeout(timeout)
   }, [clearEndingCapture, showOutro, showPortfolio])
 
@@ -1908,7 +1911,8 @@ function LegacyApp() {
           '--outro-glyph-center-y': `${endingGlyphMetrics.centerY}px`,
           '--outro-glyph-width': `${endingGlyphMetrics.width}px`,
           '--outro-glyph-height': `${endingGlyphMetrics.height}px`,
-          '--outro-card-scale': endingGlyphMetrics.cardScale,
+          '--outro-scene-width': `${endingGlyphMetrics.slotWidth}px`,
+          '--outro-scene-height': `${endingGlyphMetrics.slotHeight}px`,
         } : {}),
       }}
     >
@@ -1967,9 +1971,28 @@ function LegacyApp() {
       <div className="soft-vignette" aria-hidden="true" />
 
       <section className="journey-outro" aria-label="Thank you so much.">
-        <p className="journey-outro__copy" aria-hidden="true">
-          <span ref={endingCopyRef} className="journey-outro__phrase">
+        <p className="journey-outro__copy">
+          <span ref={endingCopyRef} className="journey-outro__final-copy" aria-hidden="true">
             {ENDING_COPY}
+          </span>
+          <span className="journey-outro__phrase" aria-hidden="true">
+            <span>{ENDING_PREFIX}</span>
+            <span className="journey-outro__scene-slot">
+              <span className="journey-outro__scene">
+                {endingFrameSource ? <img src={endingFrameSource} alt="" /> : null}
+              </span>
+              <span className="journey-outro__mountain">
+                {endingFrameSource ? <img src={endingFrameSource} alt="" /> : null}
+              </span>
+              <span
+                className="journey-outro__m journey-outro__m--snapshot"
+                style={endingFrameSource ? { backgroundImage: `url(${endingFrameSource})` } : undefined}
+              >
+                m
+              </span>
+              <span className="journey-outro__m journey-outro__m--real">m</span>
+            </span>
+            <span>{ENDING_SUFFIX}</span>
           </span>
         </p>
       </section>
