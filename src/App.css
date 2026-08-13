@@ -6275,6 +6275,244 @@ html[data-portfolio-route-transition='reveal'] .portfolio-site::after {
   letter-spacing: normal;
 }
 
+/* Journey ending — The View Becomes Memory.
+   The exact final frame remains a landscape. Nothing is squeezed into a logo
+   or glyph; only the atmosphere changes as the experience returns to Home. */
+.journey-ending-frame {
+  z-index: 8;
+  isolation: isolate;
+  background: #071411;
+}
+
+.journey-ending-frame__landscape,
+.journey-ending-frame__echo {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  transform: none;
+  transform-origin: center;
+}
+
+.journey-ending-frame__landscape {
+  z-index: 1;
+}
+
+.journey-ending-frame__echo {
+  z-index: 2;
+  opacity: 0;
+  filter: grayscale(.72) sepia(.2) hue-rotate(82deg) saturate(.72) brightness(1.34) contrast(.82);
+  mix-blend-mode: screen;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0 22%, rgba(0, 0, 0, .22) 40%, #000 72%, rgba(0, 0, 0, .72) 100%);
+  mask-image: linear-gradient(to bottom, transparent 0 22%, rgba(0, 0, 0, .22) 40%, #000 72%, rgba(0, 0, 0, .72) 100%);
+}
+
+.journey-ending-frame__air {
+  position: absolute;
+  z-index: 3;
+  inset: -12%;
+  overflow: hidden;
+  opacity: 0;
+  background:
+    radial-gradient(ellipse 82% 42% at 48% 74%, rgba(230, 235, 225, .96) 0 18%, rgba(211, 225, 216, .74) 38%, rgba(170, 202, 189, .2) 62%, transparent 82%),
+    radial-gradient(ellipse 58% 36% at 16% 48%, rgba(176, 207, 194, .4), transparent 74%),
+    radial-gradient(ellipse 66% 38% at 88% 52%, rgba(190, 216, 204, .38), transparent 72%),
+    linear-gradient(to top, rgba(229, 234, 224, .9), rgba(180, 207, 195, .2) 66%, transparent 96%);
+  filter: blur(22px);
+  transform: translate3d(0, 2.5%, 0) scale(1.035);
+}
+
+.journey-ending-frame__air::after {
+  position: absolute;
+  inset: -8%;
+  content: '';
+  opacity: .24;
+  background-image: repeating-radial-gradient(circle at 31% 38%, rgba(49, 95, 73, .16) 0 .35px, transparent .65px 3.2px);
+  background-size: 5px 5px;
+  mix-blend-mode: multiply;
+}
+
+.journey-ending-frame__air i {
+  position: absolute;
+  display: block;
+  width: 62%;
+  aspect-ratio: 2.8 / 1;
+  border-radius: 48% 52% 43% 57% / 61% 42% 58% 39%;
+  background: rgba(216, 229, 219, .56);
+  filter: blur(46px);
+}
+
+.journey-ending-frame__air i:first-child {
+  left: -14%;
+  bottom: 11%;
+  transform: rotate(3deg);
+}
+
+.journey-ending-frame__air i:last-child {
+  right: -18%;
+  bottom: 24%;
+  opacity: .7;
+  transform: rotate(-4deg) scale(.88);
+}
+
+.journey-3d.is-outro:not(.is-portfolio).has-ending-frame .journey-ending-frame,
+.journey-3d.is-outro.is-portfolio.has-ending-frame .journey-ending-frame {
+  display: block;
+  animation: memory-frame-release 6.6s cubic-bezier(.42, 0, .18, 1) both;
+  will-change: opacity;
+}
+
+.journey-3d.is-outro .journey-ending-frame__landscape {
+  animation: memory-landscape-exposure 6.6s cubic-bezier(.42, 0, .18, 1) both;
+  will-change: opacity, filter;
+}
+
+.journey-3d.is-outro .journey-ending-frame__echo {
+  animation: memory-mountain-echo 6.6s cubic-bezier(.42, 0, .18, 1) both;
+  will-change: opacity, filter;
+}
+
+.journey-3d.is-outro .journey-ending-frame__air {
+  animation: memory-air-arrival 6.6s cubic-bezier(.42, 0, .18, 1) both;
+  will-change: opacity, transform, filter;
+}
+
+.journey-3d.is-outro .journey-ending-frame__air i:first-child {
+  animation: memory-air-drift-left 6.6s ease-in-out both;
+}
+
+.journey-3d.is-outro .journey-ending-frame__air i:last-child {
+  animation: memory-air-drift-right 6.6s ease-in-out both;
+}
+
+.journey-3d.is-outro.is-portfolio:not(.is-portfolio-scrolled) .journey-scene-frame {
+  z-index: 7;
+}
+
+.journey-3d.is-outro .journey-outro {
+  display: none;
+}
+
+@keyframes memory-frame-release {
+  0%, 66% { opacity: 1; }
+  78% { opacity: .9; }
+  89% { opacity: .34; }
+  100% { opacity: 0; }
+}
+
+@keyframes memory-landscape-exposure {
+  0%, 24% {
+    opacity: 1;
+    filter: saturate(1) contrast(1) brightness(1);
+  }
+  43% {
+    opacity: .94;
+    filter: saturate(.82) contrast(.96) brightness(1.025);
+  }
+  62% {
+    opacity: .62;
+    filter: saturate(.54) contrast(.88) brightness(1.1);
+  }
+  78% {
+    opacity: .22;
+    filter: saturate(.32) contrast(.82) brightness(1.16);
+  }
+  100% {
+    opacity: 0;
+    filter: saturate(.2) contrast(.78) brightness(1.2);
+  }
+}
+
+@keyframes memory-mountain-echo {
+  0%, 29% { opacity: 0; }
+  49% { opacity: .2; }
+  66% { opacity: .3; }
+  82% { opacity: .13; }
+  100% { opacity: 0; }
+}
+
+@keyframes memory-air-arrival {
+  0%, 24% {
+    opacity: 0;
+    filter: blur(28px);
+    transform: translate3d(-1.6%, 3.5%, 0) scale(1.045);
+  }
+  47% {
+    opacity: .28;
+  }
+  68% {
+    opacity: .72;
+    filter: blur(21px);
+  }
+  86%, 100% {
+    opacity: 1;
+    filter: blur(17px);
+    transform: translate3d(1.2%, 0, 0) scale(1.025);
+  }
+}
+
+@keyframes memory-air-drift-left {
+  from { transform: translate3d(-5%, 3%, 0) rotate(3deg) scale(.96); }
+  to { transform: translate3d(14%, -3%, 0) rotate(-1deg) scale(1.08); }
+}
+
+@keyframes memory-air-drift-right {
+  from { transform: translate3d(7%, 2%, 0) rotate(-4deg) scale(.86); }
+  to { transform: translate3d(-13%, -5%, 0) rotate(1deg) scale(1.02); }
+}
+
+@media (max-width: 720px), (max-aspect-ratio: 4 / 5) {
+  .journey-ending-frame__air {
+    inset: -10% -24%;
+    background:
+      radial-gradient(ellipse 70% 42% at 50% 72%, rgba(230, 235, 225, .96) 0 20%, rgba(211, 225, 216, .74) 43%, rgba(170, 202, 189, .2) 67%, transparent 84%),
+      radial-gradient(ellipse 48% 34% at 8% 48%, rgba(176, 207, 194, .38), transparent 76%),
+      radial-gradient(ellipse 52% 36% at 94% 54%, rgba(190, 216, 204, .38), transparent 74%),
+      linear-gradient(to top, rgba(229, 234, 224, .92), rgba(180, 207, 195, .2) 69%, transparent 96%);
+    filter: blur(18px);
+  }
+
+  .journey-ending-frame__air i {
+    width: 84%;
+    filter: blur(36px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .journey-3d.is-outro .journey-ending-frame {
+    opacity: 1;
+    animation: memory-frame-release-reduced 760ms ease both !important;
+  }
+
+  .journey-3d.is-outro .journey-ending-frame__landscape {
+    opacity: 1;
+    animation: memory-landscape-reduced 760ms ease both !important;
+  }
+
+  .journey-3d.is-outro .journey-ending-frame__echo,
+  .journey-3d.is-outro .journey-ending-frame__air,
+  .journey-3d.is-outro .journey-ending-frame__air i {
+    animation: none !important;
+  }
+
+  .journey-ending-frame__echo,
+  .journey-ending-frame__air {
+    opacity: 0 !important;
+  }
+}
+
+@keyframes memory-frame-release-reduced {
+  0%, 34% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes memory-landscape-reduced {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .portfolio-mist-transition.is-cover,
   .portfolio-mist-transition.is-reveal,

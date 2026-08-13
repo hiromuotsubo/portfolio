@@ -66,10 +66,8 @@ const PREVIEW_FOG_COMPLETED = (
 const ENDING_SETTLE_PROGRESS = 99.995
 const ENDING_SETTLE_MS = 1500
 const ENDING_CAPTURE_MAX_ATTEMPTS = 3
-const ENDING_COPY = 'Thank you so much.'
-const ENDING_PREFIX = 'Thank you so\u00a0'
-const ENDING_SUFFIX = 'uch.'
-const ENDING_M_INDEX = ENDING_COPY.indexOf('m')
+const ENDING_MEMORY_HOME_MS = 4200
+const ENDING_MEMORY_COMPLETE_MS = 6600
 const PORTFOLIO_TRANSITION_MS = 720
 const PORTFOLIO_ROUTE_SWITCH_MS = 330
 const PORTFOLIO_PAGES = ['home', 'about', 'project', 'contact']
@@ -243,7 +241,7 @@ const PORTFOLIO_IMAGE_URLS = [
   '/portfolio/project-emotion-night-v4.jpg',
 ]
 
-function useAmbientAudio(progress, fogCompleted) {
+function useAmbientAudio(progress, fogCompleted, endingQuiet = false) {
   const audioRef = useRef(null)
   const listenerPoseRef = useRef({
     time: 0,
@@ -382,6 +380,9 @@ function useAmbientAudio(progress, fogCompleted) {
     const audio = audioRef.current
     if (!audioReady || !audio?.tracks) return
     const now = audio.context.currentTime
+    const masterTarget = endingQuiet ? 0.0001 : 0.88
+    audio.master.gain.cancelScheduledValues(now)
+    audio.master.gain.setTargetAtTime(masterTarget, now, endingQuiet ? 1.7 : 1.05)
     const outside = clamp((progress - 13.5) / 9, 0, 1)
     const night = clamp((progress - 52) / 18, 0, 1)
     const quietNight = clamp((progress - 68) / 18, 0, 1)
@@ -412,7 +413,7 @@ function useAmbientAudio(progress, fogCompleted) {
       riverFilter.frequency.setTargetAtTime(5200 + valley * 3000 - night * 1700, now, 2.4)
     }
 
-  }, [audioReady, fogCompleted, progress])
+  }, [audioReady, endingQuiet, fogCompleted, progress])
 
   useEffect(
     () => () => {
@@ -1059,7 +1060,6 @@ function LegacyApp() {
   const [endingCaptureRequest, setEndingCaptureRequest] = useState(0)
   const [endingFrameSource, setEndingFrameSource] = useState(null)
   const [endingFrameLoaded, setEndingFrameLoaded] = useState(false)
-  const [endingGlyphMetrics, setEndingGlyphMetrics] = useState(null)
   const [endingCapturePreparing, setEndingCapturePreparing] = useState(false)
   const [endingCaptureBlocked, setEndingCaptureBlocked] = useState(false)
   const progressRef = useRef(PREVIEW_PROGRESS)
@@ -1087,15 +1087,17 @@ function LegacyApp() {
   const endingCommittedRef = useRef(
     DEV_PREVIEW === 'portfolio' || INITIAL_VIEW === 'portfolio',
   )
-  const endingCopyRef = useRef(null)
-  const { ensureAudio, updateListenerPose } = useAmbientAudio(progress, fogCompleted)
+  const { ensureAudio, updateListenerPose } = useAmbientAudio(
+    progress,
+    fogCompleted,
+    showOutro,
+  )
 
   const clearEndingCapture = useCallback(() => {
     activeEndingRequestRef.current = 0
     setEndingCaptureRequest(0)
     setEndingFrameSource(null)
     setEndingFrameLoaded(false)
-    setEndingGlyphMetrics(null)
   }, [])
 
   const recordEndingCaptureFailure = useCallback((requestId, error, stage) => {
@@ -1222,33 +1224,7 @@ function LegacyApp() {
     let secondPaintFrame = null
     const requestId = activeEndingRequestRef.current
 
-    const armOutro = async () => {
-      await document.fonts?.ready
-      if (cancelled || requestId !== activeEndingRequestRef.current) return
-      const copy = endingCopyRef.current
-      const textNode = copy?.firstChild
-      if (!copy || !textNode || textNode.nodeType !== Node.TEXT_NODE) return
-      const range = document.createRange()
-      range.setStart(textNode, ENDING_M_INDEX)
-      range.setEnd(textNode, ENDING_M_INDEX + 1)
-      const inkRect = range.getBoundingClientRect()
-      const elementRect = copy.getBoundingClientRect()
-      const bounds = inkRect.width > 0 && inkRect.height > 0 ? inkRect : elementRect
-      const portraitEnding = window.matchMedia(
-        '(max-width: 720px), (max-aspect-ratio: 4 / 5)',
-      ).matches
-      const cardWidth = portraitEnding
-        ? clamp(window.innerWidth * 0.4, 142, 180)
-        : clamp(window.innerWidth * 0.34, 320, 520)
-      setEndingGlyphMetrics({
-        centerX: bounds.left + bounds.width / 2,
-        centerY: bounds.top + bounds.height / 2,
-        width: bounds.width,
-        height: bounds.height,
-        slotWidth: cardWidth,
-        slotHeight: cardWidth * 0.5625,
-      })
-
+    const armOutro = () => {
       firstPaintFrame = window.requestAnimationFrame(() => {
         secondPaintFrame = window.requestAnimationFrame(() => {
           if (
@@ -1272,8 +1248,11 @@ function LegacyApp() {
   }, [endingFrameLoaded, endingFrameSource, showOutro, showPortfolio])
 
   useEffect(() => {
-    if (!showOutro || showPortfolio) return undefined
-    const timeout = window.setTimeout(() => {
+    if (!showOutro || portfolioRef.current) return undefined
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const homeDelay = reduceMotion ? 220 : ENDING_MEMORY_HOME_MS
+    const completeDelay = reduceMotion ? 760 : ENDING_MEMORY_COMPLETE_MS
+    const homeTimeout = window.setTimeout(() => {
       portfolioRef.current = true
       setPortfolioPage('home')
       try {
@@ -1282,12 +1261,17 @@ function LegacyApp() {
         // The experience still completes when storage is unavailable.
       }
       window.history.replaceState(null, '', '/')
+      setShowPortfolio(true)
+    }, homeDelay)
+    const completeTimeout = window.setTimeout(() => {
       clearEndingCapture()
       setEndingCapturePreparing(false)
-      setShowPortfolio(true)
-    }, 7000)
-    return () => window.clearTimeout(timeout)
-  }, [clearEndingCapture, showOutro, showPortfolio])
+    }, completeDelay)
+    return () => {
+      window.clearTimeout(homeTimeout)
+      window.clearTimeout(completeTimeout)
+    }
+  }, [clearEndingCapture, showOutro])
 
   useEffect(() => {
     if (!showPortfolio) return undefined
@@ -1906,14 +1890,6 @@ function LegacyApp() {
         '--hold-x': `${holdOrigin.x}px`,
         '--hold-y': `${holdOrigin.y}px`,
         '--hold-radius': `${80 + holdProgress * 360}px`,
-        ...(endingGlyphMetrics ? {
-          '--outro-glyph-center-x': `${endingGlyphMetrics.centerX}px`,
-          '--outro-glyph-center-y': `${endingGlyphMetrics.centerY}px`,
-          '--outro-glyph-width': `${endingGlyphMetrics.width}px`,
-          '--outro-glyph-height': `${endingGlyphMetrics.height}px`,
-          '--outro-scene-width': `${endingGlyphMetrics.slotWidth}px`,
-          '--outro-scene-height': `${endingGlyphMetrics.slotHeight}px`,
-        } : {}),
       }}
     >
       <div className="journey-scene-frame" aria-hidden={showOutro && !showPortfolio}>
@@ -1937,9 +1913,10 @@ function LegacyApp() {
         ) : null}
       </div>
 
-      {endingFrameSource && !showPortfolio ? (
+      {endingFrameSource ? (
         <div className="journey-ending-frame" aria-hidden="true">
           <img
+            className="journey-ending-frame__landscape"
             src={endingFrameSource}
             alt=""
             onLoad={() => {
@@ -1953,6 +1930,15 @@ function LegacyApp() {
               )
             }}
           />
+          <img
+            className="journey-ending-frame__echo"
+            src={endingFrameSource}
+            alt=""
+          />
+          <div className="journey-ending-frame__air" aria-hidden="true">
+            <i />
+            <i />
+          </div>
         </div>
       ) : null}
 
@@ -1969,33 +1955,6 @@ function LegacyApp() {
       <div className="cave-grade" aria-hidden="true" />
       <div className="valley-mist" aria-hidden="true" />
       <div className="soft-vignette" aria-hidden="true" />
-
-      <section className="journey-outro" aria-label="Thank you so much.">
-        <p className="journey-outro__copy">
-          <span ref={endingCopyRef} className="journey-outro__final-copy" aria-hidden="true">
-            {ENDING_COPY}
-          </span>
-          <span className="journey-outro__phrase" aria-hidden="true">
-            <span>{ENDING_PREFIX}</span>
-            <span className="journey-outro__scene-slot">
-              <span className="journey-outro__scene">
-                {endingFrameSource ? <img src={endingFrameSource} alt="" /> : null}
-              </span>
-              <span className="journey-outro__mountain">
-                {endingFrameSource ? <img src={endingFrameSource} alt="" /> : null}
-              </span>
-              <span
-                className="journey-outro__m journey-outro__m--snapshot"
-                style={endingFrameSource ? { backgroundImage: `url(${endingFrameSource})` } : undefined}
-              >
-                m
-              </span>
-              <span className="journey-outro__m journey-outro__m--real">m</span>
-            </span>
-            <span>{ENDING_SUFFIX}</span>
-          </span>
-        </p>
-      </section>
 
       {showPortfolio ? (
         <PortfolioSite
