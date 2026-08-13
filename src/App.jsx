@@ -234,10 +234,11 @@ const PORTFOLIO_IMAGE_URLS = [
   '/portfolio/journey-storyboard.jpg',
   '/portfolio/journey-night.jpg',
   '/portfolio/project-inspiration-v2.png',
-  '/portfolio/project-space-v3.webp',
-  '/portfolio/project-atmosphere-v3.webp',
-  '/portfolio/project-interaction-v3.webp',
-  '/portfolio/project-emotion-v3.webp',
+  '/portfolio/project-contrast-v2.png',
+  '/portfolio/project-valley-day-v4.jpg',
+  '/portfolio/project-atmosphere-sunset-v4.jpg',
+  '/portfolio/project-interaction-meadow-v4.jpg',
+  '/portfolio/project-emotion-night-v4.jpg',
 ]
 
 function useAmbientAudio(progress, fogCompleted) {
@@ -622,6 +623,22 @@ function PortfolioImage({ src, alt, caption, className = '' }) {
   )
 }
 
+function PortfolioImagePair({ images, caption, className = '' }) {
+  return (
+    <figure className={`portfolio-figure portfolio-figure--pair ${className}`}>
+      <div className="portfolio-figure__pair">
+        {images.map((image) => (
+          <div className={`portfolio-figure__image ${image.className ?? ''}`} key={image.src}>
+            <img src={image.src} alt={image.alt} loading="lazy" />
+            <span aria-hidden="true">{image.label}</span>
+          </div>
+        ))}
+      </div>
+      {caption ? <figcaption>{caption}</figcaption> : null}
+    </figure>
+  )
+}
+
 function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }) {
   const siteScrollRef = useRef(null)
   const transitionTimersRef = useRef([])
@@ -886,19 +903,26 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
           <div className="portfolio-panel__copy"><span className="portfolio-kicker">INSPIRATION</span><h3>A photograph captured the view, not the feeling.</h3><p>Six weeks in Kamikochi taught me that photographs can preserve a view, but not the feeling of being there.<br />Journey begins from that gap.<br />Rather than reproducing the landscape exactly, it rebuilds the experience through space, interaction and time.</p></div>
         </article>
         <article id="contrast" className={panelClassName('contrast')} data-story-panel="contrast">
-          <PortfolioImage src="/portfolio/project-space-v3.webp" alt="Journey beginning inside a dark cave and opening toward the valley" caption="CAVE TO VALLEY" className="is-dark" />
+          <PortfolioImage src="/portfolio/project-contrast-v2.png" alt="The Journey valley framed tightly by the dark cave opening" caption="CONTRACTION / RELEASE" className="is-space-wide is-dark" />
           <div className="portfolio-panel__copy"><span className="portfolio-kicker">SPACE</span><h3>Emotion begins with space.</h3><p>The cave narrows the view.<br />Darkness holds the landscape back.<br />Emerging into the valley makes its scale feel greater by contrast.</p></div>
         </article>
         <article id="terrain" className={panelClassName('terrain')} data-story-panel="terrain">
-          <PortfolioImage src="/portfolio/project-atmosphere-v3.webp" alt="The Journey valley transforming from daylight through dusk" caption="DAY / DUSK / ATMOSPHERE" />
+          <PortfolioImagePair
+            images={[
+              { src: '/portfolio/project-valley-day-v4.jpg', alt: 'The Journey valley in clear daylight', label: 'DAY' },
+              { src: '/portfolio/project-atmosphere-sunset-v4.jpg', alt: 'The same Journey valley at sunset', label: 'DUSK' },
+            ]}
+            caption="ONE VALLEY / CHANGING LIGHT"
+            className="is-atmosphere-pair"
+          />
           <div className="portfolio-panel__copy"><span className="portfolio-kicker">ATMOSPHERE</span><h3>Light lets the landscape breathe.</h3><p>Day fades into dusk.<br />Dusk deepens into night.<br />Light, mist and color slowly transform the same valley over time.</p></div>
         </article>
         <article id="interaction" className={panelClassName('interaction')} data-story-panel="interaction">
-          <PortfolioImage src="/portfolio/project-interaction-v3.webp" alt="Tall meadow grass responding to the Journey cursor wind" caption="HOLD / CURSOR WIND" />
+          <PortfolioImage src="/portfolio/project-interaction-meadow-v4.jpg" alt="Tall meadow grass surrounding the Journey river and responding to cursor wind" caption="MEADOW / CURSOR WIND" className="is-interaction-wide" />
           <div className="portfolio-panel__copy"><span className="portfolio-kicker">INTERACTION</span><h3>The landscape responds when you slow down.</h3><p>Scroll moves you forward.<br />HOLD lets the moment linger.<br />Move the cursor to stir the wind, and the grass moves with it.</p></div>
         </article>
         <article id="emotion" className={panelClassName('emotion', 'is-emotion-panel')} data-story-panel="emotion">
-          <PortfolioImage src="/portfolio/project-emotion-v3.webp" alt="A small figure beneath the Journey mountains and immense night sky" caption="EMOTION / FINAL WIDE" className="is-dark" />
+          <PortfolioImage src="/portfolio/project-emotion-night-v4.jpg" alt="A small figure beneath the Journey mountains and immense night sky" caption="HUMAN SCALE / FINAL NIGHT" className="is-emotion-wide is-dark" />
           <div className="portfolio-panel__copy"><span className="portfolio-kicker">EMOTION</span><h3>Wonder grows in quiet moments.</h3><p>The journey ends beneath an immense night sky.<br />A small figure stands against the mountains.<br />For a moment, the landscape feels larger—and we feel smaller within it.</p><button type="button" onClick={onReplay}>EXPERIENCE AGAIN <ShortArrow /></button></div>
         </article>
         <footer className="portfolio-story__end">
@@ -988,7 +1012,7 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
             <p>For collaborations, research or thoughtful ideas.</p>
             <div className="portfolio-contact__links">
               <a href="mailto:hiromu.otsubo.design@gmail.com"><small>EMAIL</small><span>hiromu.otsubo.design@gmail.com</span><i>↗</i></a>
-              <a href="https://note.com/tabonnu" target="_blank" rel="noreferrer"><small>WRITING</small><span>note / tabonnu</span><i>↗</i></a>
+              <a href="https://note.com/hiromu_o" target="_blank" rel="noreferrer"><small>WRITING</small><span>note / hiromu_o</span><i>↗</i></a>
             </div>
             <footer><span>HIROMU OTSUBO</span><span>PORTFOLIO</span><span>© 2026</span></footer>
           </section>

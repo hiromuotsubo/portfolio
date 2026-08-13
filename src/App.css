@@ -6156,3 +6156,264 @@ html[data-portfolio-route-transition='reveal'] .portfolio-site::after {
     animation-duration: 90ms !important;
   }
 }
+
+/* Portfolio completion pass: a measured editorial column and image-led rhythm. */
+.portfolio-figure--pair .portfolio-figure__pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(8px, 1vw, 14px);
+}
+
+.portfolio-figure--pair .portfolio-figure__image {
+  position: relative;
+  aspect-ratio: 1 / 1.06;
+}
+
+.portfolio-figure--pair .portfolio-figure__image > span {
+  position: absolute;
+  right: 13px;
+  bottom: 12px;
+  padding: 6px 8px 5px;
+  color: rgba(240, 238, 230, .92);
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: .18em;
+  background: rgba(18, 35, 28, .38);
+  backdrop-filter: blur(8px);
+}
+
+.portfolio-site.is-page-project .portfolio-figure__image {
+  overflow: hidden;
+  background: #d6dfd6;
+}
+
+.portfolio-site.is-page-project .portfolio-figure__image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.portfolio-site.is-page-project .is-atmosphere-pair .portfolio-figure__image:first-child img {
+  filter: saturate(.82) contrast(.95) brightness(1.01);
+}
+
+.portfolio-site.is-page-project .is-atmosphere-pair .portfolio-figure__image:last-child img {
+  filter: saturate(.78) contrast(.93) brightness(1.025);
+}
+
+.portfolio-site.is-page-project .is-interaction-wide .portfolio-figure__image,
+.portfolio-site.is-page-project .is-emotion-wide .portfolio-figure__image,
+.portfolio-site.is-page-project .is-space-wide .portfolio-figure__image {
+  aspect-ratio: 2 / 1;
+}
+
+.portfolio-site.is-page-project .is-emotion-wide img {
+  object-position: 50% 58%;
+}
+
+@media (min-width: 901px) {
+  .portfolio-site.is-page-about .portfolio-story__panels,
+  .portfolio-site.is-page-project .portfolio-story__panels {
+    padding-inline: clamp(48px, 4.8vw, 88px) clamp(60px, 6vw, 110px);
+  }
+
+  .portfolio-site.is-page-about .portfolio-story__panels .portfolio-panel,
+  .portfolio-site.is-page-project .portfolio-story__panels .portfolio-panel,
+  .portfolio-site.is-page-about .portfolio-story__panels .portfolio-panel.is-active,
+  .portfolio-site.is-page-project .portfolio-story__panels .portfolio-panel.is-active {
+    width: min(100%, 1120px);
+    min-height: max(calc(132svh - 92px), 900px);
+    padding-top: clamp(68px, 8.5vh, 102px);
+    padding-bottom: clamp(116px, 15vh, 178px);
+  }
+
+  .portfolio-site.is-page-about .portfolio-story__panels .portfolio-figure {
+    width: min(94%, 1020px) !important;
+  }
+
+  .portfolio-site.is-page-project .portfolio-story__panels .portfolio-figure {
+    width: min(100%, 1120px) !important;
+  }
+
+  .portfolio-site.is-page-project #interaction .portfolio-figure {
+    width: min(92%, 1010px) !important;
+    margin-left: 8% !important;
+  }
+
+  .portfolio-site.is-page-about .portfolio-story__panels .portfolio-panel__copy,
+  .portfolio-site.is-page-project .portfolio-story__panels .portfolio-panel__copy {
+    width: min(100%, 700px) !important;
+    margin-top: clamp(72px, 9vh, 108px) !important;
+  }
+
+  .portfolio-site.is-page-about #research .portfolio-panel__copy,
+  .portfolio-site.is-page-about #motivation .portfolio-panel__copy,
+  .portfolio-site.is-page-project #contrast .portfolio-panel__copy,
+  .portfolio-site.is-page-project #emotion .portfolio-panel__copy {
+    margin-left: clamp(18px, 3vw, 48px) !important;
+  }
+
+  .portfolio-site.is-page-about #approach .portfolio-panel__copy,
+  .portfolio-site.is-page-project #origin .portfolio-panel__copy,
+  .portfolio-site.is-page-project #interaction .portfolio-panel__copy {
+    margin-left: clamp(42px, 6vw, 92px) !important;
+  }
+
+  .portfolio-site.is-page-about .portfolio-story__panels .portfolio-panel__copy h3,
+  .portfolio-site.is-page-project .portfolio-story__panels .portfolio-panel__copy h3 {
+    max-width: 14ch;
+    font-size: clamp(48px, 4.15vw, 72px);
+    line-height: 1.01;
+  }
+
+  .portfolio-site.is-page-about .portfolio-story__panels .portfolio-panel__copy p,
+  .portfolio-site.is-page-project .portfolio-story__panels .portfolio-panel__copy p {
+    max-width: 52ch;
+    font-size: clamp(18px, 1.28vw, 21px);
+    line-height: 1.72;
+  }
+
+  .portfolio-site.is-page-about .portfolio-panel__copy a,
+  .portfolio-site.is-page-project .portfolio-panel__copy button {
+    width: min(100%, 520px);
+  }
+
+  .portfolio-story__end {
+    width: min(calc(100% - clamp(96px, 10vw, 176px)), 1120px);
+    margin-inline: clamp(48px, 5vw, 88px) auto;
+  }
+}
+
+.portfolio-figure figcaption,
+.portfolio-kicker,
+.portfolio-story__end > span,
+.portfolio-story__end button {
+  font-size: 9.5px;
+  line-height: 1.5;
+}
+
+.portfolio-profile-facts dt,
+.portfolio-profile-facts dd,
+.portfolio-home__copy dt,
+.portfolio-home__copy dd,
+.portfolio-contact__links small {
+  font-size: 9px;
+}
+
+.portfolio-profile-facts > div {
+  padding-block: 14px 12px;
+}
+
+.portfolio-contact {
+  width: min(100%, 1220px);
+  margin-inline: auto;
+  padding-inline: clamp(32px, 7vw, 116px);
+}
+
+.portfolio-contact > p {
+  max-width: 38ch;
+  font-size: clamp(17px, 1.25vw, 20px);
+  line-height: 1.65;
+}
+
+.portfolio-contact__links {
+  width: min(100%, 1040px);
+}
+
+.portfolio-contact__links a {
+  padding-block: clamp(22px, 3vh, 32px);
+}
+
+.portfolio-site .portfolio-mist-transition {
+  overflow: hidden;
+  background:
+    linear-gradient(114deg, rgba(240, 238, 230, .96), rgba(225, 235, 227, .94)),
+    repeating-radial-gradient(ellipse at 32% 46%, rgba(105, 167, 133, .045) 0 1px, transparent 1px 6px);
+  backdrop-filter: blur(7px);
+  -webkit-backdrop-filter: blur(7px);
+}
+
+.portfolio-site .portfolio-mist-transition::before,
+.portfolio-site .portfolio-mist-transition::after {
+  position: absolute;
+  display: block;
+  width: 82vmax;
+  height: 48vmax;
+  content: '';
+  opacity: .3;
+  border-radius: 44% 56% 61% 39%;
+  background: rgba(178, 204, 185, .28);
+  filter: blur(64px);
+  transform: rotate(-9deg);
+}
+
+.portfolio-site .portfolio-mist-transition::before {
+  top: -22vmax;
+  left: -18vmax;
+}
+
+.portfolio-site .portfolio-mist-transition::after {
+  right: -24vmax;
+  bottom: -18vmax;
+  opacity: .22;
+  transform: rotate(14deg);
+}
+
+@media (max-width: 900px) {
+  .portfolio-site.is-page-about .portfolio-story__panels .portfolio-panel,
+  .portfolio-site.is-page-project .portfolio-story__panels .portfolio-panel,
+  .portfolio-site.is-page-about .portfolio-story__panels .portfolio-panel.is-active,
+  .portfolio-site.is-page-project .portfolio-story__panels .portfolio-panel.is-active {
+    padding: 32px clamp(22px, 6vw, 34px) clamp(96px, 14vh, 132px) !important;
+  }
+
+  .portfolio-site.is-page-project .portfolio-story__panels .portfolio-figure--pair .portfolio-figure__image {
+    aspect-ratio: 4 / 5;
+  }
+
+  .portfolio-site.is-page-project .is-interaction-wide .portfolio-figure__image,
+  .portfolio-site.is-page-project .is-emotion-wide .portfolio-figure__image,
+  .portfolio-site.is-page-project .is-space-wide .portfolio-figure__image {
+    aspect-ratio: 16 / 10;
+  }
+
+  .portfolio-site.is-page-about .portfolio-story__panels .portfolio-panel__copy,
+  .portfolio-site.is-page-project .portfolio-story__panels .portfolio-panel__copy {
+    margin-top: 38px !important;
+  }
+
+  .portfolio-site.is-page-about .portfolio-story__panels .portfolio-panel__copy p,
+  .portfolio-site.is-page-project .portfolio-story__panels .portfolio-panel__copy p {
+    max-width: 39ch !important;
+    font-size: 16px !important;
+    line-height: 1.68 !important;
+  }
+
+  .portfolio-figure figcaption,
+  .portfolio-kicker {
+    font-size: 9px;
+  }
+
+  .portfolio-figure--pair .portfolio-figure__image > span {
+    right: 9px;
+    bottom: 9px;
+    font-size: 7px;
+  }
+
+  .portfolio-contact {
+    padding-inline: 22px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .portfolio-site .portfolio-mist-transition {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .portfolio-site .portfolio-mist-transition::before,
+  .portfolio-site .portfolio-mist-transition::after {
+    display: none;
+  }
+}
