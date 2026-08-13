@@ -2790,12 +2790,10 @@ function prepareWorld(source, biomeMacroTexture, caveLookdevSource) {
     candidate.geometry = object.geometry.clone()
     candidate.material = new THREE.MeshStandardMaterial({
       name: `MAT_${object.name}`,
-      color: object.name.includes('PUDDLE')
-        ? '#26332e'
-        : object.name.includes('FLOOR')
+      color: object.name.includes('FLOOR')
           ? '#252b26'
           : '#29312d',
-      roughness: object.name.includes('PUDDLE') ? 0.58 : 0.92,
+      roughness: 0.92,
       metalness: 0,
     })
     candidate.position.copy(object.position)
@@ -3081,7 +3079,7 @@ function prepareWorld(source, biomeMacroTexture, caveLookdevSource) {
     root.add(object)
     groups.cave.push(object)
     object.frustumCulled = true
-    object.castShadow = !object.name.includes('PUDDLE')
+    object.castShadow = true
     object.receiveShadow = false
     object.userData.journeySkipPlanarReflection = true
     object.userData.journeyCaveLookdevVersion = 'v003-macro-space'
@@ -3089,22 +3087,12 @@ function prepareWorld(source, biomeMacroTexture, caveLookdevSource) {
     material.dithering = true
     material.transparent = true
     material.side = THREE.DoubleSide
-    material.depthWrite = !object.name.includes('PUDDLE')
-    material.envMapIntensity = object.name.includes('PUDDLE') ? 0.48 : 0.16
-    if (object.name.includes('PUDDLE')) {
-      material.opacity = 0.46
-      material.clearcoat = 0.18
-      material.clearcoatRoughness = 0.46
-      material.specularIntensity = 0.24
-      material.emissive.set('#111b17')
-      material.emissiveIntensity = 0.08
-      object.renderOrder = 1
-    } else {
-      material.color.lerp(new THREE.Color(CAVE_LOOK.materialTint), 0.58)
-      material.emissive.set(object.name.includes('FLOOR') ? '#0a0e0b' : '#101612')
-      material.emissiveIntensity = object.name.includes('FLOOR') ? 0.035 : 0.055
-      applyCaveSurfaceDetail(material)
-    }
+    material.depthWrite = true
+    material.envMapIntensity = 0.16
+    material.color.lerp(new THREE.Color(CAVE_LOOK.materialTint), 0.58)
+    material.emissive.set(object.name.includes('FLOOR') ? '#0a0e0b' : '#101612')
+    material.emissiveIntensity = object.name.includes('FLOOR') ? 0.035 : 0.055
+    applyCaveSurfaceDetail(material)
     material.userData.journeyCaveBaseOpacity = material.opacity
     material.userData.journeyCaveBaseColor = material.color.clone()
     material.userData.journeyCaveBaseEmissive = material.emissive.clone()
