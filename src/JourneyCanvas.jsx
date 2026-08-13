@@ -340,6 +340,7 @@ export default function JourneyCanvas({
   skyConnectionProgress,
   activeGate,
   holdProgress,
+  fogClearProgress,
   fogCompleted,
   presentationMode,
   endingCaptureRequest,
@@ -377,6 +378,7 @@ export default function JourneyCanvas({
           skyConnectionProgress={presentationMode ? 0 : skyConnectionProgress}
           activeGate={presentationMode ? null : activeGate}
           holdProgress={presentationMode ? 0 : holdProgress}
+          fogClearProgress={presentationMode ? 1 : fogClearProgress}
           fogCompleted={presentationMode ? true : fogCompleted}
           presentationMode={presentationMode}
           onListenerPose={onListenerPose}
