@@ -6044,7 +6044,7 @@ export default function JourneyScene({
       )
       camera.position.addScaledVector(
         cameraScratch.right,
-        horizontalBob - portraitFactor * THREE.MathUtils.lerp(0.16, 0.58, portraitVista),
+        horizontalBob - portraitFactor * THREE.MathUtils.lerp(0.12, 0.46, portraitVista),
       )
       camera.position.y +=
         verticalBob +
@@ -6059,7 +6059,7 @@ export default function JourneyScene({
         portraitFactor * (1 - endingLift) * 0.08
       cameraScratch.target.addScaledVector(
         cameraScratch.right,
-        -portraitFactor * THREE.MathUtils.lerp(0.12, 0.38, portraitVista),
+        portraitFactor * THREE.MathUtils.lerp(0.08, 0.28, portraitVista),
       )
       camera.up.set(0, 1, 0)
       camera.lookAt(cameraScratch.target)
