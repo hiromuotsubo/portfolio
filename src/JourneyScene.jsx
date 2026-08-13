@@ -6059,7 +6059,7 @@ export default function JourneyScene({
         portraitFactor * (1 - endingLift) * 0.08
       cameraScratch.target.addScaledVector(
         cameraScratch.right,
-        portraitFactor * THREE.MathUtils.lerp(0.08, 0.28, portraitVista),
+        -portraitFactor * THREE.MathUtils.lerp(0.02, 0.08, portraitVista),
       )
       camera.up.set(0, 1, 0)
       camera.lookAt(cameraScratch.target)
