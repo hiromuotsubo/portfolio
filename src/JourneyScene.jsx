@@ -2791,11 +2791,11 @@ function prepareWorld(source, biomeMacroTexture, caveLookdevSource) {
     candidate.material = new THREE.MeshStandardMaterial({
       name: `MAT_${object.name}`,
       color: object.name.includes('PUDDLE')
-        ? '#12211f'
+        ? '#26332e'
         : object.name.includes('FLOOR')
           ? '#252b26'
           : '#29312d',
-      roughness: object.name.includes('PUDDLE') ? 0.36 : 0.92,
+      roughness: object.name.includes('PUDDLE') ? 0.58 : 0.92,
       metalness: 0,
     })
     candidate.position.copy(object.position)
@@ -3092,11 +3092,12 @@ function prepareWorld(source, biomeMacroTexture, caveLookdevSource) {
     material.depthWrite = !object.name.includes('PUDDLE')
     material.envMapIntensity = object.name.includes('PUDDLE') ? 0.48 : 0.16
     if (object.name.includes('PUDDLE')) {
-      material.clearcoat = 0.34
-      material.clearcoatRoughness = 0.24
-      material.specularIntensity = 0.42
-      material.emissive.set('#07110f')
-      material.emissiveIntensity = 0.035
+      material.opacity = 0.46
+      material.clearcoat = 0.18
+      material.clearcoatRoughness = 0.46
+      material.specularIntensity = 0.24
+      material.emissive.set('#111b17')
+      material.emissiveIntensity = 0.08
       object.renderOrder = 1
     } else {
       material.color.lerp(new THREE.Color(CAVE_LOOK.materialTint), 0.58)
