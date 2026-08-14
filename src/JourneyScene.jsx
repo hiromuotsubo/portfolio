@@ -88,8 +88,8 @@ const CAVE_PORTAL_FADE_START_Z = -1.08
 const CAVE_PORTAL_FADE_END_Z = -2.42
 const CAVE_CAMERA_RELEASE_END = 20
 const CAVE_CAMERA_CONTINUATION_DISTANCE = 2.15
-const VALLEY_REVEAL_START = 11.98
-const VALLEY_REVEAL_END = 12.24
+const VALLEY_REVEAL_START = 9.55
+const VALLEY_REVEAL_END = 10.25
 // Depth fog supplies the cave-exit mist. Camera-facing cards are retained as
 // rollback assets but stay disabled because their projection crosses the sky.
 const USE_VIEW_FACING_FOG_CARDS = false
@@ -2961,6 +2961,10 @@ function prepareWorld(source, biomeMacroTexture, caveLookdevSource) {
       materials.forEach((material) => {
         material.userData.journeyCaveBaseOpacity = material.opacity
         material.transparent = true
+        // Exterior depth fog must already exist beyond the opening, but it
+        // must not wash the cave shell into the same pale field. Keeping rock
+        // out of scene fog preserves a physical, dark frame around the mist.
+        material.fog = false
         // The opening camera starts inside the authored shell. Preserve its
         // geometry and lighting, but render the inner faces so the cave is a
         // readable place rather than an all-black loading-like interval.
@@ -3182,6 +3186,7 @@ function prepareWorld(source, biomeMacroTexture, caveLookdevSource) {
     const material = object.material
     material.dithering = true
     material.transparent = true
+    material.fog = false
     material.side = THREE.DoubleSide
     material.depthWrite = true
     material.envMapIntensity = 0.16
@@ -7046,12 +7051,19 @@ export default function JourneyScene({
     )
 
     const openAirFogDensity = THREE.MathUtils.lerp(0.00098, 0.00076, night)
-    // Fog is fully prepared behind the portal before the first valley pixel
-    // appears. The sky stays clear because the atmosphere material is not
-    // fogged, while depth fog gathers over the lower valley and conceals the
-    // mountains/river strongly enough to make HOLD's reveal unmistakable.
+    // Fog and valley geometry are already prepared behind the opening. At the
+    // portal the mist is dense enough to read immediately, but not so dense
+    // that every landscape silhouette disappears into a uniform white field.
+    // It gathers to the full HOLD density as the camera reaches its settled
+    // outdoor pose, preserving the intended discovery without a blank frame.
     const caveAirFog = THREE.MathUtils.lerp(0.0022, 0.00275, exitAirMix)
-    const preHoldFog = THREE.MathUtils.lerp(caveAirFog, 0.0088, valleyFogArrival)
+    const exitFogSettle = smoothstep(10.25, JOURNEY_CAVE_SEQUENCE.fogGate, progress)
+    const exteriorFogDensity = THREE.MathUtils.lerp(0.0057, 0.0088, exitFogSettle)
+    const preHoldFog = THREE.MathUtils.lerp(
+      caveAirFog,
+      exteriorFogDensity,
+      valleyFogArrival,
+    )
     const entranceFog = THREE.MathUtils.lerp(
       preHoldFog,
       openAirFogDensity,
@@ -7061,9 +7073,11 @@ export default function JourneyScene({
       const openAirFog = frameColors.openAirFog
         .copy(skyColor)
         .multiplyScalar(THREE.MathUtils.lerp(0.91, 0.82, night))
+        .multiplyScalar(THREE.MathUtils.lerp(0.74, 1, exitFogSettle))
+      const exteriorFogColorMix = smoothstep(7.8, JOURNEY_CAVE_SEQUENCE.fogGate, progress)
       state.scene.fog.color
-        .set('#050909')
-        .lerp(openAirFog, exitAirMix)
+        .set('#101817')
+        .lerp(openAirFog, exteriorFogColorMix)
       state.scene.fog.density = diagnostics.fog
         ? 0
         : Math.max(

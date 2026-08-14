@@ -244,7 +244,77 @@ const PORTFOLIO_IMAGE_URLS = [
   '/portfolio/project-emotion-night-v4.jpg',
 ]
 
-function useAmbientAudio(progress, fogCompleted, endingQuiet = false) {
+const JOURNEY_AUDIO_DEFINITIONS = Object.freeze({
+  cave: Object.freeze({
+    url: '/journey/audio/cave-master.m4a',
+    position: [0, 3, -8],
+    refDistance: 10,
+    filter: Object.freeze({ type: 'lowpass', frequency: 5200, q: 0.42 }),
+  }),
+  wind: Object.freeze({
+    url: '/journey/audio/wind-master.m4a',
+    position: [-58, 32, -112],
+    refDistance: 38,
+    filter: Object.freeze({ type: 'highpass', frequency: 72, q: 0.48 }),
+  }),
+  river: Object.freeze({
+    url: '/journey/audio/river-master.m4a',
+    position: [12, -1, -82],
+    refDistance: 25,
+    filter: Object.freeze({ type: 'lowpass', frequency: 8200, q: 0.36 }),
+  }),
+})
+
+let journeyAudioPreloadPromise = null
+let portfolioImagePreloadPromise = null
+
+const preloadPortfolioImages = () => {
+  if (portfolioImagePreloadPromise) return portfolioImagePreloadPromise
+  performance.mark?.('journey-portfolio-images-preload-start')
+  portfolioImagePreloadPromise = Promise.all(
+    PORTFOLIO_IMAGE_URLS.map((source) => (
+      decodeImageSource(source).then(() => null).catch(() => null)
+    )),
+  ).finally(() => {
+    performance.mark?.('journey-portfolio-images-preload-complete')
+  })
+  return portfolioImagePreloadPromise
+}
+
+const preloadJourneyAudio = () => {
+  if (journeyAudioPreloadPromise) return journeyAudioPreloadPromise
+  performance.mark?.('journey-audio-preload-start')
+  journeyAudioPreloadPromise = Promise.all(
+    Object.entries(JOURNEY_AUDIO_DEFINITIONS).map(async ([name, definition]) => {
+      const response = await fetch(definition.url)
+      if (!response.ok) throw new Error(`Unable to load ${definition.url}`)
+      return [name, definition, await response.arrayBuffer()]
+    }),
+  ).then(async (encodedTracks) => {
+    const OfflineAudioContext = window.OfflineAudioContext || window.webkitOfflineAudioContext
+    if (!OfflineAudioContext) return { encodedTracks, decodedTracks: null }
+    try {
+      const decoder = new OfflineAudioContext(2, 1, 44100)
+      const decodedTracks = await Promise.all(
+        encodedTracks.map(async ([name, definition, encoded]) => [
+          name,
+          definition,
+          await decoder.decodeAudioData(encoded.slice(0)),
+        ]),
+      )
+      return { encodedTracks: null, decodedTracks }
+    } catch {
+      // Network data is still cached; decode it after the ENTER gesture in
+      // browsers that do not permit an OfflineAudioContext during loading.
+      return { encodedTracks, decodedTracks: null }
+    }
+  }).finally(() => {
+    performance.mark?.('journey-audio-preload-complete')
+  })
+  return journeyAudioPreloadPromise
+}
+
+function useAmbientAudio(progress, fogCompleted, endingQuiet = false, preloadEnabled = true) {
   const audioRef = useRef(null)
   const listenerPoseRef = useRef({
     time: 0,
@@ -252,6 +322,27 @@ function useAmbientAudio(progress, fogCompleted, endingQuiet = false) {
     forward: [Infinity, Infinity, Infinity],
   })
   const [audioReady, setAudioReady] = useState(false)
+  const [audioPrepared, setAudioPrepared] = useState(!preloadEnabled)
+
+  useEffect(() => {
+    if (!preloadEnabled) {
+      setAudioPrepared(true)
+      return undefined
+    }
+    let cancelled = false
+    setAudioPrepared(false)
+    preloadJourneyAudio()
+      .catch(() => {
+        // Audio is progressive enhancement; a network/audio codec failure
+        // must not deadlock the visual experience.
+      })
+      .finally(() => {
+        if (!cancelled) setAudioPrepared(true)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [preloadEnabled])
 
   const ensureAudio = useCallback(async () => {
     if (audioRef.current) {
@@ -274,35 +365,14 @@ function useAmbientAudio(progress, fogCompleted, endingQuiet = false) {
     audioRef.current = { context, master, compressor, tracks: {}, cancelled: false }
     await context.resume()
 
-    const definitions = {
-      cave: {
-        url: '/journey/audio/cave-master.m4a',
-        position: [0, 3, -8],
-        refDistance: 10,
-        filter: { type: 'lowpass', frequency: 5200, q: 0.42 },
-      },
-      wind: {
-        url: '/journey/audio/wind-master.m4a',
-        position: [-58, 32, -112],
-        refDistance: 38,
-        filter: { type: 'highpass', frequency: 72, q: 0.48 },
-      },
-      river: {
-        url: '/journey/audio/river-master.m4a',
-        position: [12, -1, -82],
-        refDistance: 25,
-        filter: { type: 'lowpass', frequency: 8200, q: 0.36 },
-      },
-    }
-
     try {
-      const decoded = await Promise.all(
-        Object.entries(definitions).map(async ([name, definition]) => {
-          const response = await fetch(definition.url)
-          if (!response.ok) throw new Error(`Unable to load ${definition.url}`)
-          const buffer = await context.decodeAudioData(await response.arrayBuffer())
-          return [name, definition, buffer]
-        }),
+      const prepared = await preloadJourneyAudio()
+      const decoded = prepared.decodedTracks ?? await Promise.all(
+        prepared.encodedTracks.map(async ([name, definition, encoded]) => [
+          name,
+          definition,
+          await context.decodeAudioData(encoded.slice(0)),
+        ]),
       )
       if (audioRef.current?.cancelled) return
 
@@ -428,7 +498,7 @@ function useAmbientAudio(progress, fogCompleted, endingQuiet = false) {
     [],
   )
 
-  return { ensureAudio, updateListenerPose }
+  return { ensureAudio, updateListenerPose, audioPrepared }
 }
 
 function HiromuMark({ stage = 4, compact = false }) {
@@ -457,22 +527,40 @@ function HiromuMark({ stage = 4, compact = false }) {
   )
 }
 
-function ExperienceLoader({ entered, onEnter, assetsActive, assetProgress }) {
+function ExperienceLoader({
+  entered,
+  onEnter,
+  assetsActive,
+  assetProgress,
+  audioPrepared,
+  portfolioImagesPrepared,
+}) {
   const [dismissed, setDismissed] = useState(false)
   const [visualProgress, setVisualProgress] = useState(0)
   const [animationStage, setAnimationStage] = useState(0)
-  const loadComplete = !assetsActive && assetProgress >= 100
+  const safeAssetProgress = Number.isFinite(assetProgress)
+    ? clamp(assetProgress, 0, 100)
+    : 0
+  const loadComplete = !assetsActive &&
+    safeAssetProgress >= 100 &&
+    audioPrepared &&
+    portfolioImagesPrepared
   const ready = loadComplete && visualProgress >= 99.5
 
   useEffect(() => {
     let frame
     let previous = performance.now()
     const tick = (time) => {
-      const elapsed = Math.min((time - previous) / 1000, 0.05)
+      const elapsed = Math.max(0, Math.min((time - previous) / 1000, 0.05))
       previous = time
       setVisualProgress((current) => {
         const ceiling = loadComplete ? 100 : 92
-        return Math.min(ceiling, current + elapsed * (loadComplete ? 27 : 22))
+        const safeCurrent = Number.isFinite(current) ? clamp(current, 0, 100) : 0
+        return clamp(
+          safeCurrent + elapsed * (loadComplete ? 27 : 22),
+          0,
+          ceiling,
+        )
       })
       frame = window.requestAnimationFrame(tick)
     }
@@ -501,7 +589,11 @@ function ExperienceLoader({ entered, onEnter, assetsActive, assetProgress }) {
 
   if (dismissed) return null
 
-  const displayedProgress = Math.min(100, Math.round(visualProgress))
+  const displayedProgress = clamp(
+    Math.round(Number.isFinite(visualProgress) ? visualProgress : 0),
+    0,
+    100,
+  )
 
   return (
     <div
@@ -528,7 +620,7 @@ function ExperienceLoader({ entered, onEnter, assetsActive, assetProgress }) {
             {displayedProgress}
             <small>%</small>
           </span>
-          <i aria-hidden="true"><b style={{ width: `${visualProgress}%` }} /></i>
+          <i aria-hidden="true"><b style={{ width: `${displayedProgress}%` }} /></i>
         </div>
         <div className="experience-loader__action">
           {ready ? (
@@ -1060,6 +1152,7 @@ function LegacyApp() {
   const [displayedMessage, setDisplayedMessage] = useState(null)
   const [messageVisible, setMessageVisible] = useState(false)
   const [journeyAssets, setJourneyAssets] = useState({ active: true, progress: 0 })
+  const [portfolioImagesPrepared, setPortfolioImagesPrepared] = useState(showPortfolio)
   const [endingCaptureRequest, setEndingCaptureRequest] = useState(0)
   const [endingFrameSource, setEndingFrameSource] = useState(null)
   const [endingFrameLoaded, setEndingFrameLoaded] = useState(false)
@@ -1095,10 +1188,11 @@ function LegacyApp() {
   const endingCommittedRef = useRef(
     DEV_PREVIEW === 'portfolio' || INITIAL_VIEW === 'portfolio',
   )
-  const { ensureAudio, updateListenerPose } = useAmbientAudio(
+  const { ensureAudio, updateListenerPose, audioPrepared } = useAmbientAudio(
     progress,
     fogCompleted,
     showOutro,
+    !showPortfolio,
   )
 
   const clearEndingCapture = useCallback(() => {
@@ -1183,35 +1277,30 @@ function LegacyApp() {
   }, [recordEndingCaptureFailure])
 
   const handleJourneyAssets = useCallback(({ active, progress: nextProgress }) => {
+    const safeProgress = Number.isFinite(nextProgress)
+      ? clamp(nextProgress, 0, 100)
+      : 0
     setJourneyAssets((current) =>
-      current.active === active && Math.abs(current.progress - nextProgress) < 0.05
+      current.active === Boolean(active) && Math.abs(current.progress - safeProgress) < 0.05
         ? current
-        : { active, progress: nextProgress },
+        : { active: Boolean(active), progress: safeProgress },
     )
   }, [])
 
   useEffect(() => {
-    if (!entered) return undefined
-
-    const preloadPortfolioImages = () => {
-      PORTFOLIO_IMAGE_URLS.forEach((source) => {
-        const image = new Image()
-        image.decoding = 'async'
-        image.src = source
-      })
+    if (showPortfolio) {
+      setPortfolioImagesPrepared(true)
+      return undefined
     }
-    const idleId = window.requestIdleCallback?.(preloadPortfolioImages, {
-      timeout: 5000,
+    let cancelled = false
+    setPortfolioImagesPrepared(false)
+    preloadPortfolioImages().finally(() => {
+      if (!cancelled) setPortfolioImagesPrepared(true)
     })
-    const timeoutId = idleId == null
-      ? window.setTimeout(preloadPortfolioImages, 1800)
-      : null
-
     return () => {
-      if (idleId != null) window.cancelIdleCallback?.(idleId)
-      if (timeoutId != null) window.clearTimeout(timeoutId)
+      cancelled = true
     }
-  }, [entered])
+  }, [showPortfolio])
 
   useEffect(() => {
     const isOutroPreview = DEV_PREVIEW === 'outro'
@@ -1915,7 +2004,7 @@ function LegacyApp() {
     : activeGate === 'fog'
       ? holdProgress
       : 0
-  const valleyMist = getJourneyFogArrival(progress) * (1 - fogClearProgress)
+  const valleyMist = getJourneyFogArrival(progress) * openAir * (1 - fogClearProgress)
   const queuedMessage = STORY_MESSAGES.find(
     (message) => progress >= message.start && progress <= message.end,
   )
@@ -2144,6 +2233,8 @@ function LegacyApp() {
           onEnter={enterExperience}
           assetsActive={journeyAssets.active}
           assetProgress={journeyAssets.progress}
+          audioPrepared={audioPrepared}
+          portfolioImagesPrepared={portfolioImagesPrepared}
         />
       ) : null}
 

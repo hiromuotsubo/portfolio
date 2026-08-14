@@ -296,10 +296,15 @@ function JourneyVisualReadyBridge({ onProgress, quality }) {
       // its exact authored visibility; no alternate story frame reaches the
       // default framebuffer.
       const hiddenObjects = []
+      const frustumCulledObjects = []
       scene.traverse((object) => {
         if (!object.visible) {
           hiddenObjects.push(object)
           object.visible = true
+        }
+        if (object.frustumCulled) {
+          frustumCulledObjects.push(object)
+          object.frustumCulled = false
         }
       })
       try {
@@ -333,6 +338,9 @@ function JourneyVisualReadyBridge({ onProgress, quality }) {
       } finally {
         hiddenObjects.forEach((object) => {
           object.visible = false
+        })
+        frustumCulledObjects.forEach((object) => {
+          object.frustumCulled = true
         })
       }
       if (cancelled || generation !== generationRef.current) return

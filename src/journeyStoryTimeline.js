@@ -6,18 +6,19 @@ const smootherstep = (start, end, value) => {
   return t * t * t * (t * (t * 6 - 15) + 10)
 }
 
-// Geometry-derived V1 handoff points. The exterior fog is already complete
-// behind the portal before valley geometry becomes visible. This prevents the
-// single clear outdoor frame that previously appeared between cave culling
-// and Fog/HOLD activation. The HOLD gate remains at the established 13.5
-// visual anchor so the later valley/TOD baseline stays unchanged.
+// Geometry-derived V1 handoff points. Exterior fog and the complete valley are
+// resident behind the opening while the camera is still inside the cave. The
+// rock frame then leaves only as the camera physically crosses it, so there is
+// never an empty background between Cave and Fog/HOLD. The HOLD gate remains
+// at the established 13.5 visual anchor so the later valley/TOD baseline stays
+// unchanged.
 export const JOURNEY_CAVE_SEQUENCE = Object.freeze({
   portalCrossing: 11.82,
-  portalCleared: 12.08,
+  portalCleared: 12.74,
   outdoorSettled: 13.5,
-  caveFadeEnd: 12.18,
-  fogArrivalStart: 11.62,
-  fogArrivalEnd: 11.96,
+  caveFadeEnd: 13.05,
+  fogArrivalStart: 8.85,
+  fogArrivalEnd: 9.55,
   fogGate: 13.5,
   fogDuration: 2500,
   reverseFogStart: 15.5,
