@@ -498,7 +498,8 @@
 }
 
 .portfolio-home__copy button:hover .short-arrow,
-.portfolio-panel__copy button:hover .short-arrow {
+.portfolio-panel__copy button:hover .short-arrow,
+.portfolio-panel__copy a:hover .short-arrow {
   transform: translate(2px, -2px);
 }
 
@@ -2147,12 +2148,11 @@
   text-overflow: ellipsis;
 }
 
-.portfolio-contact__links i {
-  font-style: normal;
+.portfolio-contact__links .short-arrow {
   transition: transform 300ms ease;
 }
 
-.portfolio-contact__links a:hover i {
+.portfolio-contact__links a:hover .short-arrow {
   transform: translate(4px, -4px);
 }
 
@@ -4065,7 +4065,7 @@ textarea,
 }
 
 .experience-loader.is-ready .experience-loader__action button span,
-.experience-loader.is-ready .experience-loader__action button > i {
+.experience-loader.is-ready .experience-loader__action button > .short-arrow {
   position: relative;
   z-index: 1;
   color: #f0eee6;

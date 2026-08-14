@@ -649,7 +649,7 @@ function ExperienceLoader({
             <div className="experience-loader__ready">
               <button type="button" onClick={onEnter}>
                 <span>ENTER THE JOURNEY</span>
-                <i aria-hidden="true">↗</i>
+                <ShortArrow />
               </button>
             </div>
           ) : null}
@@ -1080,7 +1080,7 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
             <h3>Human scale amplifies vastness.</h3>
             <p>This idea became the foundation of my research on awe in immersive VR, comparing first- and third-person perspectives.</p>
             <p>I also contributed as a co-author to related studies on awe, emotion and human experience.</p>
-            <a href="https://scholar.google.co.jp/citations?user=xiwv18wAAAAJ&hl=ja" target="_blank" rel="noreferrer">VIEW RESEARCH <span>↗</span></a>
+            <a href="https://scholar.google.co.jp/citations?user=xiwv18wAAAAJ&hl=ja" target="_blank" rel="noreferrer">VIEW RESEARCH <ShortArrow /></a>
           </div>
         </article>
 
@@ -1308,8 +1308,8 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
             <h2 id="contact-title">Let’s Talk</h2>
             <p>For collaborations, research or thoughtful ideas.</p>
             <div className="portfolio-contact__links">
-              <a href="mailto:hiromu.otsubo.design@gmail.com"><small>EMAIL</small><span>hiromu.otsubo.design@gmail.com</span><i>↗</i></a>
-              <a href="https://note.com/hiromu_o" target="_blank" rel="noreferrer"><small>WRITING</small><span>note / hiromu_o</span><i>↗</i></a>
+              <a href="mailto:hiromu.otsubo.design@gmail.com"><small>EMAIL</small><span>hiromu.otsubo.design@gmail.com</span><ShortArrow /></a>
+              <a href="https://note.com/hiromu_o" target="_blank" rel="noreferrer"><small>WRITING</small><span>note / hiromu_o</span><ShortArrow /></a>
             </div>
             <footer><span>HIROMU OTSUBO</span><span>PORTFOLIO</span><span>© 2026</span></footer>
           </section>
