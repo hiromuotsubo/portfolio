@@ -84,19 +84,60 @@ const smoothstep = (edge0, edge1, value) => {
   return x * x * (3 - 2 * x)
 }
 
+const smootherstep = (edge0, edge1, value) => {
+  const x = clamp01((value - edge0) / (edge1 - edge0))
+  return x * x * x * (x * (x * 6 - 15) + 10)
+}
+
 const CAVE_PORTAL_FADE_START_Z = -1.08
 const CAVE_PORTAL_FADE_END_Z = -2.42
 const CAVE_CAMERA_RELEASE_END = 20
 const CAVE_CAMERA_CONTINUATION_DISTANCE = 2.15
-const VALLEY_REVEAL_START = 9.55
-const VALLEY_REVEAL_END = 10.25
+// The exterior is not one flat layer. Its distant silhouette becomes legible
+// first through the cave opening, then the valley floor and river, with grass
+// resolving last. Keeping these depth bands separate prevents a fast wheel
+// gesture from turning the cave exit into a scene cut.
+const VALLEY_REVEAL_START = 9.1
+const VALLEY_REVEAL_END = 12.55
+const VALLEY_FAR_REVEAL_START = 8.8
+const VALLEY_FAR_REVEAL_END = 12.1
+const VALLEY_GROUND_REVEAL_START = 10
+const VALLEY_GROUND_REVEAL_END = 12.75
+const VALLEY_RIVER_REVEAL_START = 10.25
+const VALLEY_RIVER_REVEAL_END = 12.85
+const VALLEY_DETAIL_REVEAL_START = 10.65
+const VALLEY_DETAIL_REVEAL_END = 13.05
 // Depth fog supplies the cave-exit mist. Camera-facing cards are retained as
 // rollback assets but stay disabled because their projection crosses the sky.
 const USE_VIEW_FACING_FOG_CARDS = false
 
-const getJourneyValleyPresence = (progress) => smoothstep(
+const getJourneyValleyPresence = (progress) => smootherstep(
   VALLEY_REVEAL_START,
   VALLEY_REVEAL_END,
+  progress,
+)
+
+const getJourneyValleyFarPresence = (progress) => smootherstep(
+  VALLEY_FAR_REVEAL_START,
+  VALLEY_FAR_REVEAL_END,
+  progress,
+)
+
+const getJourneyValleyGroundPresence = (progress) => smootherstep(
+  VALLEY_GROUND_REVEAL_START,
+  VALLEY_GROUND_REVEAL_END,
+  progress,
+)
+
+const getJourneyValleyRiverPresence = (progress) => smootherstep(
+  VALLEY_RIVER_REVEAL_START,
+  VALLEY_RIVER_REVEAL_END,
+  progress,
+)
+
+const getJourneyValleyDetailPresence = (progress) => smootherstep(
+  VALLEY_DETAIL_REVEAL_START,
+  VALLEY_DETAIL_REVEAL_END,
   progress,
 )
 
@@ -2091,6 +2132,7 @@ function applyAlpineProduction(material, isFarRidge, biomeMacroTexture) {
     uJourneyRiverLight: { value: 0 },
     uJourneyDiscovery: { value: 0 },
     uJourneyTime: { value: 0 },
+    uJourneyEntranceReveal: { value: 1 },
     uJourneyBiomeMacro: { value: biomeMacroTexture },
   }
   material.userData.journeyAlpineUniforms = uniforms
@@ -2119,6 +2161,7 @@ uniform float uJourneySunset;
 uniform float uJourneyNight;
 uniform float uJourneyRiverLight;
 uniform float uJourneyDiscovery;
+uniform float uJourneyEntranceReveal;
 uniform sampler2D uJourneyBiomeMacro;
 
 float journeyProductionHash(vec2 point) {
@@ -2334,9 +2377,19 @@ roughnessFactor = clamp(roughnessFactor, 0.58, 0.94);`,
 totalEmissiveRadiance += diffuseColor.rgb * uJourneyNight * 0.025;
 totalEmissiveRadiance += vec3(0.01, 0.024, 0.055) * uJourneyNight;`,
       )
+      .replace(
+        '#include <fog_fragment>',
+        `#include <fog_fragment>
+#ifdef USE_FOG
+  // Reveal opaque terrain by increasing its contrast out of the exact scene
+  // fog colour. This preserves stable depth while avoiding a hard visibility
+  // switch or transparent mountain intersections at the cave mouth.
+  gl_FragColor.rgb = mix(fogColor, gl_FragColor.rgb, uJourneyEntranceReveal);
+#endif`,
+      )
   }
   material.customProgramCacheKey = () =>
-    `journey-alpine-production-${material.type}-${isFarRidge ? 'far' : 'near'}-v4-lambert-compatible`
+    `journey-alpine-production-${material.type}-${isFarRidge ? 'far' : 'near'}-v5-entrance-depth-reveal`
   material.needsUpdate = true
 }
 
@@ -4248,7 +4301,7 @@ function NaturalRiverCorridor({ progress, qualityScale = 1, reflectionDisabled =
   }, [reflectionMaterial, reflectionTarget])
 
   useFrame((state) => {
-    const reveal = getJourneyValleyPresence(progress)
+    const reveal = getJourneyValleyRiverPresence(progress)
     const { nightWeight: night } = getJourneyTimeOfDay(progress)
     if (corridorRef.current) corridorRef.current.visible = reveal > 0.01
     if (reflectionMeshRef.current) reflectionMeshRef.current.visible = reveal > 0.01
@@ -4542,7 +4595,7 @@ function FarRidgeCrown({ progress, biomeMacroTexture }) {
     material.dispose()
   }, [geometry, material])
   useFrame(() => {
-    const reveal = getJourneyValleyPresence(progress)
+    const reveal = getJourneyValleyFarPresence(progress)
     const { sunsetWeight: sunset, nightWeight: night } = getJourneyTimeOfDay(progress)
     material.opacity = reveal * THREE.MathUtils.lerp(0.44, 0.26, night)
     material.color
@@ -4555,6 +4608,7 @@ function FarRidgeCrown({ progress, biomeMacroTexture }) {
       uniforms.uJourneyNight.value = night
       uniforms.uJourneyDiscovery.value = 0
       uniforms.uJourneyTime.value = 0
+      uniforms.uJourneyEntranceReveal.value = reveal
     }
   })
   return (
@@ -5624,7 +5678,8 @@ function ValleyMeadow({ diagnostics = {}, progress, travelWindRef, qualityScale 
   }, [flowerGeometry, flowerMaterial, flowerPointGeometry, flowerPointMaterial, flowerPointTexture, foregroundGrassGeometry, grassMaterial, groundGeometry, groundMaterial, groundTexture, midGrassGeometry, nearGrassGeometry])
 
   useFrame((state, delta) => {
-    const reveal = getJourneyValleyPresence(progress)
+    const reveal = getJourneyValleyDetailPresence(progress)
+    const groundReveal = getJourneyValleyGroundPresence(progress)
     const {
       dayWeight,
       sunsetWeight: sunset,
@@ -5718,10 +5773,10 @@ function ValleyMeadow({ diagnostics = {}, progress, travelWindRef, qualityScale 
       document.documentElement.dataset.journeyStrongestGust = frameStrongestGust.toFixed(6)
     }
     const groundUniforms = groundMaterial.userData.journeyMeadowGroundUniforms
-    groundUniforms.uJourneyReveal.value = reveal
+    groundUniforms.uJourneyReveal.value = groundReveal
     groundUniforms.uJourneyNight.value = night
     groundUniforms.uJourneySunset.value = sunset
-    if (groundRef.current) groundRef.current.visible = reveal > 0.01
+    if (groundRef.current) groundRef.current.visible = groundReveal > 0.01
     if (nearGrassRef.current) nearGrassRef.current.visible = reveal > 0.01 && !diagnostics.grass
     if (midGrassRef.current) midGrassRef.current.visible = reveal > 0.01 && !diagnostics.grass
     if (foregroundGrassRef.current) {
@@ -5881,7 +5936,7 @@ function ValleyForestEdge({ progress, qualityScale = 1 }) {
   }, [activeCount, material, palette, placements])
 
   useFrame(() => {
-    const reveal = getJourneyValleyPresence(progress)
+    const reveal = getJourneyValleyDetailPresence(progress)
     const { sunsetWeight: sunset, nightWeight: night } = getJourneyTimeOfDay(progress)
     if (meshRef.current) meshRef.current.visible = reveal > 0.002
     material.opacity = reveal * THREE.MathUtils.lerp(0.38, 0.3, night)
@@ -6913,7 +6968,7 @@ export default function JourneyScene({
       .set('#07100f')
       .lerp(skyColor, caveBackgroundReveal)
 
-    const portalSkyMix = smoothstep(9.4, VALLEY_REVEAL_END, progress)
+    const portalSkyMix = getJourneyValleyFarPresence(progress)
     if (skyAtmosphereMaterialRef.current) {
       const uniforms = skyAtmosphereMaterialRef.current.uniforms
       uniforms.uJourneyTopColor.value
@@ -6949,7 +7004,7 @@ export default function JourneyScene({
     }
 
     if (cloudGroupRef.current) {
-      const openSky = getJourneyValleyPresence(progress)
+      const openSky = getJourneyValleyFarPresence(progress)
       const cloudNightFade = 1 - smoothstep(0.12, 0.92, night)
       const cloudsVisible = openSky * cloudNightFade > 0.002
       cloudGroupRef.current.visible = cloudsVisible
@@ -7239,10 +7294,14 @@ export default function JourneyScene({
 
     const openValley = getJourneyValleyPresence(progress)
     phase2Groups.ridges.forEach((mesh) => {
-      mesh.visible = openValley > 0.01
       const material = mesh.material
       const isFar = mesh.name.toUpperCase().includes('_FAR')
-      material.opacity = openValley * (isFar ? 0.72 : 0.95)
+      // These are low valley-support sheets rather than the hero skyline.
+      // Revealing them with the far silhouette exposed their long lower edges
+      // as horizontal bands inside the fog, so they arrive with the ground.
+      const ridgeReveal = getJourneyValleyGroundPresence(progress)
+      mesh.visible = ridgeReveal > 0.01
+      material.opacity = Math.pow(ridgeReveal, 1.45) * (isFar ? 0.72 : 0.95)
       material.color
         .set(isFar ? '#a9bbb5' : '#6f887b')
         .lerp(isFar ? frameColors.ridgeFarSunset : frameColors.ridgeNearSunset, sunset * 0.48)
@@ -7257,6 +7316,7 @@ export default function JourneyScene({
         uniforms.uJourneyRiverLight.value = night * skyConnectionProgress * 0.16
         uniforms.uJourneyDiscovery.value = 0
         uniforms.uJourneyTime.value = state.clock.elapsedTime
+        uniforms.uJourneyEntranceReveal.value = ridgeReveal
       }
     })
     phase2Groups.clouds.forEach((cloud, index) => {
@@ -7334,11 +7394,14 @@ export default function JourneyScene({
     // mountains through the portal prevents a full-screen sky color from
     // reading as a white wall, while Fog itself still begins only after the
     // authored portal crossing.
-    // Do not expose opaque mountain geometry while the camera is still inside
-    // the tunnel; it intersects the portal view as a full-screen black slab.
-    const sourceValleyPresence = getJourneyValleyPresence(progress)
+    // Keep the geometry resident and reveal only its contrast from the fog;
+    // a raw opaque visibility switch reads as a full-screen black slab.
     groups.mountains.forEach((mesh) => {
-      mesh.visible = sourceValleyPresence > 0.002
+      // All source mountain masses are distant from this portal viewpoint.
+      // Let their silhouette lead the lower valley layers irrespective of the
+      // source asset's near/far material naming.
+      const mountainReveal = getJourneyValleyFarPresence(progress)
+      mesh.visible = mountainReveal > 0.0002
       const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
       materials.forEach((material) => {
         if ('emissiveIntensity' in material) {
@@ -7353,6 +7416,7 @@ export default function JourneyScene({
           uniforms.uJourneyDiscovery.value =
             openValley * (1 - night) * (0.045 + cloudbreakDiscovery * 0.955)
           uniforms.uJourneyTime.value = state.clock.elapsedTime
+          uniforms.uJourneyEntranceReveal.value = mountainReveal
         }
       })
     })
@@ -7361,7 +7425,7 @@ export default function JourneyScene({
       canopy.material.opacity = 0
     })
     groups.water.forEach((mesh, index) => {
-      const valleyRiverReveal = getJourneyValleyPresence(progress)
+      const valleyRiverReveal = getJourneyValleyRiverPresence(progress)
       mesh.visible = valleyRiverReveal > 0.01
       const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
       materials.forEach((material) => {
