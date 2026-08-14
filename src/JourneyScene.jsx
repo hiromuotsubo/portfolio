@@ -87,7 +87,7 @@ const smoothstep = (edge0, edge1, value) => {
 const CAVE_PORTAL_FADE_START_Z = -1.08
 const CAVE_PORTAL_FADE_END_Z = -2.42
 const CAVE_CAMERA_RELEASE_END = 20
-const CAVE_CAMERA_CONTINUATION_DISTANCE = 1.05
+const CAVE_CAMERA_CONTINUATION_DISTANCE = 2.15
 const VALLEY_REVEAL_START = 11.98
 const VALLEY_REVEAL_END = 12.24
 // Depth fog supplies the cave-exit mist. Camera-facing cards are retained as
@@ -4876,8 +4876,13 @@ function createMeadowMaterial(kind, alphaMap = null) {
           '  dot(journeyWorldAmbient, journeyInstanceX),',
           '  dot(journeyWorldAmbient, journeyInstanceZ)',
           ');',
-          'float journeyAmbientStrength = 0.045 + uJourneyAmbientWind * 0.18 +',
-          '  journeyAmbientField * 0.052;',
+          'float journeyBroadWind = sin(',
+          '  uJourneyTime * 0.48 + journeyBladeBase.z * 0.06 - journeyBladeBase.x * 0.018',
+          ');',
+          'float journeyAmbientPulse = 0.88 +',
+          '  sin(uJourneyTime * 0.21 + journeyBladeBase.z * 0.043 - journeyBladeBase.x * 0.019 + aJourneyMeadowPhase * 1.3) * 0.12;',
+          'float journeyAmbientStrength = (0.065 + uJourneyAmbientWind * 0.34 +',
+          '  journeyAmbientField * 0.055 + journeyBroadWind * 0.085) * journeyAmbientPulse;',
           'vec2 journeySway = journeyLocalAmbient * max(0.016, journeyAmbientStrength) * uJourneyMotionScale;',
           'if (uJourneyReflectionPass < 0.5) {',
           'for (int journeyImpulseIndex = 0; journeyImpulseIndex < ' + MEADOW_WIND_IMPULSE_COUNT + '; journeyImpulseIndex++) {',
@@ -4958,7 +4963,7 @@ function createMeadowMaterial(kind, alphaMap = null) {
         ].join('\n'),
       )
   }
-  material.customProgramCacheKey = () => 'journey-meadow-' + kind + '-v10-strong-wind'
+  material.customProgramCacheKey = () => 'journey-meadow-' + kind + '-v12-broad-idle-wind'
   material.userData.journeyMeadowUniforms = uniforms
   return material
 }
@@ -5045,8 +5050,13 @@ vec2 journeyPetalAmbientDirection = normalize(vec2(
   0.82 - journeyPetalTurn * 0.42,
   0.42 + journeyPetalTurn * 0.82
 ));
-float journeyPetalAmbientStrength = 0.045 + uJourneyAmbientWind * 0.18 +
-  journeyPetalField * 0.052;
+float journeyPetalBroadWind = sin(
+  uJourneyTime * 0.48 + journeyPetalBase.z * 0.06 - journeyPetalBase.x * 0.018
+);
+float journeyPetalAmbientPulse = 0.88 +
+  sin(uJourneyTime * 0.21 + journeyPetalBase.z * 0.043 - journeyPetalBase.x * 0.019 + aJourneyMeadowPhase * 1.3) * 0.12;
+float journeyPetalAmbientStrength = (0.065 + uJourneyAmbientWind * 0.34 +
+  journeyPetalField * 0.055 + journeyPetalBroadWind * 0.085) * journeyPetalAmbientPulse;
 	vec2 journeyPetalSway = journeyPetalAmbientDirection *
 	  max(0.016, journeyPetalAmbientStrength) * uJourneyMotionScale;
 	if (uJourneyReflectionPass < 0.5) {
@@ -5105,7 +5115,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(1.12, 0.82, 0.6
 diffuseColor.a *= uJourneyReveal * (1.0 - uJourneyNight * 0.72);`,
       )
   }
-	material.customProgramCacheKey = () => 'journey-meadow-petals-v6-strong-wind'
+	material.customProgramCacheKey = () => 'journey-meadow-petals-v8-broad-idle-wind'
   return material
 }
 
@@ -5660,9 +5670,9 @@ function ValleyMeadow({ diagnostics = {}, progress, travelWindRef, qualityScale 
       uniforms.uJourneyNight.value = night
       uniforms.uJourneyTime.value = state.clock.elapsedTime
       const timeOfDayWind =
-        dayWeight * 0.28 +
-        sunset * (0.31 + Math.sin(state.clock.elapsedTime * 0.17) * 0.018) +
-        night * 0.18
+        dayWeight * 0.36 +
+        sunset * (0.4 + Math.sin(state.clock.elapsedTime * 0.17) * 0.022) +
+        night * 0.25
       uniforms.uJourneyAmbientWind.value = reduceMotion
         ? 0
         : travelWindRef.current * 0.6 + timeOfDayWind
@@ -6502,27 +6512,23 @@ export default function JourneyScene({
       const introAuthoredTransition = introLocked || introReleaseActive
       let introRelease = 0
       if (introLocked && cameraScratch.introPoseCaptured) {
-        // Approach the opening at a walking pace, slow down while the eye
-        // adjusts to daylight, then cross the short portal segment. Keeping
-        // most of the late-cave distance in reserve prevents the rock frame
-        // from disappearing several scroll beats before the actual exit.
+        // One continuous walking curve replaces the former approach/portal
+        // curves. Its velocity peaks in the middle of the cave, then keeps
+        // decelerating through the exit and the mist approach: there is no
+        // second acceleration when the portal is crossed.
+        const caveTravelT = clamp01(progress / JOURNEY_CAVE_SEQUENCE.fogGate)
         const caveTravel =
-          smoothstep(0, 8.6, progress) * 0.7 +
-          smoothstep(8.6, 10.8, progress) * 0.08 +
-          smoothstep(10.8, JOURNEY_CAVE_SEQUENCE.portalCrossing, progress) * 0.22
-        const portalTravel = smoothstep(
-          JOURNEY_CAVE_SEQUENCE.portalCrossing,
-          JOURNEY_CAVE_SEQUENCE.portalCleared,
-          progress,
-        )
+          -caveTravelT * caveTravelT * caveTravelT +
+          1.55 * caveTravelT * caveTravelT +
+          0.45 * caveTravelT
         camera.position.set(
           CAVE_CAMERA.x,
           CAVE_CAMERA.y,
           THREE.MathUtils.lerp(
             cameraScratch.introStartZ,
-            cameraScratch.introFogZ,
+            cameraScratch.introFogZ - CAVE_CAMERA_CONTINUATION_DISTANCE,
             caveTravel,
-          ) - CAVE_CAMERA_CONTINUATION_DISTANCE * portalTravel,
+          ),
         )
         camera.quaternion.copy(cameraScratch.introQuaternion)
       } else if (introReleaseActive) {

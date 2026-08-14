@@ -6836,20 +6836,20 @@ html[data-portfolio-route-transition='reveal'] .portfolio-site::after {
   }
 }
 
-/* Final refinement: fog-facing controls use the dark alpine ink so HOLD
-   remains readable against pale air without becoming a boxed UI element. */
+/* Fog-facing controls stay legible over both pale mist and the cyan river.
+   A warm white cue with a restrained dark halo retains the unboxed look. */
 .journey-3d.is-gate-fog .journey-ui__operation.is-hold {
-  color: #244d3d;
-  filter: drop-shadow(0 1px 0 rgba(246, 244, 234, .55))
-    drop-shadow(0 0 10px rgba(239, 244, 235, .42));
+  color: #fffdf5;
+  filter: drop-shadow(0 1px 2px rgba(4, 14, 13, .92))
+    drop-shadow(0 0 12px rgba(4, 14, 13, .5));
 }
 
 .journey-3d.is-gate-fog .journey-ui__operation.is-hold .hold-mark::before {
-  background: conic-gradient(currentColor var(--hold-progress), rgba(36, 77, 61, .18) 0);
+  background: conic-gradient(currentColor var(--hold-progress), rgba(255, 253, 245, .24) 0);
 }
 
 .journey-3d.is-gate-fog .journey-ui__operation.is-hold .hold-mark::after {
-  box-shadow: 0 0 0 5px rgba(36, 77, 61, .1);
+  box-shadow: 0 0 0 5px rgba(255, 253, 245, .13);
 }
 
 /* Hybrid C ending: the night keeps its quiet hold, while a restrained cue
