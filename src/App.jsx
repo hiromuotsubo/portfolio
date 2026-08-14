@@ -237,11 +237,15 @@ const PORTFOLIO_IMAGE_URLS = [
   '/portfolio/journey-storyboard.jpg',
   '/portfolio/journey-night.jpg',
   '/portfolio/project-inspiration-v2.png',
-  '/portfolio/project-contrast-v2.png',
-  '/portfolio/project-valley-day-v4.jpg',
-  '/portfolio/project-atmosphere-sunset-v4.jpg',
   '/portfolio/project-interaction-meadow-v4.jpg',
-  '/portfolio/project-emotion-night-v4.jpg',
+  '/portfolio/project-v5/field-reference.jpg',
+  '/portfolio/project-v5/blender-massing.jpg',
+  '/portfolio/project-v5/day-clear.jpg',
+  '/portfolio/project-v5/dusk.jpg',
+  '/portfolio/project-v5/night.jpg',
+  '/portfolio/project-v5/cave-to-fog-poster.jpg',
+  '/portfolio/project-v5/hold-fog-reveal-poster.jpg',
+  '/portfolio/project-v5/emotion-final.jpg',
 ]
 
 const JOURNEY_AUDIO_DEFINITIONS = Object.freeze({
@@ -721,14 +725,59 @@ function PortfolioImage({ src, alt, caption, className = '' }) {
   )
 }
 
-function PortfolioImagePair({ images, caption, className = '' }) {
+function PortfolioVideo({ src, poster, alt }) {
+  const videoRef = useRef(null)
+
+  useEffect(() => {
+    const video = videoRef.current
+    if (!video) return undefined
+
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    if (reducedMotion || !('IntersectionObserver' in window)) return undefined
+
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting && entry.intersectionRatio >= 0.28) {
+        video.play().catch(() => {})
+      } else {
+        video.pause()
+      }
+    }, { threshold: [0, 0.28, 0.7] })
+
+    observer.observe(video)
+    return () => {
+      observer.disconnect()
+      video.pause()
+    }
+  }, [])
+
   return (
-    <figure className={`portfolio-figure portfolio-figure--pair ${className}`}>
-      <div className="portfolio-figure__pair">
-        {images.map((image) => (
-          <div className={`portfolio-figure__image ${image.className ?? ''}`} key={image.src}>
-            <img src={image.src} alt={image.alt} loading="lazy" />
-            <span aria-hidden="true">{image.label}</span>
+    <video
+      ref={videoRef}
+      src={src}
+      poster={poster}
+      aria-label={alt}
+      muted
+      loop
+      playsInline
+      preload="metadata"
+    />
+  )
+}
+
+function PortfolioMediaFigure({ items, caption, className = '' }) {
+  return (
+    <figure className={`portfolio-figure portfolio-media-v5 ${className}`}>
+      <div className="portfolio-media-v5__grid">
+        {items.map((item) => (
+          <div className="portfolio-media-v5__item" key={item.src}>
+            <div className="portfolio-media-v5__frame">
+              {item.type === 'video' ? (
+                <PortfolioVideo src={item.src} poster={item.poster} alt={item.alt} />
+              ) : (
+                <img src={item.src} alt={item.alt} loading="lazy" />
+              )}
+            </div>
+            {item.label ? <span>{item.label}</span> : null}
           </div>
         ))}
       </div>
@@ -1036,30 +1085,69 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
       </aside>
       <div className="portfolio-story__panels">
         <article id="origin" className={panelClassName('origin')} data-story-panel="origin">
-          <PortfolioImage src="/portfolio/project-inspiration-v2.png" alt="A Kamikochi field photograph used as a reference for Journey" caption="FIELD REFERENCE / KAMIKOCHI" />
+          <PortfolioMediaFigure
+            items={[
+              { src: '/portfolio/project-v5/field-reference.jpg', alt: 'The real Kamikochi valley and Azusa River that inspired Journey', label: 'FIELD / KAMIKOCHI' },
+              { src: '/portfolio/project-v5/blender-massing.jpg', alt: 'The Journey valley terrain being shaped as a neutral Blender model', label: 'MASSING / BLENDER' },
+              { src: '/portfolio/project-v5/day-clear.jpg', alt: 'The finished Journey valley in clear daylight', label: 'EXPERIENCE / WEBGL' },
+            ]}
+            caption="REALITY / FORM / MEMORY"
+            className="is-origin-triptych"
+          />
           <div className="portfolio-panel__copy"><span className="portfolio-kicker">INSPIRATION</span><h3>A photograph captured the view, not the feeling.</h3><p>Six weeks in Kamikochi taught me that photographs can preserve a view, but not the feeling of being there.<br />Journey begins from that gap.<br />Rather than reproducing the landscape exactly, it rebuilds the experience through space, interaction and time.</p></div>
         </article>
         <article id="contrast" className={panelClassName('contrast')} data-story-panel="contrast">
-          <PortfolioImage src="/portfolio/project-contrast-v2.png" alt="The Journey valley framed tightly by the dark cave opening" caption="CONTRACTION / RELEASE" className="is-space-wide is-dark" />
+          <PortfolioMediaFigure
+            items={[
+              {
+                type: 'video',
+                src: '/portfolio/project-v5/cave-to-fog.mp4',
+                poster: '/portfolio/project-v5/cave-to-fog-poster.jpg',
+                alt: 'The camera moving through the dark Journey cave toward the fog-covered open valley',
+                label: 'CAVE → OPEN AIR',
+              },
+            ]}
+            caption="CONTRACTION / RELEASE"
+            className="is-space-cinema"
+          />
           <div className="portfolio-panel__copy"><span className="portfolio-kicker">SPACE</span><h3>Emotion begins with space.</h3><p>The cave narrows the view.<br />Darkness holds the landscape back.<br />Emerging into the valley makes its scale feel greater by contrast.</p></div>
         </article>
         <article id="terrain" className={panelClassName('terrain')} data-story-panel="terrain">
-          <PortfolioImagePair
-            images={[
-              { src: '/portfolio/project-valley-day-v4.jpg', alt: 'The Journey valley in clear daylight', label: 'DAY' },
-              { src: '/portfolio/project-atmosphere-sunset-v4.jpg', alt: 'The same Journey valley at sunset', label: 'DUSK' },
+          <PortfolioMediaFigure
+            items={[
+              { src: '/portfolio/project-v5/day-clear.jpg', alt: 'The Journey valley in soft clear daylight', label: 'DAY' },
+              { src: '/portfolio/project-v5/dusk.jpg', alt: 'The same Journey valley in muted dusk light', label: 'DUSK' },
+              { src: '/portfolio/project-v5/night.jpg', alt: 'The same Journey valley beneath the night sky', label: 'NIGHT' },
             ]}
             caption="ONE VALLEY / CHANGING LIGHT"
-            className="is-atmosphere-pair"
+            className="is-atmosphere-triptych"
           />
           <div className="portfolio-panel__copy"><span className="portfolio-kicker">ATMOSPHERE</span><h3>Light lets the landscape breathe.</h3><p>Day fades into dusk.<br />Dusk deepens into night.<br />Light, mist and color slowly transform the same valley over time.</p></div>
         </article>
         <article id="interaction" className={panelClassName('interaction')} data-story-panel="interaction">
-          <PortfolioImage src="/portfolio/project-interaction-meadow-v4.jpg" alt="Tall meadow grass surrounding the Journey river and responding to cursor wind" caption="MEADOW / CURSOR WIND" className="is-interaction-wide" />
+          <PortfolioMediaFigure
+            items={[
+              {
+                type: 'video',
+                src: '/portfolio/project-v5/hold-fog-reveal.mp4',
+                poster: '/portfolio/project-v5/hold-fog-reveal-poster.jpg',
+                alt: 'The fog gradually clearing as the visitor holds the Journey interaction',
+                label: 'HOLD / FOG REVEAL',
+              },
+            ]}
+            caption="THE LANDSCAPE RESPONDS"
+            className="is-interaction-cinema"
+          />
           <div className="portfolio-panel__copy"><span className="portfolio-kicker">INTERACTION</span><h3>The landscape responds when you slow down.</h3><p>Scroll moves you forward.<br />HOLD lets the moment linger.<br />Move the cursor to stir the wind, and the grass moves with it.</p></div>
         </article>
         <article id="emotion" className={panelClassName('emotion', 'is-emotion-panel')} data-story-panel="emotion">
-          <PortfolioImage src="/portfolio/project-emotion-night-v4.jpg" alt="A small figure beneath the Journey mountains and immense night sky" caption="HUMAN SCALE / FINAL NIGHT" className="is-emotion-wide is-dark" />
+          <PortfolioMediaFigure
+            items={[
+              { src: '/portfolio/project-v5/emotion-final.jpg', alt: 'A small seated figure beneath the Journey mountains and immense star-filled night sky', label: 'FINAL NIGHT / HUMAN SCALE' },
+            ]}
+            caption="A QUIET SENSE OF SCALE"
+            className="is-emotion-hero"
+          />
           <div className="portfolio-panel__copy"><span className="portfolio-kicker">EMOTION</span><h3>Wonder grows in quiet moments.</h3><p>The journey ends beneath an immense night sky.<br />A small figure stands against the mountains.<br />For a moment, the landscape feels larger—and we feel smaller within it.</p><button type="button" onClick={onReplay}>EXPERIENCE AGAIN <ShortArrow /></button></div>
         </article>
         <footer className="portfolio-story__end">
