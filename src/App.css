@@ -7133,7 +7133,7 @@ html[data-portfolio-route-transition='reveal'] .portfolio-site::after {
    The field photograph and the authored Journey valley share one atmospheric
    threshold. The contrast is conceptual, not a comparison-slider interface. */
 .portfolio-site.is-page-home .portfolio-page-transition {
-  min-height: calc(100dvh - 92px);
+  min-height: 100dvh;
 }
 
 .portfolio-site.is-page-home .portfolio-home {
@@ -7147,7 +7147,7 @@ html[data-portfolio-route-transition='reveal'] .portfolio-site::after {
   grid-template-rows: minmax(0, 1fr) auto;
   gap: clamp(24px, 3.2vh, 34px);
   width: 100%;
-  height: calc(100dvh - 92px);
+  height: 100dvh;
   min-height: 590px;
   padding: 0 0 clamp(22px, 3vw, 38px);
   overflow: hidden;
@@ -7301,13 +7301,13 @@ html[data-portfolio-route-transition='reveal'] .portfolio-site::after {
 
 .portfolio-site.is-page-home .portfolio-home__copy h1 {
   max-width: none;
-  margin: 0 0 clamp(20px, 2.6vh, 31px);
+  margin: 0 0 clamp(40px, 5vh, 52px);
   color: var(--green-ink);
   font-family: var(--font-display);
   font-size: clamp(102px, 11.1vw, 182px);
   font-weight: 400;
   line-height: .74;
-  letter-spacing: -.06em;
+  letter-spacing: -.052em;
   text-indent: -3.5vw;
   white-space: nowrap;
   text-wrap: nowrap;
@@ -7321,6 +7321,7 @@ html[data-portfolio-route-transition='reveal'] .portfolio-site::after {
   font-size: clamp(13px, .98vw, 16px);
   font-weight: 450;
   line-height: 1.55;
+  letter-spacing: .005em;
   text-wrap: pretty;
   white-space: nowrap;
 }
@@ -7332,7 +7333,8 @@ html[data-portfolio-route-transition='reveal'] .portfolio-site::after {
   color: var(--green-ink);
   border-bottom-color: rgba(49, 95, 73, .72);
   font-family: var(--font-ui);
-  font-size: 8px;
+  font-size: clamp(8.5px, .64vw, 9.5px);
+  font-weight: 600;
   letter-spacing: .16em;
 }
 
@@ -7398,13 +7400,13 @@ html[data-portfolio-route-transition='reveal'] .portfolio-site::after {
 
 @media (max-width: 760px), (max-aspect-ratio: 4 / 5) {
   .portfolio-site.is-page-home .portfolio-page-transition {
-    min-height: calc(100dvh - 70px);
+    min-height: 100dvh;
   }
 
   .portfolio-site.is-page-home .portfolio-home {
     display: block;
-    height: calc(100dvh - 70px);
-    min-height: 620px;
+    height: 100dvh;
+    min-height: 100dvh;
     padding: 14px 14px max(14px, env(safe-area-inset-bottom));
   }
 
@@ -7480,7 +7482,7 @@ html[data-portfolio-route-transition='reveal'] .portfolio-site::after {
   }
 
   .portfolio-site.is-page-home .portfolio-home__copy h1 {
-    margin-bottom: 17px;
+    margin-bottom: 28px;
     font-size: clamp(76px, 24vw, 112px);
     line-height: .76;
     text-indent: 0;
@@ -7564,7 +7566,7 @@ html[data-portfolio-route-transition='reveal'] .portfolio-site::after {
 
 .portfolio-home__meta dt,
 .portfolio-home__meta dd {
-  font-size: clamp(8px, .58vw, 9.5px);
+  font-size: clamp(9px, .64vw, 10px);
   font-weight: 600;
   letter-spacing: .1em;
 }
@@ -7598,6 +7600,23 @@ html[data-portfolio-route-transition='reveal'] .portfolio-site::after {
   font-weight: 600;
 }
 
+.portfolio-story__hint {
+  font-size: 8.5px;
+  font-weight: 600;
+  letter-spacing: .16em;
+}
+
+.portfolio-contact__links small {
+  font-size: 9.5px;
+  font-weight: 600;
+}
+
+.portfolio-contact footer span {
+  font-size: 8px;
+  font-weight: 500;
+  letter-spacing: .13em;
+}
+
 @media (max-width: 760px), (max-aspect-ratio: 4 / 5) {
   .portfolio-site.is-page-home .portfolio-home__copy h1 {
     line-height: .84;
@@ -7605,7 +7624,7 @@ html[data-portfolio-route-transition='reveal'] .portfolio-site::after {
 
   .portfolio-media-v5__item > span,
   .portfolio-media-v5 figcaption {
-    font-size: 8px;
+    font-size: 8.5px;
     letter-spacing: .12em;
   }
 }
