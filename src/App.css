@@ -3006,9 +3006,14 @@ textarea,
 .journey-3d.is-portfolio .journey-ui__rail,
 .journey-3d.is-portfolio .journey-ui__operation,
 .journey-3d.is-portfolio .journey-ui__sound {
-  visibility: hidden;
-  opacity: 0;
+  display: none;
   pointer-events: none;
+}
+
+.journey-3d.is-portfolio .cave-grade,
+.journey-3d.is-portfolio .valley-mist,
+.journey-3d.is-portfolio .soft-vignette {
+  display: none;
 }
 
 .journey-3d.is-showcase .journey-ui__operation,
@@ -6201,9 +6206,9 @@ textarea,
 }
 
 .portfolio-site .portfolio-mist-transition {
-  background:
-    linear-gradient(112deg, rgba(240, 238, 230, .94), rgba(228, 237, 229, .9)),
-    repeating-radial-gradient(ellipse at 32% 46%, rgba(105, 167, 133, .05) 0 1px, transparent 1px 6px);
+  background: var(--paper);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   clip-path: inset(0) !important;
 }
 
@@ -6220,33 +6225,31 @@ html[data-portfolio-route-transition='reveal'] .portfolio-site::after {
   inset: 0;
   content: '';
   pointer-events: auto;
-  background: rgba(240, 238, 230, .94);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: var(--paper);
 }
 
 html[data-portfolio-route-transition='cover'] .portfolio-site::after {
-  animation: portfolio-air-cover 330ms ease both;
+  animation: portfolio-air-cover 220ms ease both;
 }
 
 html[data-portfolio-route-transition='reveal'] .portfolio-site::after {
-  animation: portfolio-air-reveal 390ms ease both;
+  animation: portfolio-air-reveal 260ms ease both;
 }
 
 .portfolio-mist-transition.is-cover {
-  animation: portfolio-air-cover 330ms cubic-bezier(.4, 0, .3, 1) both;
+  animation: portfolio-air-cover 220ms cubic-bezier(.4, 0, .3, 1) both;
 }
 
 .portfolio-mist-transition.is-reveal {
-  animation: portfolio-air-reveal 390ms cubic-bezier(.2, .7, .2, 1) both;
+  animation: portfolio-air-reveal 260ms cubic-bezier(.2, .7, .2, 1) both;
 }
 
 .portfolio-site.is-mist-cover .portfolio-page-transition {
-  animation: portfolio-content-breathe-out 330ms cubic-bezier(.4, 0, .3, 1) both;
+  animation: portfolio-content-breathe-out 220ms cubic-bezier(.4, 0, .3, 1) both;
 }
 
 .portfolio-site.is-mist-reveal .portfolio-page-transition {
-  animation: portfolio-content-breathe-in 390ms cubic-bezier(.2, .7, .2, 1) both;
+  animation: portfolio-content-breathe-in 260ms cubic-bezier(.2, .7, .2, 1) both;
 }
 
 @keyframes portfolio-air-cover {
@@ -6260,13 +6263,13 @@ html[data-portfolio-route-transition='reveal'] .portfolio-site::after {
 }
 
 @keyframes portfolio-content-breathe-out {
-  from { opacity: 1; filter: blur(0); transform: scale(1); }
-  to { opacity: .28; filter: blur(5px); transform: scale(.996); }
+  from { opacity: 1; transform: translate3d(0, 0, 0); }
+  to { opacity: .9; transform: translate3d(0, -2px, 0); }
 }
 
 @keyframes portfolio-content-breathe-in {
-  from { opacity: .18; filter: blur(6px); transform: scale(1.004); }
-  to { opacity: 1; filter: blur(0); transform: scale(1); }
+  from { opacity: .9; transform: translate3d(0, 2px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
 }
 
 .journey-3d.is-outro .journey-outro__phrase {
@@ -6744,38 +6747,14 @@ html[data-portfolio-route-transition='reveal'] .portfolio-site::after {
 }
 
 .portfolio-site .portfolio-mist-transition {
-  overflow: hidden;
-  background:
-    linear-gradient(114deg, rgba(240, 238, 230, .96), rgba(225, 235, 227, .94)),
-    repeating-radial-gradient(ellipse at 32% 46%, rgba(105, 167, 133, .045) 0 1px, transparent 1px 6px);
-  backdrop-filter: blur(7px);
-  -webkit-backdrop-filter: blur(7px);
+  background: var(--paper);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 .portfolio-site .portfolio-mist-transition::before,
 .portfolio-site .portfolio-mist-transition::after {
-  position: absolute;
-  display: block;
-  width: 82vmax;
-  height: 48vmax;
-  content: '';
-  opacity: .3;
-  border-radius: 44% 56% 61% 39%;
-  background: rgba(178, 204, 185, .28);
-  filter: blur(64px);
-  transform: rotate(-9deg);
-}
-
-.portfolio-site .portfolio-mist-transition::before {
-  top: -22vmax;
-  left: -18vmax;
-}
-
-.portfolio-site .portfolio-mist-transition::after {
-  right: -24vmax;
-  bottom: -18vmax;
-  opacity: .22;
-  transform: rotate(14deg);
+  display: none;
 }
 
 @media (max-width: 900px) {
@@ -7112,16 +7091,16 @@ html[data-portfolio-route-transition='reveal'] .portfolio-site::after {
 
 /* Home is pre-mounted during the final pause. Its hero plane can therefore
    settle first; navigation and copy wait until the memory layer is weak. */
-.journey-3d.is-outro.is-portfolio:not(.is-portfolio-scrolled) .portfolio-nav {
+.journey-3d.is-memory-home:not(.is-portfolio-scrolled) .portfolio-nav {
   animation: portfolio-content-in 760ms ease 980ms both;
 }
 
-.journey-3d.is-outro.is-portfolio:not(.is-portfolio-scrolled) .portfolio-home__copy {
+.journey-3d.is-memory-home:not(.is-portfolio-scrolled) .portfolio-home__copy {
   animation: portfolio-content-in 900ms ease 1240ms both;
 }
 
-.journey-3d.is-outro.is-portfolio:not(.is-portfolio-scrolled) .portfolio-home__caption,
-.journey-3d.is-outro.is-portfolio:not(.is-portfolio-scrolled) .portfolio-home__footer {
+.journey-3d.is-memory-home:not(.is-portfolio-scrolled) .portfolio-home__caption,
+.journey-3d.is-memory-home:not(.is-portfolio-scrolled) .portfolio-home__footer {
   animation: portfolio-content-in 820ms ease 1460ms both;
 }
 
@@ -7155,11 +7134,6 @@ html[data-portfolio-route-transition='reveal'] .portfolio-site::after {
    threshold. The contrast is conceptual, not a comparison-slider interface. */
 .portfolio-site.is-page-home .portfolio-page-transition {
   min-height: calc(100dvh - 92px);
-}
-
-.journey-3d.is-outro.is-portfolio:not(.is-portfolio-scrolled) .journey-scene-frame {
-  pointer-events: none;
-  animation: home-diptych-release-legacy-frame 1050ms ease 120ms both !important;
 }
 
 .portfolio-site.is-page-home .portfolio-home {
@@ -7198,7 +7172,7 @@ html[data-portfolio-route-transition='reveal'] .portfolio-site::after {
   margin: 0;
   overflow: hidden;
   background: #d6dfd5;
-  animation: home-diptych-arrive 1050ms cubic-bezier(.22, .72, .2, 1) both;
+  animation: home-diptych-arrive 620ms cubic-bezier(.22, .72, .2, 1) both;
 }
 
 .portfolio-home__reality,
@@ -7291,7 +7265,6 @@ html[data-portfolio-route-transition='reveal'] .portfolio-site::after {
     radial-gradient(ellipse 38% 22% at 43% 30%, rgba(251, 249, 243, .5), transparent 76%),
     radial-gradient(ellipse 44% 25% at 57% 47%, rgba(248, 247, 240, .42), transparent 78%),
     radial-gradient(ellipse 53% 21% at 47% 66%, rgba(238, 241, 232, .34), transparent 80%);
-  animation: home-threshold-breathe 9s ease-in-out infinite alternate;
 }
 
 .portfolio-home__landscape figcaption {
@@ -7322,7 +7295,7 @@ html[data-portfolio-route-transition='reveal'] .portfolio-site::after {
   height: auto;
   opacity: 1;
   transform: translate3d(var(--home-copy-x), -50%, 0);
-  animation: home-diptych-copy-in 980ms cubic-bezier(.22, .72, .2, 1) 180ms both;
+  animation: home-diptych-copy-in 560ms cubic-bezier(.22, .72, .2, 1) 60ms both;
   transition: transform 1350ms cubic-bezier(.2, .72, .2, 1);
 }
 
@@ -7374,7 +7347,7 @@ html[data-portfolio-route-transition='reveal'] .portfolio-site::after {
   border-top: 1px solid rgba(49, 95, 73, .18);
   border-bottom: 1px solid rgba(49, 95, 73, .18);
   background: var(--paper);
-  animation: home-diptych-meta-in 780ms ease 420ms both;
+  animation: home-diptych-meta-in 480ms ease 120ms both;
 }
 
 .portfolio-home__meta > div {
@@ -7413,11 +7386,6 @@ html[data-portfolio-route-transition='reveal'] .portfolio-site::after {
   to { opacity: 1; transform: scale(1); }
 }
 
-@keyframes home-diptych-release-legacy-frame {
-  0%, 16% { opacity: 1; }
-  100% { opacity: 0; }
-}
-
 @keyframes home-diptych-copy-in {
   from { opacity: 0; transform: translate3d(calc(var(--home-copy-x) + 12px), -47%, 0); }
   to { opacity: 1; transform: translate3d(var(--home-copy-x), -50%, 0); }
@@ -7426,11 +7394,6 @@ html[data-portfolio-route-transition='reveal'] .portfolio-site::after {
 @keyframes home-diptych-meta-in {
   from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes home-threshold-breathe {
-  from { opacity: .72; transform: translate3d(-2%, -.6%, 0) scale(.98, 1.02); }
-  to { opacity: 1; transform: translate3d(3%, .8%, 0) scale(1.07, .98); }
 }
 
 @media (max-width: 760px), (max-aspect-ratio: 4 / 5) {
@@ -7512,7 +7475,7 @@ html[data-portfolio-route-transition='reveal'] .portfolio-site::after {
     left: 18px;
     width: auto;
     transform: none;
-    animation: home-diptych-mobile-copy-in 900ms cubic-bezier(.22, .72, .2, 1) 120ms both;
+    animation: home-diptych-mobile-copy-in 560ms cubic-bezier(.22, .72, .2, 1) 60ms both;
     transition: none;
   }
 

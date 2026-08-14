@@ -71,8 +71,8 @@ const ENDING_INPUT_NEUTRAL_MS = 520
 const ENDING_CAPTURE_MAX_ATTEMPTS = 3
 const ENDING_MEMORY_HOME_MS = 4850
 const ENDING_MEMORY_COMPLETE_MS = 6900
-const PORTFOLIO_TRANSITION_MS = 720
-const PORTFOLIO_ROUTE_SWITCH_MS = 330
+const PORTFOLIO_TRANSITION_MS = 480
+const PORTFOLIO_ROUTE_SWITCH_MS = 220
 const PORTFOLIO_PAGES = ['home', 'about', 'project', 'contact']
 const PORTFOLIO_PATHS = {
   home: '/',
@@ -227,26 +227,27 @@ const decodeImageSource = (source) => new Promise((resolve, reject) => {
 })
 
 const PORTFOLIO_IMAGE_URLS = [
-  '/portfolio/about-hiromu.jpg',
-  '/portfolio/research-vr.jpg',
-  '/portfolio/philosophy-lake.jpg',
-  '/portfolio/nagano-summer.jpg',
-  '/portfolio/journey-day-clear-river.jpg',
-  '/portfolio/journey-cave.jpg',
-  '/portfolio/journey-river.jpg',
-  '/portfolio/journey-storyboard.jpg',
-  '/portfolio/journey-night.jpg',
-  '/portfolio/project-inspiration-v2.png',
+  '/portfolio/home-kamikochi.webp',
   '/portfolio/project-interaction-meadow-v4.jpg',
-  '/portfolio/project-v5/field-reference.jpg',
-  '/portfolio/project-v5/blender-massing.jpg',
-  '/portfolio/project-v5/day-clear.jpg',
-  '/portfolio/project-v5/dusk.jpg',
-  '/portfolio/project-v5/night.jpg',
-  '/portfolio/project-v5/cave-to-fog-poster.jpg',
-  '/portfolio/project-v5/hold-fog-reveal-poster.jpg',
-  '/portfolio/project-v5/emotion-final.jpg',
 ]
+
+const preloadPortfolioImageSource = (source) => new Promise((resolve) => {
+  const image = new Image()
+  let settled = false
+  const finish = () => {
+    if (settled) return
+    settled = true
+    image.onload = null
+    image.onerror = null
+    resolve()
+  }
+  image.decoding = 'async'
+  image.fetchPriority = 'low'
+  image.onload = finish
+  image.onerror = finish
+  image.src = source
+  image.decode?.().then(finish, () => {})
+})
 
 const JOURNEY_AUDIO_DEFINITIONS = Object.freeze({
   cave: Object.freeze({
@@ -276,9 +277,7 @@ const preloadPortfolioImages = () => {
   if (portfolioImagePreloadPromise) return portfolioImagePreloadPromise
   performance.mark?.('journey-portfolio-images-preload-start')
   portfolioImagePreloadPromise = Promise.all(
-    PORTFOLIO_IMAGE_URLS.map((source) => (
-      decodeImageSource(source).then(() => null).catch(() => null)
-    )),
+    PORTFOLIO_IMAGE_URLS.map(preloadPortfolioImageSource),
   ).finally(() => {
     performance.mark?.('journey-portfolio-images-preload-complete')
   })
@@ -801,6 +800,10 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
     y: '50vh',
   })
 
+  useEffect(() => {
+    preloadPortfolioImages()
+  }, [])
+
   const selectPanel = useCallback((id) => {
     setActivePanel(id)
     const root = siteScrollRef.current
@@ -1224,9 +1227,10 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
               >
                 <div className="portfolio-home__reality" aria-hidden="true">
                   <img
-                    src="/portfolio/project-inspiration-v2.png"
+                    src="/portfolio/home-kamikochi.webp"
                     alt=""
                     decoding="async"
+                    fetchPriority="high"
                     draggable="false"
                   />
                 </div>
@@ -1235,6 +1239,7 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
                     src="/portfolio/project-interaction-meadow-v4.jpg"
                     alt=""
                     decoding="async"
+                    fetchPriority="high"
                     draggable="false"
                   />
                 </div>
@@ -1304,6 +1309,7 @@ function LegacyApp() {
   const [portfolioScrolled, setPortfolioScrolled] = useState(
     Boolean(INITIAL_PORTFOLIO_PAGE && INITIAL_PORTFOLIO_PAGE !== 'home'),
   )
+  const [memoryHome, setMemoryHome] = useState(false)
   const [displayedMessage, setDisplayedMessage] = useState(null)
   const [messageVisible, setMessageVisible] = useState(false)
   const [journeyAssets, setJourneyAssets] = useState({ active: true, progress: 0 })
@@ -1573,6 +1579,7 @@ function LegacyApp() {
     const homeTimeout = window.setTimeout(() => {
       portfolioRef.current = true
       setPortfolioPage('home')
+      setMemoryHome(true)
       try {
         window.localStorage.setItem(JOURNEY_STORAGE_KEY, 'true')
       } catch {
@@ -2242,6 +2249,7 @@ function LegacyApp() {
     setEntered(false)
     setShowPortfolio(false)
     setPortfolioScrolled(false)
+    setMemoryHome(false)
     setShowOutro(false)
     setProgress(0)
     setActiveGate(null)
@@ -2276,6 +2284,7 @@ function LegacyApp() {
     setEntered(true)
     setShowOutro(true)
     setShowPortfolio(true)
+    setMemoryHome(false)
     setPortfolioPage(nextPage)
     setPortfolioScrolled(nextPage !== 'home')
     if (updateHistory) {
@@ -2319,7 +2328,7 @@ function LegacyApp() {
 
   return (
     <main
-      className={`journey-3d ${entered ? 'is-entered' : ''} ${PUBLIC_SHOWCASE ? 'is-showcase' : ''} ${ENDING_PERFORMANCE_LEGACY ? 'is-ending-perf-legacy' : ''} ${activeGate ? `has-gate is-gate-${activeGate}` : ''} ${activeGate && holdProgress > 0 ? 'is-holding' : ''} ${endingCapturePreparing ? 'is-ending-preparing' : ''} ${endingFrameSource ? 'has-ending-frame' : ''} ${showOutro ? 'is-outro' : ''} ${showPortfolio ? 'is-portfolio' : ''} ${portfolioScrolled ? 'is-portfolio-scrolled' : ''}`}
+      className={`journey-3d ${entered ? 'is-entered' : ''} ${PUBLIC_SHOWCASE ? 'is-showcase' : ''} ${ENDING_PERFORMANCE_LEGACY ? 'is-ending-perf-legacy' : ''} ${activeGate ? `has-gate is-gate-${activeGate}` : ''} ${activeGate && holdProgress > 0 ? 'is-holding' : ''} ${endingCapturePreparing ? 'is-ending-preparing' : ''} ${endingFrameSource ? 'has-ending-frame' : ''} ${showOutro ? 'is-outro' : ''} ${showPortfolio ? 'is-portfolio' : ''} ${memoryHome ? 'is-memory-home' : ''} ${portfolioScrolled ? 'is-portfolio-scrolled' : ''}`}
       style={{
         '--cave-depth': caveDepth,
         '--open-air': openAir,
@@ -2330,8 +2339,8 @@ function LegacyApp() {
         '--hold-radius': `${80 + holdProgress * 360}px`,
       }}
     >
-      <div className="journey-scene-frame" aria-hidden={showOutro && !showPortfolio}>
-        {!showPortfolio || !portfolioScrolled ? (
+      {!showPortfolio ? (
+        <div className="journey-scene-frame" aria-hidden={showOutro}>
           <Suspense fallback={null}>
             <JourneyCanvas
               progress={progress}
@@ -2340,7 +2349,6 @@ function LegacyApp() {
               holdProgress={holdProgress}
               fogClearProgress={fogClearProgress}
               fogCompleted={fogCompleted}
-              presentationMode={showPortfolio}
               endingCaptureRequest={endingCaptureRequest}
               endingPaused={Boolean(endingFrameSource)}
               endingActive={showOutro}
@@ -2350,8 +2358,8 @@ function LegacyApp() {
               onListenerPose={updateListenerPose}
             />
           </Suspense>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
 
       {endingFrameSource ? (
         <div className="journey-ending-frame" aria-hidden="true">
