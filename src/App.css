@@ -6861,26 +6861,28 @@ html[data-portfolio-route-transition='reveal'] .portfolio-site::after {
   bottom: clamp(42px, 7.5vh, 82px);
   display: grid;
   justify-items: center;
-  gap: 7px;
-  color: rgba(240, 238, 230, .8);
+  gap: 8px;
+  color: rgba(244, 242, 233, .94);
   text-align: center;
   pointer-events: none;
   transform: translateX(-50%);
-  animation: ending-pause-cue-in 900ms ease 520ms both;
+  filter: drop-shadow(0 1px 1px rgba(2, 11, 13, .68))
+    drop-shadow(0 0 14px rgba(4, 18, 21, .46));
+  animation: ending-pause-cue-in 760ms ease 320ms both;
   transition: opacity 360ms ease, transform 480ms ease;
 }
 
 .journey-ending-pause-cue span {
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 650;
-  letter-spacing: .24em;
+  letter-spacing: .22em;
 }
 
 .journey-ending-pause-cue small {
-  opacity: .58;
-  font-size: 6px;
+  opacity: .76;
+  font-size: 8px;
   font-weight: 600;
-  letter-spacing: .2em;
+  letter-spacing: .18em;
 }
 
 .journey-ending-pause-cue.is-releasing {

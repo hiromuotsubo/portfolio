@@ -83,9 +83,9 @@ const smoothstep = (edge0, edge1, value) => {
 
 const CAVE_PORTAL_FADE_START_Z = -1.08
 const CAVE_PORTAL_FADE_END_Z = -2.42
-const CAVE_CAMERA_STRAIGHT_END = 18
-const CAVE_CAMERA_RELEASE_START = 17.25
-const CAVE_CAMERA_RELEASE_END = 24
+const CAVE_CAMERA_STRAIGHT_END = 20
+const CAVE_CAMERA_RELEASE_START = 18
+const CAVE_CAMERA_RELEASE_END = 30
 const CAVE_CAMERA_CONTINUATION_DISTANCE = 3.4
 
 function applyCaveSurfaceDetail(material) {
@@ -878,20 +878,34 @@ function createGroundFogTexture(seed) {
 
   for (let y = 0; y < canvas.height; y += 1) {
     const vertical = y / (canvas.height - 1)
-    const groundBias = Math.pow(Math.sin(Math.PI * vertical), 0.82) *
-      Math.pow(1 - vertical, 0.46)
     for (let x = 0; x < canvas.width; x += 1) {
       const horizontal = x / (canvas.width - 1)
       const worldX = horizontal * 12.5
       const worldY = vertical * 5.2
+      const valleyTop = 0.16 +
+        Math.sin(worldX * 0.47 + seed * 0.0013) * 0.075 +
+        Math.sin(worldX * 1.07 - seed * 0.0021) * 0.038 +
+        (horizontal - 0.5) * Math.sin(seed * 0.00037) * 0.1
+      const topFeather = THREE.MathUtils.smoothstep(
+        vertical,
+        valleyTop - 0.09,
+        valleyTop + 0.27,
+      )
+      const groundFeather = 1 - THREE.MathUtils.smoothstep(vertical, 0.82, 0.99)
+      const depthPocket = 0.64 +
+        Math.sin(worldX * 0.29 + seed * 0.0047) * 0.13 +
+        Math.sin(worldX * 0.83 - seed * 0.0019) * 0.08
       const broad =
         Math.sin(worldX * 0.62 + seed * 0.0017) * 0.5 +
         Math.sin(worldX * 1.13 - worldY * 0.78 + seed * 0.0031) * 0.27 +
         Math.sin(worldX * 2.18 + worldY * 1.36 + seed * 0.0049) * 0.13
       const fine = Math.sin(worldX * 4.4 - worldY * 2.2 + seed * 0.0083) * 0.1
-      const sheet = THREE.MathUtils.smoothstep(broad + fine, -0.42, 0.58)
+      const sheet = THREE.MathUtils.smoothstep(broad + fine, -0.5, 0.62)
       const edge = Math.pow(Math.sin(Math.PI * horizontal), 0.54)
-      const alpha = clamp01(sheet * groundBias * edge * 1.14)
+      const lowerDensity = THREE.MathUtils.lerp(0.62, 1.08, vertical)
+      const alpha = clamp01(
+        sheet * topFeather * groundFeather * edge * depthPocket * lowerDensity,
+      )
       const offset = (y * canvas.width + x) * 4
       pixels[offset] = 255
       pixels[offset + 1] = 255
@@ -5929,13 +5943,13 @@ function ValleyFogBanks({ groupRef, materialRefs, layers = 7, mobile = false }) 
 
   const banks = useMemo(() => {
     const presets = [
-      { position: [-18, 4.4, -35], scale: [94, 16, 1], opacity: 0.44, speed: 0.31 },
-      { position: [25, 7.2, -62], scale: [132, 21, 1], opacity: 0.38, speed: 0.24 },
-      { position: [-42, 10.5, -92], scale: [162, 25, 1], opacity: 0.32, speed: 0.19 },
-      { position: [48, 13.8, -122], scale: [190, 29, 1], opacity: 0.28, speed: 0.16 },
-      { position: [-31, 17.5, -158], scale: [212, 34, 1], opacity: 0.24, speed: 0.13 },
-      { position: [35, 21.5, -198], scale: [232, 38, 1], opacity: 0.2, speed: 0.11 },
-      { position: [-10, 26, -244], scale: [252, 42, 1], opacity: 0.17, speed: 0.09 },
+      { position: [-18, 3.8, -35], scale: [96, 18, 1], opacity: 0.24, speed: 0.31, tilt: -0.018 },
+      { position: [25, 6.7, -62], scale: [134, 23, 1], opacity: 0.34, speed: 0.24, tilt: 0.014 },
+      { position: [-42, 10.1, -92], scale: [164, 28, 1], opacity: 0.38, speed: 0.19, tilt: -0.011 },
+      { position: [48, 13.5, -122], scale: [192, 32, 1], opacity: 0.34, speed: 0.16, tilt: 0.009 },
+      { position: [-31, 17.2, -158], scale: [216, 37, 1], opacity: 0.29, speed: 0.13, tilt: -0.007 },
+      { position: [35, 21.3, -198], scale: [236, 41, 1], opacity: 0.25, speed: 0.11, tilt: 0.006 },
+      { position: [-10, 25.8, -244], scale: [258, 46, 1], opacity: 0.22, speed: 0.09, tilt: -0.004 },
     ]
     const activeBanks = presets.slice(0, Math.max(3, Math.min(layers, presets.length)))
     if (!mobile) return activeBanks
@@ -5955,6 +5969,7 @@ function ValleyFogBanks({ groupRef, materialRefs, layers = 7, mobile = false }) 
           key={`${bank.position.join('-')}-${index}`}
           position={bank.position}
           scale={bank.scale}
+          rotation-z={bank.tilt}
           renderOrder={index - 2}
           frustumCulled={false}
           userData={{
@@ -6183,6 +6198,8 @@ export default function JourneyScene({
       nightSky: new THREE.Color('#17385f'),
       sky: new THREE.Color(),
       caveBackground: new THREE.Color('#07100f'),
+      daySkyTop: new THREE.Color('#4d9fba'),
+      daySkyHorizon: new THREE.Color('#afcbc4'),
       skyTopSunset: new THREE.Color('#6f7796'),
       skyTopNight: new THREE.Color('#08172f'),
       skyHorizonSunset: new THREE.Color('#e6a07f'),
@@ -6629,11 +6646,12 @@ export default function JourneyScene({
         .set(1, 0, 0)
         .crossVectors(cameraScratch.forward, cameraScratch.up)
         .normalize()
-      if (!introAuthoredTransition) {
+      const revealCompositionStrength = introReleaseActive ? introRelease : 1
+      if (!introLocked) {
         camera.position.addScaledVector(
           cameraScratch.forward,
           (presentationMode ? -1.8 : 0) -
-            vistaComposition * LOOKDEV_V2_COMPOSITION.pullBack -
+            vistaComposition * LOOKDEV_V2_COMPOSITION.pullBack * revealCompositionStrength -
             endingWide * ENDING_CAMERA.pullBack +
             portraitComposition * THREE.MathUtils.lerp(-0.72, -1.55, portraitVista),
         )
@@ -6642,13 +6660,13 @@ export default function JourneyScene({
           -portraitComposition * THREE.MathUtils.lerp(0.12, 0.46, portraitVista),
         )
         camera.position.y +=
-          vistaComposition * LOOKDEV_V2_COMPOSITION.cameraLift +
+          vistaComposition * LOOKDEV_V2_COMPOSITION.cameraLift * revealCompositionStrength +
           endingLift * ENDING_CAMERA.cameraLift +
           portraitComposition * THREE.MathUtils.lerp(-0.08, 0.18, portraitVista)
         cameraScratch.target.copy(camera.position).add(cameraScratch.forward)
         cameraScratch.target.y +=
           (presentationMode ? 0.12 : 0) +
-          vistaComposition * LOOKDEV_V2_COMPOSITION.targetLift +
+          vistaComposition * LOOKDEV_V2_COMPOSITION.targetLift * revealCompositionStrength +
           endingLift * ENDING_CAMERA.lift +
           portraitComposition * (1 - endingLift) * 0.08
         cameraScratch.target.addScaledVector(
@@ -6819,9 +6837,10 @@ export default function JourneyScene({
     // Exterior illumination arrives through the opening before the viewer is
     // fully outdoors. This is deliberately separate from world visibility and
     // Fog/HOLD timing: it reveals the route without advancing the story.
+    const exitAirMix = smoothstep(5.6, 13.7, progress)
     const caveDaylight = Math.max(
       caveRelease,
-      smoothstep(7.8, JOURNEY_CAVE_SEQUENCE.fogGate, progress) * 0.82,
+      exitAirMix * 0.9,
     )
     const caveExitBounce = smoothstep(4.5, 11.8, progress) *
       (1 - smoothstep(13.15, 15.2, progress))
@@ -6832,7 +6851,7 @@ export default function JourneyScene({
       frameColors.nightSky,
       timeOfDay,
     )
-    const caveBackgroundReveal = smoothstep(9.4, 13.35, progress)
+    const caveBackgroundReveal = smoothstep(9.4, 13.7, progress)
     state.scene.background = frameColors.caveBackground
       .set('#07100f')
       .lerp(skyColor, caveBackgroundReveal)
@@ -6840,11 +6859,13 @@ export default function JourneyScene({
     if (skyAtmosphereMaterialRef.current) {
       const uniforms = skyAtmosphereMaterialRef.current.uniforms
       uniforms.uJourneyTopColor.value
-        .set('#4d9fba')
+        .set('#193b3b')
+        .lerp(frameColors.daySkyTop, exitAirMix)
         .lerp(frameColors.skyTopSunset, sunsetColorMix)
         .lerp(frameColors.skyTopNight, night)
       uniforms.uJourneyHorizonColor.value
-        .set('#afcbc4')
+        .set('#4f6b65')
+        .lerp(frameColors.daySkyHorizon, exitAirMix)
         .lerp(frameColors.skyHorizonSunset, sunsetColorMix)
         .lerp(frameColors.skyHorizonNight, night)
       uniforms.uJourneySunColor.value
@@ -6914,7 +6935,7 @@ export default function JourneyScene({
           const breathing = 0.86 + Math.sin(state.clock.elapsedTime * 0.13 + index * 1.31) * 0.14
           if (material) {
             material.opacity =
-              valleyMist * (portraitFactor > 0.5 ? 1.26 : 1.72) *
+              valleyMist * (portraitFactor > 0.5 ? 1.45 : 1.95) *
               (bank.userData.opacity ?? 0.2) *
               breathing *
               (1 - night * 0.46)
@@ -6956,7 +6977,7 @@ export default function JourneyScene({
     const daylightExposure = THREE.MathUtils.lerp(
       CAVE_LOOK.exposure,
       THREE.MathUtils.lerp(1.34, 1.42, holdClear),
-      caveRelease,
+      exitAirMix,
     )
     state.gl.toneMappingExposure = THREE.MathUtils.lerp(
       daylightExposure,
@@ -6967,8 +6988,8 @@ export default function JourneyScene({
     const openAirFogDensity = THREE.MathUtils.lerp(0.00098, 0.00076, night)
     // Keep the dark opening legible as rock. Dense atmospheric fog only
     // arrives after the physical portal crossing, then clears during HOLD.
-    const caveAirFog = 0.0028
-    const preHoldFog = THREE.MathUtils.lerp(caveAirFog, 0.0084, valleyFogArrival)
+    const caveAirFog = THREE.MathUtils.lerp(0.0028, 0.0037, exitAirMix)
+    const preHoldFog = THREE.MathUtils.lerp(caveAirFog, 0.0068, valleyFogArrival)
     const entranceFog = THREE.MathUtils.lerp(
       preHoldFog,
       openAirFogDensity,
@@ -6980,7 +7001,7 @@ export default function JourneyScene({
         .multiplyScalar(THREE.MathUtils.lerp(0.91, 0.82, night))
       state.scene.fog.color
         .set('#050909')
-        .lerp(openAirFog, caveRelease)
+        .lerp(openAirFog, exitAirMix)
       state.scene.fog.density = diagnostics.fog
         ? 0
         : Math.max(
@@ -6994,6 +7015,8 @@ export default function JourneyScene({
           valleyFogArrival.toFixed(7)
         document.documentElement.dataset.journeyCaveRelease =
           caveRelease.toFixed(7)
+        document.documentElement.dataset.journeyExitAirMix =
+          exitAirMix.toFixed(7)
       }
     }
 

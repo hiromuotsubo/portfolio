@@ -67,6 +67,7 @@ const PREVIEW_FOG_COMPLETED = (
 const ENDING_SETTLE_PROGRESS = 99.995
 const ENDING_SETTLE_MS = 2600
 const ENDING_INPUT_RELEASE_MS = 420
+const ENDING_INPUT_NEUTRAL_MS = 520
 const ENDING_CAPTURE_MAX_ATTEMPTS = 3
 const ENDING_MEMORY_HOME_MS = 4850
 const ENDING_MEMORY_COMPLETE_MS = 6900
@@ -1065,6 +1066,7 @@ function LegacyApp() {
   const [endingCapturePreparing, setEndingCapturePreparing] = useState(false)
   const [endingCaptureBlocked, setEndingCaptureBlocked] = useState(false)
   const [endingReleaseRequested, setEndingReleaseRequested] = useState(false)
+  const [endingInputReady, setEndingInputReady] = useState(DEV_PREVIEW === 'outro')
   const progressRef = useRef(PREVIEW_PROGRESS)
   const enteredRef = useRef(PREVIEW_ENTERED || INITIAL_VIEW === 'portfolio')
   const targetRef = useRef(PREVIEW_PROGRESS)
@@ -1087,6 +1089,9 @@ function LegacyApp() {
   const endingRequestSerialRef = useRef(0)
   const activeEndingRequestRef = useRef(0)
   const endingCaptureFailureCountRef = useRef(0)
+  const endingInputReadyRef = useRef(DEV_PREVIEW === 'outro')
+  const endingReleaseRequestedRef = useRef(false)
+  const endingInputReleaseTimerRef = useRef(null)
   const endingCommittedRef = useRef(
     DEV_PREVIEW === 'portfolio' || INITIAL_VIEW === 'portfolio',
   )
@@ -1102,6 +1107,39 @@ function LegacyApp() {
     setEndingFrameSource(null)
     setEndingFrameLoaded(false)
   }, [])
+
+  const resetEndingInputGate = useCallback(() => {
+    window.clearTimeout(endingInputReleaseTimerRef.current)
+    endingInputReleaseTimerRef.current = null
+    endingInputReadyRef.current = false
+    endingReleaseRequestedRef.current = false
+    setEndingInputReady(false)
+    setEndingReleaseRequested(false)
+  }, [])
+
+  const markEndingInputReady = useCallback(() => {
+    if (endingReleaseRequestedRef.current) return
+    window.clearTimeout(endingInputReleaseTimerRef.current)
+    endingInputReleaseTimerRef.current = null
+    endingInputReadyRef.current = true
+    setEndingInputReady(true)
+  }, [])
+
+  const waitForEndingInputRelease = useCallback(() => {
+    if (endingReleaseRequestedRef.current) return
+    endingInputReadyRef.current = false
+    setEndingInputReady(false)
+    window.clearTimeout(endingInputReleaseTimerRef.current)
+    endingInputReleaseTimerRef.current = window.setTimeout(() => {
+      endingInputReleaseTimerRef.current = null
+      if (
+        touchRef.current.active ||
+        progressRef.current < ENDING_SETTLE_PROGRESS ||
+        endingReleaseRequestedRef.current
+      ) return
+      markEndingInputReady()
+    }, ENDING_INPUT_NEUTRAL_MS)
+  }, [markEndingInputReady])
 
   const recordEndingCaptureFailure = useCallback((requestId, error, stage) => {
     if (!requestId || requestId !== activeEndingRequestRef.current) return
@@ -1185,7 +1223,7 @@ function LegacyApp() {
       endingCaptureFailureCountRef.current = 0
       setEndingCapturePreparing(false)
       setEndingCaptureBlocked(false)
-      setEndingReleaseRequested(false)
+      resetEndingInputGate()
       setShowOutro(false)
       portfolioRef.current = false
       setShowPortfolio(false)
@@ -1201,13 +1239,15 @@ function LegacyApp() {
       endingFrameSource
     ) return undefined
 
+    if (!isOutroPreview && !endingReleaseRequested) return undefined
+
     const timeout = window.setTimeout(() => {
       if (!isOutroPreview && progressRef.current < ENDING_SETTLE_PROGRESS) return
       const requestId = endingRequestSerialRef.current + 1
       endingRequestSerialRef.current = requestId
       activeEndingRequestRef.current = requestId
       setEndingCaptureRequest(requestId)
-    }, endingReleaseRequested ? ENDING_INPUT_RELEASE_MS : ENDING_SETTLE_MS)
+    }, isOutroPreview ? ENDING_SETTLE_MS : ENDING_INPUT_RELEASE_MS)
     return () => window.clearTimeout(timeout)
   }, [
     clearEndingCapture,
@@ -1218,9 +1258,38 @@ function LegacyApp() {
     journeyAssets.active,
     journeyAssets.progress,
     progress,
+    resetEndingInputGate,
     showOutro,
     showPortfolio,
   ])
+
+  useEffect(() => {
+    if (!endingCapturePreparing || showOutro || showPortfolio) {
+      window.clearTimeout(endingInputReleaseTimerRef.current)
+      endingInputReleaseTimerRef.current = null
+      return undefined
+    }
+    if (DEV_PREVIEW === 'outro') {
+      markEndingInputReady()
+      return undefined
+    }
+    if (!endingReleaseRequestedRef.current) waitForEndingInputRelease()
+    return () => {
+      window.clearTimeout(endingInputReleaseTimerRef.current)
+      endingInputReleaseTimerRef.current = null
+    }
+  }, [endingCapturePreparing, markEndingInputReady, showOutro, showPortfolio, waitForEndingInputRelease])
+
+  useEffect(() => {
+    if (journeySearch.get('capture') !== '1') return
+    document.documentElement.dataset.journeyEndingInputState = endingReleaseRequested
+      ? 'triggered'
+      : endingInputReady
+        ? 'ready'
+        : endingCapturePreparing
+          ? 'awaiting-release'
+          : 'inactive'
+  }, [endingCapturePreparing, endingInputReady, endingReleaseRequested])
 
   useEffect(() => {
     if (!endingFrameSource || !endingFrameLoaded || showOutro || showPortfolio) return undefined
@@ -1433,7 +1502,10 @@ function LegacyApp() {
         !endingFrameSource &&
         progressRef.current >= ENDING_SETTLE_PROGRESS
       ) {
-        setEndingReleaseRequested(true)
+        if (endingInputReadyRef.current && !endingReleaseRequestedRef.current) {
+          endingReleaseRequestedRef.current = true
+          setEndingReleaseRequested(true)
+        }
         return
       }
 
@@ -1599,6 +1671,15 @@ function LegacyApp() {
       if (portfolioRef.current) return
       event.preventDefault()
       const multiplier = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? window.innerHeight : 1
+      if (
+        endingCapturePreparing &&
+        !endingInputReadyRef.current &&
+        !endingReleaseRequestedRef.current &&
+        progressRef.current >= ENDING_SETTLE_PROGRESS
+      ) {
+        waitForEndingInputRelease()
+        return
+      }
       advance(event.deltaY * multiplier)
     }
     const onTouchStart = (event) => {
@@ -1635,6 +1716,16 @@ function LegacyApp() {
       if (touchRef.current.mode === 'ignore') return
       event.preventDefault()
       const deltaY = touch.clientY - touchRef.current.y
+      if (
+        endingCapturePreparing &&
+        !endingInputReadyRef.current &&
+        !endingReleaseRequestedRef.current &&
+        progressRef.current >= ENDING_SETTLE_PROGRESS
+      ) {
+        touchRef.current.x = touch.clientX
+        touchRef.current.y = touch.clientY
+        return
+      }
       advance(-deltaY * 1.8)
       touchRef.current.x = touch.clientX
       touchRef.current.y = touch.clientY
@@ -1642,6 +1733,11 @@ function LegacyApp() {
     const onTouchEnd = () => {
       touchRef.current.active = false
       touchRef.current.mode = null
+      if (
+        endingCapturePreparing &&
+        !endingReleaseRequestedRef.current &&
+        progressRef.current >= ENDING_SETTLE_PROGRESS
+      ) markEndingInputReady()
     }
     window.addEventListener('wheel', onWheel, { passive: false })
     window.addEventListener('touchstart', onTouchStart, { passive: true })
@@ -1655,7 +1751,7 @@ function LegacyApp() {
       window.removeEventListener('touchend', onTouchEnd)
       window.removeEventListener('touchcancel', onTouchEnd)
     }
-  }, [advance])
+  }, [advance, endingCapturePreparing, markEndingInputReady, waitForEndingInputRelease])
 
   const startSkyConnection = useCallback(() => {
     if (skyConnectionRef.current.frame) return
@@ -1877,7 +1973,7 @@ function LegacyApp() {
     endingCaptureFailureCountRef.current = 0
     setEndingCapturePreparing(false)
     setEndingCaptureBlocked(false)
-    setEndingReleaseRequested(false)
+    resetEndingInputGate()
     portfolioRef.current = false
     endingCommittedRef.current = false
     enteredRef.current = false
@@ -1917,7 +2013,7 @@ function LegacyApp() {
     setMessageVisible(false)
     setMobileLook({ x: 0, y: 0 })
     setPortfolioPage('home')
-  }, [clearEndingCapture])
+  }, [clearEndingCapture, resetEndingInputGate])
 
   const replayExperience = useCallback(() => {
     resetExperience()
@@ -1931,7 +2027,7 @@ function LegacyApp() {
     endingCaptureFailureCountRef.current = 0
     setEndingCapturePreparing(false)
     setEndingCaptureBlocked(false)
-    setEndingReleaseRequested(false)
+    resetEndingInputGate()
     enteredRef.current = true
     setEntered(true)
     setShowOutro(true)
@@ -1941,7 +2037,7 @@ function LegacyApp() {
     if (updateHistory) {
       window.history.pushState(null, '', `${PORTFOLIO_PATHS[nextPage]}${window.location.search}`)
     }
-  }, [clearEndingCapture])
+  }, [clearEndingCapture, resetEndingInputGate])
 
   const portfolioRouteTransitionRef = useRef(null)
 
@@ -2065,7 +2161,7 @@ function LegacyApp() {
         />
       ) : null}
 
-      {endingCapturePreparing && !endingFrameSource && !showOutro ? (
+      {endingCapturePreparing && endingInputReady && !endingFrameSource && !showOutro ? (
         <div
           className={`journey-ending-pause-cue ${endingReleaseRequested ? 'is-releasing' : ''}`}
           role="status"
