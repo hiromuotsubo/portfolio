@@ -77,6 +77,26 @@ const CAVE_CAMERA = Object.freeze({
   fov: 39.760707,
 })
 
+// Portrait viewports need their own composition, not a second story camera.
+// Every value is blended by portraitFactor, so the authored desktop path is
+// mathematically unchanged while mobile keeps the cave walls and meadow banks
+// inside its much narrower horizontal field of view.
+const MOBILE_JOURNEY_COMPOSITION = Object.freeze({
+  caveFov: 60,
+  valleyPullBackNear: -1.05,
+  valleyPullBackFar: -2.2,
+  valleyLateralNear: -2,
+  valleyLateralFar: -12.4,
+  valleyCameraLiftNear: 0.08,
+  valleyCameraLiftFar: 0.45,
+  valleyTargetLiftNear: -0.025,
+  valleyTargetLiftFar: 0.015,
+  valleyTargetRightNear: 0.06,
+  valleyTargetRightFar: 0.36,
+  valleyFov: 7,
+  grassHeightScale: 1.18,
+})
+
 const clamp01 = (value) => Math.min(1, Math.max(0, value))
 
 const smoothstep = (edge0, edge1, value) => {
@@ -4847,6 +4867,7 @@ function createMeadowMaterial(kind, alphaMap = null) {
     uJourneyTime: { value: 0 },
     uJourneyAmbientWind: { value: 0 },
     uJourneyMotionScale: { value: 1 },
+    uJourneyBladeHeightScale: { value: 1 },
     // The 320x200 planar pass keeps every blade and its ambient motion, but
     // pointer-gust micro-deformation is below its pixel footprint. Bypassing
     // that 30-slot loop there preserves the reflected meadow while removing
@@ -4899,6 +4920,7 @@ function createMeadowMaterial(kind, alphaMap = null) {
           'uniform float uJourneyTime;',
           'uniform float uJourneyAmbientWind;',
           'uniform float uJourneyMotionScale;',
+          'uniform float uJourneyBladeHeightScale;',
           'uniform float uJourneyReflectionPass;',
           'uniform float uJourneyActiveImpulseCount;',
           'uniform vec4 uJourneyWindImpulse[' + MEADOW_WIND_IMPULSE_COUNT + '];',
@@ -4911,6 +4933,7 @@ function createMeadowMaterial(kind, alphaMap = null) {
         '#include <begin_vertex>',
         [
           '#include <begin_vertex>',
+          'transformed.y *= uJourneyBladeHeightScale;',
           'float journeyBladeTip = ' + bladeTip + ';',
           'vec4 journeyBladeBase = modelMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);',
           'float journeyAmbientField =',
@@ -5022,7 +5045,7 @@ function createMeadowMaterial(kind, alphaMap = null) {
         ].join('\n'),
       )
   }
-  material.customProgramCacheKey = () => 'journey-meadow-' + kind + '-v12-broad-idle-wind'
+  material.customProgramCacheKey = () => 'journey-meadow-' + kind + '-v13-mobile-presence'
   material.userData.journeyMeadowUniforms = uniforms
   return material
 }
@@ -5333,7 +5356,13 @@ function buildMeadowSeeds() {
   return { nearGrass, midGrass, foregroundGrass, flowers }
 }
 
-function ValleyMeadow({ diagnostics = {}, progress, travelWindRef, qualityScale = 1 }) {
+function ValleyMeadow({
+  diagnostics = {},
+  portraitFactor = 0,
+  progress,
+  travelWindRef,
+  qualityScale = 1,
+}) {
   const groundRef = useRef(null)
   const nearGrassRef = useRef(null)
   const midGrassRef = useRef(null)
@@ -5738,6 +5767,9 @@ function ValleyMeadow({ diagnostics = {}, progress, travelWindRef, qualityScale 
         : travelWindRef.current * 0.6 + timeOfDayWind
       if (materialIndex === 0) frameAmbientWind = uniforms.uJourneyAmbientWind.value
       uniforms.uJourneyMotionScale.value = reduceMotion || diagnostics.wind ? 0 : 1
+      uniforms.uJourneyBladeHeightScale.value = materialIndex === 0
+        ? THREE.MathUtils.lerp(1, MOBILE_JOURNEY_COMPOSITION.grassHeightScale, portraitFactor)
+        : 1
       let activeImpulseCount = 0
       windImpulses.forEach((impulse) => {
         if (impulse.strength <= 0.001) return
@@ -6389,6 +6421,15 @@ export default function JourneyScene({
   const cameraMotionSamplesRef = useRef([])
   const cameraMotionAuditRef = useRef({ previous: null, samples: [] })
   const { set, size, scene } = useThree()
+  const sceneViewportAspect = size.width / Math.max(size.height, 1)
+  const scenePortraitFactor = 1 - smoothstep(0.62, 0.95, sceneViewportAspect)
+  const mobileMeadowQualityScale = quality.name === 'medium'
+    ? THREE.MathUtils.lerp(
+      quality.particles,
+      Math.max(quality.particles, 0.9),
+      scenePortraitFactor,
+    )
+    : quality.particles
 
   // Keep Three's authored-clip evaluation active even though the two camera
   // tracks are also sampled below for deterministic composition offsets. The
@@ -6523,8 +6564,7 @@ export default function JourneyScene({
       ? clip.duration * storyProgressToClipProgress(cameraProgress)
       : 0
     if (clip) mixer.setTime(clipTime)
-    const viewportAspect = size.width / Math.max(size.height, 1)
-    const portraitFactor = 1 - smoothstep(0.62, 0.95, viewportAspect)
+    const portraitFactor = scenePortraitFactor
     const portraitComposition = portraitFactor * smoothstep(
       JOURNEY_CAVE_SEQUENCE.fogGate,
       20,
@@ -6754,25 +6794,45 @@ export default function JourneyScene({
           (presentationMode ? -1.8 : 0) -
             vistaComposition * LOOKDEV_V2_COMPOSITION.pullBack * revealCompositionStrength -
             endingWide * ENDING_CAMERA.pullBack +
-            portraitComposition * THREE.MathUtils.lerp(-0.72, -1.55, portraitVista),
+            portraitComposition * THREE.MathUtils.lerp(
+              MOBILE_JOURNEY_COMPOSITION.valleyPullBackNear,
+              MOBILE_JOURNEY_COMPOSITION.valleyPullBackFar,
+              portraitVista,
+            ),
         )
         camera.position.addScaledVector(
           cameraScratch.right,
-          -portraitComposition * THREE.MathUtils.lerp(0.12, 0.46, portraitVista),
+          portraitComposition * THREE.MathUtils.lerp(
+            MOBILE_JOURNEY_COMPOSITION.valleyLateralNear,
+            MOBILE_JOURNEY_COMPOSITION.valleyLateralFar,
+            portraitVista,
+          ),
         )
         camera.position.y +=
           vistaComposition * LOOKDEV_V2_COMPOSITION.cameraLift * revealCompositionStrength +
           endingLift * ENDING_CAMERA.cameraLift +
-          portraitComposition * THREE.MathUtils.lerp(-0.08, 0.18, portraitVista)
+          portraitComposition * THREE.MathUtils.lerp(
+            MOBILE_JOURNEY_COMPOSITION.valleyCameraLiftNear,
+            MOBILE_JOURNEY_COMPOSITION.valleyCameraLiftFar,
+            portraitVista,
+          )
         cameraScratch.target.copy(camera.position).add(cameraScratch.forward)
         cameraScratch.target.y +=
           (presentationMode ? 0.12 : 0) +
           vistaComposition * LOOKDEV_V2_COMPOSITION.targetLift * revealCompositionStrength +
           endingLift * ENDING_CAMERA.lift +
-          portraitComposition * (1 - endingLift) * 0.08
+          portraitComposition * (1 - endingLift) * THREE.MathUtils.lerp(
+            MOBILE_JOURNEY_COMPOSITION.valleyTargetLiftNear,
+            MOBILE_JOURNEY_COMPOSITION.valleyTargetLiftFar,
+            portraitVista,
+          )
         cameraScratch.target.addScaledVector(
           cameraScratch.right,
-          -portraitComposition * THREE.MathUtils.lerp(0.02, 0.08, portraitVista),
+          portraitComposition * THREE.MathUtils.lerp(
+            MOBILE_JOURNEY_COMPOSITION.valleyTargetRightNear,
+            MOBILE_JOURNEY_COMPOSITION.valleyTargetRightFar,
+            portraitVista,
+          ),
         )
         camera.up.set(0, 1, 0)
         camera.lookAt(cameraScratch.target)
@@ -6783,13 +6843,18 @@ export default function JourneyScene({
         vistaComposition * LOOKDEV_V2_COMPOSITION.fov +
         endingWide * ENDING_CAMERA.fov +
         (presentationMode ? 15 : 0) +
-        portraitCaveComposition * 4 +
-        portraitComposition * 7
+        portraitCaveComposition * (MOBILE_JOURNEY_COMPOSITION.caveFov - CAVE_CAMERA.fov) +
+        portraitComposition * MOBILE_JOURNEY_COMPOSITION.valleyFov
+      const mobileIntroFov = THREE.MathUtils.lerp(
+        CAVE_CAMERA.fov,
+        MOBILE_JOURNEY_COMPOSITION.caveFov,
+        portraitFactor,
+      )
       const desiredFov = introLocked
-        ? CAVE_CAMERA.fov
+        ? mobileIntroFov
         : introReleaseActive
           ? THREE.MathUtils.lerp(
-            CAVE_CAMERA.fov,
+            mobileIntroFov,
             authoredDesiredFov,
             introRelease,
           )
@@ -7560,9 +7625,10 @@ export default function JourneyScene({
       />
       <ValleyMeadow
         diagnostics={diagnostics}
+        portraitFactor={scenePortraitFactor}
         progress={progress}
         travelWindRef={travelWindRef}
-        qualityScale={quality.particles}
+        qualityScale={mobileMeadowQualityScale}
       />
       <ValleyForestEdge
         progress={progress}
