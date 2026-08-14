@@ -65,10 +65,11 @@ const PREVIEW_FOG_COMPLETED = (
   )
 )
 const ENDING_SETTLE_PROGRESS = 99.995
-const ENDING_SETTLE_MS = 1500
+const ENDING_SETTLE_MS = 2600
+const ENDING_INPUT_RELEASE_MS = 420
 const ENDING_CAPTURE_MAX_ATTEMPTS = 3
-const ENDING_MEMORY_HOME_MS = 4200
-const ENDING_MEMORY_COMPLETE_MS = 6600
+const ENDING_MEMORY_HOME_MS = 4850
+const ENDING_MEMORY_COMPLETE_MS = 6900
 const PORTFOLIO_TRANSITION_MS = 720
 const PORTFOLIO_ROUTE_SWITCH_MS = 330
 const PORTFOLIO_PAGES = ['home', 'about', 'project', 'contact']
@@ -1063,6 +1064,7 @@ function LegacyApp() {
   const [endingFrameLoaded, setEndingFrameLoaded] = useState(false)
   const [endingCapturePreparing, setEndingCapturePreparing] = useState(false)
   const [endingCaptureBlocked, setEndingCaptureBlocked] = useState(false)
+  const [endingReleaseRequested, setEndingReleaseRequested] = useState(false)
   const progressRef = useRef(PREVIEW_PROGRESS)
   const enteredRef = useRef(PREVIEW_ENTERED || INITIAL_VIEW === 'portfolio')
   const targetRef = useRef(PREVIEW_PROGRESS)
@@ -1183,6 +1185,7 @@ function LegacyApp() {
       endingCaptureFailureCountRef.current = 0
       setEndingCapturePreparing(false)
       setEndingCaptureBlocked(false)
+      setEndingReleaseRequested(false)
       setShowOutro(false)
       portfolioRef.current = false
       setShowPortfolio(false)
@@ -1204,13 +1207,14 @@ function LegacyApp() {
       endingRequestSerialRef.current = requestId
       activeEndingRequestRef.current = requestId
       setEndingCaptureRequest(requestId)
-    }, ENDING_SETTLE_MS)
+    }, endingReleaseRequested ? ENDING_INPUT_RELEASE_MS : ENDING_SETTLE_MS)
     return () => window.clearTimeout(timeout)
   }, [
     clearEndingCapture,
     endingCaptureRequest,
     endingCaptureBlocked,
     endingFrameSource,
+    endingReleaseRequested,
     journeyAssets.active,
     journeyAssets.progress,
     progress,
@@ -1424,6 +1428,16 @@ function LegacyApp() {
       const active = gateRef.current
 
       if (
+        direction > 0 &&
+        endingCapturePreparing &&
+        !endingFrameSource &&
+        progressRef.current >= ENDING_SETTLE_PROGRESS
+      ) {
+        setEndingReleaseRequested(true)
+        return
+      }
+
+      if (
         direction < 0 &&
         fogCompletedRef.current &&
         targetRef.current <= JOURNEY_CAVE_SEQUENCE.fogGate + 0.02
@@ -1510,7 +1524,7 @@ function LegacyApp() {
 
       setTarget(next)
     },
-    [restoreFogAtGateForReverse, setTarget],
+    [endingCapturePreparing, endingFrameSource, restoreFogAtGateForReverse, setTarget],
   )
 
   useEffect(() => {
@@ -1863,6 +1877,7 @@ function LegacyApp() {
     endingCaptureFailureCountRef.current = 0
     setEndingCapturePreparing(false)
     setEndingCaptureBlocked(false)
+    setEndingReleaseRequested(false)
     portfolioRef.current = false
     endingCommittedRef.current = false
     enteredRef.current = false
@@ -1916,6 +1931,7 @@ function LegacyApp() {
     endingCaptureFailureCountRef.current = 0
     setEndingCapturePreparing(false)
     setEndingCaptureBlocked(false)
+    setEndingReleaseRequested(false)
     enteredRef.current = true
     setEntered(true)
     setShowOutro(true)
@@ -2040,13 +2056,24 @@ function LegacyApp() {
       <div className="valley-mist" aria-hidden="true" />
       <div className="soft-vignette" aria-hidden="true" />
 
-      {showOutro || showPortfolio ? (
+      {endingCapturePreparing || showOutro || showPortfolio ? (
         <PortfolioSite
           onReplay={replayExperience}
           onNavigate={openPortfolioPage}
           onScrolledChange={setPortfolioScrolled}
           page={portfolioPage}
         />
+      ) : null}
+
+      {endingCapturePreparing && !endingFrameSource && !showOutro ? (
+        <div
+          className={`journey-ending-pause-cue ${endingReleaseRequested ? 'is-releasing' : ''}`}
+          role="status"
+          aria-live="polite"
+        >
+          <span>FEEL THE VIEW</span>
+          <small>SCROLL WHEN READY</small>
+        </div>
       ) : null}
 
       <header className="journey-ui__header">

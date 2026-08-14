@@ -6835,3 +6835,145 @@ html[data-portfolio-route-transition='reveal'] .portfolio-site::after {
     display: none;
   }
 }
+
+/* Final refinement: fog-facing controls use the dark alpine ink so HOLD
+   remains readable against pale air without becoming a boxed UI element. */
+.journey-3d.is-gate-fog .journey-ui__operation.is-hold {
+  color: #244d3d;
+  filter: drop-shadow(0 1px 0 rgba(246, 244, 234, .55))
+    drop-shadow(0 0 10px rgba(239, 244, 235, .42));
+}
+
+.journey-3d.is-gate-fog .journey-ui__operation.is-hold .hold-mark::before {
+  background: conic-gradient(currentColor var(--hold-progress), rgba(36, 77, 61, .18) 0);
+}
+
+.journey-3d.is-gate-fog .journey-ui__operation.is-hold .hold-mark::after {
+  box-shadow: 0 0 0 5px rgba(36, 77, 61, .1);
+}
+
+/* Hybrid C ending: the night keeps its quiet hold, while a restrained cue
+   tells the visitor that one more scroll may release it into memory. */
+.journey-ending-pause-cue {
+  position: absolute;
+  z-index: 10;
+  left: 50%;
+  bottom: clamp(42px, 7.5vh, 82px);
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  color: rgba(240, 238, 230, .8);
+  text-align: center;
+  pointer-events: none;
+  transform: translateX(-50%);
+  animation: ending-pause-cue-in 900ms ease 520ms both;
+  transition: opacity 360ms ease, transform 480ms ease;
+}
+
+.journey-ending-pause-cue span {
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: .24em;
+}
+
+.journey-ending-pause-cue small {
+  opacity: .58;
+  font-size: 6px;
+  font-weight: 600;
+  letter-spacing: .2em;
+}
+
+.journey-ending-pause-cue.is-releasing {
+  opacity: 0;
+  transform: translate(-50%, -5px);
+}
+
+@keyframes ending-pause-cue-in {
+  from { opacity: 0; transform: translate(-50%, 5px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* A single restrained blue-green atmosphere replaces the white multi-blob
+   wash. The landscape stays primary and no filtered duplicate amplifies the
+   central star. The legacy QA switch below can still restore the old path. */
+.journey-ending-frame__echo,
+.journey-ending-frame__air i {
+  display: none;
+}
+
+.journey-ending-frame__air {
+  inset: -5%;
+  background:
+    radial-gradient(ellipse 86% 54% at 50% 76%, rgba(102, 151, 132, .48), rgba(88, 132, 119, .22) 44%, transparent 76%),
+    linear-gradient(to top, rgba(68, 111, 96, .58), rgba(83, 130, 120, .17) 58%, rgba(20, 52, 54, .06) 88%, transparent);
+  transform: translate3d(0, 1.5%, 0) scale(1.018);
+}
+
+.journey-ending-frame__air::after {
+  opacity: .1;
+  background-image: repeating-radial-gradient(circle at 31% 38%, rgba(33, 73, 58, .14) 0 .3px, transparent .6px 3.8px);
+  background-size: 7px 7px;
+}
+
+.journey-3d.is-outro .journey-ending-frame__echo,
+.journey-3d.is-outro .journey-ending-frame__air i {
+  animation: none;
+}
+
+.journey-3d.is-ending-perf-legacy .journey-ending-frame__echo,
+.journey-3d.is-ending-perf-legacy .journey-ending-frame__air i {
+  display: block;
+}
+
+@keyframes memory-air-arrival-lite {
+  0%, 28% {
+    opacity: 0;
+    transform: translate3d(-.6%, 2.4%, 0) scale(1.022);
+  }
+  52% { opacity: .2; }
+  72% { opacity: .46; }
+  88%, 100% {
+    opacity: .62;
+    transform: translate3d(.5%, 0, 0) scale(1.012);
+  }
+}
+
+/* Home is pre-mounted during the final pause. Its hero plane can therefore
+   settle first; navigation and copy wait until the memory layer is weak. */
+.journey-3d.is-outro.is-portfolio:not(.is-portfolio-scrolled) .portfolio-nav {
+  animation: portfolio-content-in 760ms ease 980ms both;
+}
+
+.journey-3d.is-outro.is-portfolio:not(.is-portfolio-scrolled) .portfolio-home__copy {
+  animation: portfolio-content-in 900ms ease 1240ms both;
+}
+
+.journey-3d.is-outro.is-portfolio:not(.is-portfolio-scrolled) .portfolio-home__caption,
+.journey-3d.is-outro.is-portfolio:not(.is-portfolio-scrolled) .portfolio-home__footer {
+  animation: portfolio-content-in 820ms ease 1460ms both;
+}
+
+@media (max-width: 720px), (max-aspect-ratio: 4 / 5) {
+  .journey-ending-pause-cue {
+    bottom: max(72px, calc(env(safe-area-inset-bottom) + 64px));
+  }
+
+  .journey-ending-frame__air {
+    inset: -5% -12%;
+    background:
+      radial-gradient(ellipse 82% 48% at 50% 78%, rgba(102, 151, 132, .46), rgba(88, 132, 119, .2) 46%, transparent 78%),
+      linear-gradient(to top, rgba(68, 111, 96, .56), rgba(83, 130, 120, .16) 60%, transparent 92%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .journey-ending-pause-cue {
+    animation: none;
+    opacity: .74;
+  }
+
+  .journey-ending-pause-cue.is-releasing {
+    opacity: 0;
+    transform: translateX(-50%);
+  }
+}

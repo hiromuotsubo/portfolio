@@ -13,7 +13,7 @@ import {
 
 // Versioned query prevents a previously cached GLB from reviving removed assets.
 const MODEL_URL = '/journey/models/journey-v17-runtime-optimized.glb?v=1-selective-runtime'
-const CAVE_LOOKDEV_URL = '/journey/models/journey-cave-macro-v003.glb?v=8-macro-space'
+const CAVE_LOOKDEV_URL = '/journey/models/journey-cave-macro-v003.glb?v=9-fractured-meso'
 const PHASE2_ENVIRONMENT_URL = '/journey/models/journey-phase2-environment.glb?v=5-distance-forest'
 const ALPINE_BIOME_MACRO_URL = '/journey/textures/surface/alpine-biome-macro-v1.jpg'
 
@@ -62,10 +62,10 @@ const CAVE_LOOK = {
   exposure: 1.24,
   sunIntensity: 0.14,
   skyIntensity: 0.19,
-  ambientIntensity: 0.065,
-  guideLightIntensity: 0.18,
-  exitLightIntensity: 2.16,
-  materialTint: '#252d2b',
+  ambientIntensity: 0.14,
+  guideLightIntensity: 18,
+  exitLightIntensity: 12,
+  materialTint: '#303833',
 }
 
 const CAVE_CAMERA = Object.freeze({
@@ -83,7 +83,10 @@ const smoothstep = (edge0, edge1, value) => {
 
 const CAVE_PORTAL_FADE_START_Z = -1.08
 const CAVE_PORTAL_FADE_END_Z = -2.42
-const CAVE_CAMERA_RELEASE_END = 18
+const CAVE_CAMERA_STRAIGHT_END = 18
+const CAVE_CAMERA_RELEASE_START = 17.25
+const CAVE_CAMERA_RELEASE_END = 24
+const CAVE_CAMERA_CONTINUATION_DISTANCE = 3.4
 
 function applyCaveSurfaceDetail(material) {
   const previousCompile = material.onBeforeCompile
@@ -143,10 +146,27 @@ function applyCaveSurfaceDetail(material) {
           '  vJourneyCaveWorldPosition * 1.12 + vec3(13.7, -8.4, 21.9)',
           ');',
           'float journeyCaveStone = journeyCaveMacroNoise * 0.68 + journeyCaveMesoNoise * 0.32;',
-          'diffuseColor.rgb *= mix(0.58, 1.17, clamp(journeyCaveBroad, 0.0, 1.0));',
+          'float journeyCaveFractureA = abs(sin(',
+          '  vJourneyCaveWorldPosition.z * 0.72 +',
+          '  vJourneyCaveWorldPosition.x * 0.46 +',
+          '  journeyCaveMacroNoise * 3.1',
+          '));',
+          'float journeyCaveFractureB = abs(sin(',
+          '  vJourneyCaveWorldPosition.z * 0.31 -',
+          '  vJourneyCaveWorldPosition.y * 0.84 +',
+          '  journeyCaveMesoNoise * 2.4 + 1.8',
+          '));',
+          'float journeyCaveFracture = max(',
+          '  1.0 - smoothstep(0.035, 0.145, journeyCaveFractureA),',
+          '  (1.0 - smoothstep(0.03, 0.12, journeyCaveFractureB)) * 0.72',
+          ');',
+          'float journeyCaveLowWet = (1.0 - smoothstep(0.12, 2.55, vJourneyCaveWorldPosition.y)) *',
+          '  smoothstep(0.26, 0.82, journeyCaveBroad);',
+          'diffuseColor.rgb *= mix(0.72, 1.14, clamp(journeyCaveBroad, 0.0, 1.0));',
           'float journeyCaveLayer = smoothstep(0.28, 0.74, journeyCaveStrata);',
           'diffuseColor.rgb *= mix(0.72, 1.08, journeyCaveLayer);',
-          'diffuseColor.rgb *= mix(0.52, 1.32, journeyCaveStone);',
+          'diffuseColor.rgb *= mix(0.64, 1.26, journeyCaveStone);',
+          'diffuseColor.rgb *= mix(1.0, 0.58, journeyCaveFracture);',
           'diffuseColor.rgb = mix(',
           '  diffuseColor.rgb * vec3(0.82, 0.76, 0.68),',
           '  diffuseColor.rgb * vec3(0.78, 0.98, 0.9),',
@@ -156,6 +176,11 @@ function applyCaveSurfaceDetail(material) {
           '  diffuseColor.rgb,',
           '  diffuseColor.rgb * vec3(0.78, 0.94, 0.87),',
           '  journeyCaveMoisture * 0.22',
+          ');',
+          'diffuseColor.rgb = mix(',
+          '  diffuseColor.rgb,',
+          '  diffuseColor.rgb * vec3(0.72, 0.9, 0.83),',
+          '  journeyCaveLowWet * (0.18 + journeyCaveMesoNoise * 0.22)',
           ');',
         ].join('\n'),
       )
@@ -169,12 +194,14 @@ function applyCaveSurfaceDetail(material) {
           '  sin(vJourneyCaveWorldPosition.x * 0.92 + vJourneyCaveWorldPosition.y * 1.08 - 0.6)',
           ');',
           'journeyCaveNormalWarp += (journeyCaveMesoNoise - 0.5) * vec3(0.42, 0.26, 0.38);',
-          'normal = normalize(normal + journeyCaveNormalWarp * 0.22);',
+          '// The rebuilt mesh owns the broad face direction. This restrained',
+          '// warp supplies only sub-plane erosion instead of rounding it again.',
+          'normal = normalize(normal + journeyCaveNormalWarp * 0.12);',
         ].join('\n'),
       )
       .replace(
         '#include <roughnessmap_fragment>',
-        '#include <roughnessmap_fragment>\nroughnessFactor = clamp(roughnessFactor - journeyCaveMoisture * 0.1, 0.72, 1.0);',
+        '#include <roughnessmap_fragment>\nroughnessFactor = clamp(roughnessFactor - journeyCaveLowWet * 0.2 + journeyCaveFracture * 0.06, 0.62, 1.0);',
       )
       .replace(
         '#include <emissivemap_fragment>',
@@ -193,17 +220,17 @@ function applyCaveSurfaceDetail(material) {
           ');',
           'vec3 journeyCaveBounceColor = mix(',
           '  vec3(0.016, 0.019, 0.017),',
-          '  vec3(0.092, 0.101, 0.088),',
+          '  vec3(0.057, 0.064, 0.056),',
           '  clamp(journeyCaveBroad * 0.72 + journeyCaveStrata * 0.28, 0.0, 1.0)',
           ');',
           'journeyCaveBounceColor *= 1.0 - journeyCaveFissure * 0.46;',
           'totalEmissiveRadiance += journeyCaveBounceColor *',
-          '  clamp(journeyCaveIndirect, 0.24, 0.88) * journeyCaveBounce;',
+          '  clamp(journeyCaveIndirect, 0.24, 0.88) * journeyCaveBounce * 0.72;',
         ].join('\n'),
       )
   }
   material.customProgramCacheKey = () => (
-    `${previousCacheKey?.() ?? ''}|journey-cave-surface-v3`
+    `${previousCacheKey?.() ?? ''}|journey-cave-surface-v4-fractured`
   )
 }
 
@@ -528,7 +555,7 @@ function createStarFieldMaterial(milkyWay = false) {
       uJourneyColor: {
         value: new THREE.Color(milkyWay ? '#c8dcff' : '#edf5ff'),
       },
-      uJourneySize: { value: milkyWay ? 1.25 : 0.92 },
+      uJourneySize: { value: milkyWay ? 1.02 : 0.92 },
     },
     vertexShader: `
       attribute float aSize;
@@ -834,6 +861,48 @@ function createCloudTexture(seed) {
   const texture = new THREE.CanvasTexture(canvas)
   texture.colorSpace = THREE.SRGBColorSpace
   texture.premultiplyAlpha = false
+  texture.generateMipmaps = false
+  texture.minFilter = THREE.LinearFilter
+  texture.magFilter = THREE.LinearFilter
+  texture.needsUpdate = true
+  return texture
+}
+
+function createGroundFogTexture(seed) {
+  const canvas = document.createElement('canvas')
+  canvas.width = 1024
+  canvas.height = 256
+  const context = canvas.getContext('2d')
+  const image = context.createImageData(canvas.width, canvas.height)
+  const pixels = image.data
+
+  for (let y = 0; y < canvas.height; y += 1) {
+    const vertical = y / (canvas.height - 1)
+    const groundBias = Math.pow(Math.sin(Math.PI * vertical), 0.82) *
+      Math.pow(1 - vertical, 0.46)
+    for (let x = 0; x < canvas.width; x += 1) {
+      const horizontal = x / (canvas.width - 1)
+      const worldX = horizontal * 12.5
+      const worldY = vertical * 5.2
+      const broad =
+        Math.sin(worldX * 0.62 + seed * 0.0017) * 0.5 +
+        Math.sin(worldX * 1.13 - worldY * 0.78 + seed * 0.0031) * 0.27 +
+        Math.sin(worldX * 2.18 + worldY * 1.36 + seed * 0.0049) * 0.13
+      const fine = Math.sin(worldX * 4.4 - worldY * 2.2 + seed * 0.0083) * 0.1
+      const sheet = THREE.MathUtils.smoothstep(broad + fine, -0.42, 0.58)
+      const edge = Math.pow(Math.sin(Math.PI * horizontal), 0.54)
+      const alpha = clamp01(sheet * groundBias * edge * 1.14)
+      const offset = (y * canvas.width + x) * 4
+      pixels[offset] = 255
+      pixels[offset + 1] = 255
+      pixels[offset + 2] = 255
+      pixels[offset + 3] = Math.round(alpha * 255)
+    }
+  }
+
+  context.putImageData(image, 0, 0)
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.colorSpace = THREE.SRGBColorSpace
   texture.generateMipmaps = false
   texture.minFilter = THREE.LinearFilter
   texture.magFilter = THREE.LinearFilter
@@ -2791,10 +2860,11 @@ function prepareWorld(source, biomeMacroTexture, caveLookdevSource) {
     candidate.material = new THREE.MeshStandardMaterial({
       name: `MAT_${object.name}`,
       color: object.name.includes('FLOOR')
-          ? '#252b26'
-          : '#29312d',
+          ? '#343a32'
+          : '#3a423b',
       roughness: 0.92,
       metalness: 0,
+      flatShading: true,
     })
     candidate.position.copy(object.position)
     candidate.quaternion.copy(object.quaternion)
@@ -3082,16 +3152,16 @@ function prepareWorld(source, biomeMacroTexture, caveLookdevSource) {
     object.castShadow = true
     object.receiveShadow = false
     object.userData.journeySkipPlanarReflection = true
-    object.userData.journeyCaveLookdevVersion = 'v003-macro-space'
+    object.userData.journeyCaveLookdevVersion = 'v003-fractured-meso'
     const material = object.material
     material.dithering = true
     material.transparent = true
     material.side = THREE.DoubleSide
     material.depthWrite = true
     material.envMapIntensity = 0.16
-    material.color.lerp(new THREE.Color(CAVE_LOOK.materialTint), 0.58)
+    material.color.lerp(new THREE.Color(CAVE_LOOK.materialTint), 0.42)
     material.emissive.set(object.name.includes('FLOOR') ? '#0a0e0b' : '#101612')
-    material.emissiveIntensity = object.name.includes('FLOOR') ? 0.035 : 0.055
+    material.emissiveIntensity = object.name.includes('FLOOR') ? 0.045 : 0.075
     applyCaveSurfaceDetail(material)
     material.userData.journeyCaveBaseOpacity = material.opacity
     material.userData.journeyCaveBaseColor = material.color.clone()
@@ -5852,28 +5922,28 @@ function CaveExitGlow({ spriteRef, materialRef }) {
 
 function ValleyFogBanks({ groupRef, materialRefs, layers = 7, mobile = false }) {
   const textures = useMemo(
-    () => [createCloudTexture(18400), createCloudTexture(22100), createCloudTexture(26700)],
+    () => [createGroundFogTexture(18400), createGroundFogTexture(22100), createGroundFogTexture(26700)],
     [],
   )
   useEffect(() => () => textures.forEach((texture) => texture.dispose()), [textures])
 
   const banks = useMemo(() => {
     const presets = [
-      { position: [-22, 7, -35], scale: [78, 24, 1], opacity: 0.42, speed: 0.42 },
-      { position: [32, 12, -62], scale: [116, 30, 1], opacity: 0.36, speed: 0.31 },
-      { position: [-58, 17, -92], scale: [146, 35, 1], opacity: 0.31, speed: 0.25 },
-      { position: [64, 21, -122], scale: [172, 40, 1], opacity: 0.28, speed: 0.2 },
-      { position: [-36, 27, -158], scale: [188, 45, 1], opacity: 0.24, speed: 0.17 },
-      { position: [40, 34, -198], scale: [210, 51, 1], opacity: 0.2, speed: 0.14 },
-      { position: [-12, 42, -244], scale: [232, 58, 1], opacity: 0.17, speed: 0.11 },
+      { position: [-18, 4.4, -35], scale: [94, 16, 1], opacity: 0.44, speed: 0.31 },
+      { position: [25, 7.2, -62], scale: [132, 21, 1], opacity: 0.38, speed: 0.24 },
+      { position: [-42, 10.5, -92], scale: [162, 25, 1], opacity: 0.32, speed: 0.19 },
+      { position: [48, 13.8, -122], scale: [190, 29, 1], opacity: 0.28, speed: 0.16 },
+      { position: [-31, 17.5, -158], scale: [212, 34, 1], opacity: 0.24, speed: 0.13 },
+      { position: [35, 21.5, -198], scale: [232, 38, 1], opacity: 0.2, speed: 0.11 },
+      { position: [-10, 26, -244], scale: [252, 42, 1], opacity: 0.17, speed: 0.09 },
     ]
     const activeBanks = presets.slice(0, Math.max(3, Math.min(layers, presets.length)))
     if (!mobile) return activeBanks
     return activeBanks.slice(0, 4).map((bank, index) => ({
       ...bank,
-      position: [bank.position[0] * 0.52, bank.position[1] - 4 - index * 0.8, bank.position[2]],
-      scale: [bank.scale[0] * 1.32, bank.scale[1] * 0.42, 1],
-      opacity: bank.opacity * 0.56,
+      position: [bank.position[0] * 0.42, bank.position[1] - 2.5 - index * 0.55, bank.position[2]],
+      scale: [bank.scale[0] * 1.38, bank.scale[1] * 0.64, 1],
+      opacity: bank.opacity * 0.66,
       speed: bank.speed * 0.72,
     }))
   }, [layers, mobile])
@@ -6091,6 +6161,7 @@ export default function JourneyScene({
       authoredForward: new THREE.Vector3(),
       introForward: new THREE.Vector3(),
       authoredPosition: new THREE.Vector3(),
+      continuationPosition: new THREE.Vector3(),
       authoredQuaternion: new THREE.Quaternion(),
       sampledQuaternion: new THREE.Quaternion(),
       holdPosition: new THREE.Vector3(),
@@ -6408,13 +6479,23 @@ export default function JourneyScene({
         )
         camera.quaternion.copy(cameraScratch.introQuaternion)
       } else if (introReleaseActive) {
-        introRelease = smoothstep(
+        const straightTravel = smoothstep(
           JOURNEY_CAVE_SEQUENCE.fogGate,
-          CAVE_CAMERA_RELEASE_END,
+          CAVE_CAMERA_STRAIGHT_END,
           progress,
         )
+        introRelease = smoothstep(CAVE_CAMERA_RELEASE_START, CAVE_CAMERA_RELEASE_END, progress)
+        cameraScratch.continuationPosition.set(
+          CAVE_CAMERA.x,
+          CAVE_CAMERA.y,
+          THREE.MathUtils.lerp(
+            cameraScratch.introFogZ,
+            cameraScratch.introFogZ - CAVE_CAMERA_CONTINUATION_DISTANCE,
+            straightTravel,
+          ),
+        )
         camera.position
-          .set(CAVE_CAMERA.x, CAVE_CAMERA.y, cameraScratch.introFogZ)
+          .copy(cameraScratch.continuationPosition)
           .lerp(cameraScratch.authoredPosition, introRelease)
         camera.quaternion
           .copy(cameraScratch.introQuaternion)
@@ -6751,7 +6832,7 @@ export default function JourneyScene({
       frameColors.nightSky,
       timeOfDay,
     )
-    const caveBackgroundReveal = smoothstep(7.6, 12.15, progress)
+    const caveBackgroundReveal = smoothstep(9.4, 13.35, progress)
     state.scene.background = frameColors.caveBackground
       .set('#07100f')
       .lerp(skyColor, caveBackgroundReveal)
@@ -6763,7 +6844,7 @@ export default function JourneyScene({
         .lerp(frameColors.skyTopSunset, sunsetColorMix)
         .lerp(frameColors.skyTopNight, night)
       uniforms.uJourneyHorizonColor.value
-        .set('#d8e7df')
+        .set('#afcbc4')
         .lerp(frameColors.skyHorizonSunset, sunsetColorMix)
         .lerp(frameColors.skyHorizonNight, night)
       uniforms.uJourneySunColor.value
@@ -6833,7 +6914,7 @@ export default function JourneyScene({
           const breathing = 0.86 + Math.sin(state.clock.elapsedTime * 0.13 + index * 1.31) * 0.14
           if (material) {
             material.opacity =
-              valleyMist * (portraitFactor > 0.5 ? 1.05 : 1.78) *
+              valleyMist * (portraitFactor > 0.5 ? 1.26 : 1.72) *
               (bank.userData.opacity ?? 0.2) *
               breathing *
               (1 - night * 0.46)
@@ -6883,11 +6964,11 @@ export default function JourneyScene({
       night,
     )
 
-    const openAirFogDensity = THREE.MathUtils.lerp(0.00102, 0.00078, night)
+    const openAirFogDensity = THREE.MathUtils.lerp(0.00098, 0.00076, night)
     // Keep the dark opening legible as rock. Dense atmospheric fog only
     // arrives after the physical portal crossing, then clears during HOLD.
-    const caveAirFog = 0.0034
-    const preHoldFog = THREE.MathUtils.lerp(caveAirFog, 0.012, valleyFogArrival)
+    const caveAirFog = 0.0028
+    const preHoldFog = THREE.MathUtils.lerp(caveAirFog, 0.0084, valleyFogArrival)
     const entranceFog = THREE.MathUtils.lerp(
       preHoldFog,
       openAirFogDensity,
@@ -6966,10 +7047,10 @@ export default function JourneyScene({
     }
     const caveGrazingPresence = 1 - smoothstep(10.5, 14.1, progress)
     if (caveLeftGrazingLightRef.current) {
-      caveLeftGrazingLightRef.current.intensity = caveGrazingPresence * 0.68
+      caveLeftGrazingLightRef.current.intensity = caveGrazingPresence * 14
     }
     if (caveRightGrazingLightRef.current) {
-      caveRightGrazingLightRef.current.intensity = caveGrazingPresence * 0.46
+      caveRightGrazingLightRef.current.intensity = caveGrazingPresence * 10
     }
     if (caveExitLightRef.current) {
       // A stable source just beyond the opening lets exterior daylight wrap
@@ -6981,7 +7062,7 @@ export default function JourneyScene({
     if (caveExitGlowMaterialRef.current) {
       const approachGlow = smoothstep(3.2, 10.8, progress) *
         (1 - smoothstep(12.7, JOURNEY_CAVE_SEQUENCE.fogGate, progress))
-      caveExitGlowMaterialRef.current.opacity = approachGlow * 0.16
+      caveExitGlowMaterialRef.current.opacity = approachGlow * 0.11
       if (caveExitGlowRef.current) caveExitGlowRef.current.visible = approachGlow > 0.002
     }
     if (qaCaptureEnabled) {
@@ -6995,7 +7076,7 @@ export default function JourneyScene({
         (ambientRef.current?.intensity ?? 0).toFixed(6)
       document.documentElement.dataset.journeyCaveLookdev =
         groups.cave.some((object) => object.userData.journeyCaveLookdevVersion)
-          ? 'v003-macro-space'
+          ? 'v003-fractured-meso'
           : 'production'
     }
 
@@ -7012,7 +7093,7 @@ export default function JourneyScene({
     }
     const bridgeReveal = smoothstep(0, 0.72, skyConnectionProgress)
     const milkyWayReveal = smoothstep(0.28, 1, skyConnectionProgress)
-    const bridgeFade = 1 - smoothstep(0.7, 1, skyConnectionProgress) * 0.72
+    const bridgeFade = 1 - smoothstep(0.7, 1, skyConnectionProgress) * 0.94
     if (skyBridgeRef.current) {
       const uniforms = skyBridgeRef.current.material.uniforms
       uniforms.uJourneyReveal.value = bridgeReveal
@@ -7022,7 +7103,7 @@ export default function JourneyScene({
       skyBridgeRef.current.visible = bridgeReveal > 0.002 && !diagnostics.stars
     }
     if (milkyMaterialRef.current) {
-      milkyMaterialRef.current.uniforms.uJourneyOpacity.value = milkyWayReveal * 0.94
+      milkyMaterialRef.current.uniforms.uJourneyOpacity.value = milkyWayReveal * 0.68
       milkyMaterialRef.current.uniforms.uJourneyTime.value = state.clock.elapsedTime
     }
     if (milkyPointsRef.current) {
@@ -7148,9 +7229,11 @@ export default function JourneyScene({
       riverMysticLightRef.current.intensity =
         night * (riverGlow * 1.35 + skyConnectionProgress * 1.8)
     }
-    const sourceValleyPresence = progress > JOURNEY_CAVE_SEQUENCE.fogGate + 0.001
-      ? 1
-      : valleyFogArrival * holdClear
+    // The exterior has physical depth before the Fog/HOLD gate. Showing its
+    // mountains through the portal prevents a full-screen sky color from
+    // reading as a white wall, while Fog itself still begins only after the
+    // authored portal crossing.
+    const sourceValleyPresence = smoothstep(9.15, JOURNEY_CAVE_SEQUENCE.fogGate, progress)
     groups.mountains.forEach((mesh) => {
       mesh.visible = sourceValleyPresence > 0.002
       const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]

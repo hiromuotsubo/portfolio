@@ -21,6 +21,15 @@ SHELL_NAME = "CAVE_MACRO_SHELL_V003"
 FLOOR_NAME = "CAVE_MACRO_FLOOR_V003"
 
 
+def deterministic_noise(row, column, salt=0):
+    value = math.sin(
+        (row + 1) * 12.9898 +
+        (column + 1) * 78.233 +
+        (salt + 1) * 37.719
+    ) * 43758.5453
+    return value - math.floor(value)
+
+
 def make_material(name, base_color, roughness, metallic=0.0):
     material = bpy.data.materials.get(name) or bpy.data.materials.new(name)
     material.diffuse_color = (*base_color, 1.0)
@@ -82,21 +91,23 @@ def build_shell(material):
         (0.8, 0.00, 3.06, 2.92, 5.12),
         (1.2, 0.02, 3.00, 2.88, 5.02),
     ]
-    # Densify only the camera-visible corridor. Roughly 1.25k quads are enough
-    # for meso-scale fractured planes without turning polygon count into the
-    # source of realism.
+    # Three longitudinal samples per authored station retain the continuous
+    # macro shell while giving the broad rock plates enough edges to change
+    # direction. The density is still tiny compared with the valley world;
+    # topology is used only where the fixed camera can read it.
     dense_stations = []
     for station_index in range(len(stations) - 1):
         current = stations[station_index]
         following = stations[station_index + 1]
-        dense_stations.append(current)
-        dense_stations.append(tuple(
-            current[value_index] + (following[value_index] - current[value_index]) * 0.5
-            for value_index in range(len(current))
-        ))
+        for station_fraction in (0.0, 1.0 / 3.0, 2.0 / 3.0):
+            dense_stations.append(tuple(
+                current[value_index] +
+                (following[value_index] - current[value_index]) * station_fraction
+                for value_index in range(len(current))
+            ))
     dense_stations.append(stations[-1])
     stations = dense_stations
-    arch_segments = 48
+    arch_segments = 60
     vertices = []
     faces = []
 
@@ -128,7 +139,28 @@ def build_shell(material):
                 + math.sin(y * 0.31 - u * 3.8) * 0.14
             )
             wall_breakup = (strata + broad_erosion) * (0.24 + wall_profile * 0.76)
+
+            # Adjacent geological plates share the shell but not one smooth
+            # tangent. A low-frequency block value creates real ridges and
+            # recesses instead of a normal-map illusion on a round tunnel.
+            plate_row = station_index // 3
+            plate_column = segment // 5
+            plate_shift = (deterministic_noise(plate_row, plate_column, 3) - 0.5) * 0.58
+            plate_tilt = (deterministic_noise(plate_row, plate_column, 17) - 0.5) * 0.34
+
+            # Long erosion shelves interrupt both walls at different heights.
+            left_shelf = math.exp(-((u - 0.17) / 0.055) ** 2) * (
+                0.18 + 0.20 * max(0.0, math.sin(y * 0.42 + 0.8))
+            )
+            right_shelf = math.exp(-((u - 0.82) / 0.06) ** 2) * (
+                0.16 + 0.24 * max(0.0, math.sin(y * 0.37 - 1.1))
+            )
+            upper_ledge = math.exp(-((u - 0.42) / 0.075) ** 2) * (
+                0.12 + 0.18 * max(0.0, math.sin(y * 0.29 + 2.2))
+            )
+            wall_breakup += left_shelf + right_shelf + upper_ledge
             x = center_x + math.cos(theta) * (side_width + wall_breakup)
+            x += math.cos(theta) * plate_shift * (0.36 + wall_profile * 0.64)
             x += left_mass + right_recess
             # Near-vertical lower walls rise into an eroded asymmetric vault.
             # This avoids the perfect half-cylinder silhouette of a generated
@@ -140,6 +172,7 @@ def build_shell(material):
             z += math.sin(u * math.pi * 3.0 + y * 0.23) * 0.22 * ceiling_profile
             z += broad_erosion * 0.38 * ceiling_profile
             z -= overhang
+            z += plate_shift * ceiling_profile * 0.38 + plate_tilt * wall_profile * 0.16
 
             continuous_fracture = (
                 math.sin(u * 7.4 + y * 0.12 + 0.8) * 0.62
@@ -173,7 +206,63 @@ def build_shell(material):
         for segment in range(arch_segments):
             a = station_index * stride + segment
             b = a + stride
-            faces.append((a, b, b + 1, a + 1))
+            # Alternating diagonals keep broad surfaces faceted without a
+            # repeating procedural direction running through the cave.
+            if (station_index + segment) % 2:
+                faces.append((a, b, a + 1))
+                faces.append((a + 1, b, b + 1))
+            else:
+                faces.append((a, b, b + 1))
+                faces.append((a, b + 1, a + 1))
+
+    def append_wall_ledge(side, y_start, y_end, wall_x, base_z, depth, height, salt):
+        """Append one fractured ledge to the same shell mesh.
+
+        These are long erosion shelves attached outside the free-space
+        corridor, not separate boulder props. They produce the readable hard
+        edges and shadow pockets missing from the sinusoidal macro surface.
+        """
+        ledge_start = len(vertices)
+        samples = 7
+        for sample in range(samples):
+            sample_t = sample / (samples - 1)
+            y = y_start + (y_end - y_start) * sample_t
+            irregularity = deterministic_noise(sample, salt, 29) - 0.5
+            local_wall = wall_x + irregularity * 0.22
+            local_depth = depth * (0.78 + deterministic_noise(sample, salt, 41) * 0.4)
+            local_floor = base_z + math.sin(sample_t * math.pi * 2.2 + salt) * 0.09
+            local_height = height * (0.82 + deterministic_noise(sample, salt, 53) * 0.35)
+            outer_x = side * local_wall
+            inner_x = side * (local_wall - local_depth)
+            vertices.extend([
+                (outer_x, y, local_floor - 0.05),
+                (inner_x, y, local_floor),
+                (inner_x, y, local_floor + local_height),
+                (outer_x, y, local_floor + local_height + irregularity * 0.08),
+            ])
+        for sample in range(samples - 1):
+            current = ledge_start + sample * 4
+            following = current + 4
+            for edge in range(4):
+                next_edge = (edge + 1) % 4
+                faces.append((current + edge, following + edge, following + next_edge))
+                faces.append((current + edge, following + next_edge, current + next_edge))
+        faces.append(tuple(ledge_start + edge for edge in (3, 2, 1, 0)))
+        end = ledge_start + (samples - 1) * 4
+        faces.append(tuple(end + edge for edge in (0, 1, 2, 3)))
+
+    ledges = [
+        (-1, -29.0, -19.0, 4.82, 0.72, 0.64, 0.44, 2),
+        (-1, -24.5, -13.0, 4.96, 3.35, 0.48, 0.38, 5),
+        (-1, -17.5, -6.0, 4.48, 1.48, 0.72, 0.52, 7),
+        (-1, -11.5, -1.0, 4.02, 4.45, 0.42, 0.42, 11),
+        (1, -28.0, -17.0, 4.62, 2.52, 0.50, 0.46, 13),
+        (1, -20.0, -9.0, 4.48, 0.82, 0.62, 0.48, 17),
+        (1, -14.5, -3.0, 4.02, 3.72, 0.50, 0.38, 19),
+        (1, -7.5, 0.7, 3.50, 1.72, 0.48, 0.42, 23),
+    ]
+    for ledge in ledges:
+        append_wall_ledge(*ledge)
 
     # Close only the rear ring behind the viewer. The front remains a physical
     # portal so the camera can cross it without any geometry or visibility pop.
@@ -186,12 +275,10 @@ def build_shell(material):
     obj = link_mesh(SHELL_NAME, vertices, faces, material)
     for polygon in obj.data.polygons:
         polygon.use_smooth = False
-    bevel = obj.modifiers.new("CAVE_MACRO_EDGE_SOFTEN", "BEVEL")
-    bevel.width = 0.055
-    bevel.segments = 2
-    bevel.limit_method = "ANGLE"
-    bevel.angle_limit = math.radians(52)
-    obj["geometry_role"] = "continuous macro wall / ceiling / portal"
+    # No blanket bevel: it was rounding every geological direction change and
+    # was the main reason the exported cave read as clay. Lighting may soften
+    # the rock, but the authored planes remain physically distinct.
+    obj["geometry_role"] = "continuous macro wall / fractured meso ledges / ceiling / portal"
     return obj
 
 
@@ -204,25 +291,36 @@ def floor_height(x, y):
 
 
 def build_floor(material):
-    y_stations = [(-32.0 + index * 1.75) for index in range(21)]
-    x_columns = [-6.7, -5.35, -3.8, -2.25, 0.0, 2.1, 3.8, 5.25, 6.75]
+    y_stations = [(-32.0 + index * 1.25) for index in range(28)]
+    x_columns = [-6.7, -5.75, -4.8, -3.85, -2.9, -1.85, 0.0, 1.75, 2.75, 3.75, 4.75, 5.75, 6.75]
     vertices = []
     faces = []
     for y in y_stations:
         opening = max(0.0, min(1.0, (y + 3.5) / 6.0))
-        for x in x_columns:
+        for column, x in enumerate(x_columns):
             expanded_x = x * (1.0 + opening * 0.18)
-            vertices.append((expanded_x, y, floor_height(expanded_x, y)))
+            edge_weight = min(1.0, max(0.0, (abs(expanded_x) - 1.45) / 4.8))
+            plate = (deterministic_noise(round((y + 32) / 2.5), column // 2, 71) - 0.5) * 0.12
+            vertices.append((
+                expanded_x,
+                y,
+                floor_height(expanded_x, y) + plate * edge_weight,
+            ))
     stride = len(x_columns)
     for row in range(len(y_stations) - 1):
         for column in range(stride - 1):
             a = row * stride + column
             b = a + stride
-            faces.append((a, a + 1, b + 1, b))
+            if (row + column) % 2:
+                faces.append((a, a + 1, b))
+                faces.append((a + 1, b + 1, b))
+            else:
+                faces.append((a, a + 1, b + 1))
+                faces.append((a, b + 1, b))
     obj = link_mesh(FLOOR_NAME, vertices, faces, material)
     for polygon in obj.data.polygons:
-        polygon.use_smooth = True
-    obj["geometry_role"] = "stable eroded walking floor"
+        polygon.use_smooth = False
+    obj["geometry_role"] = "stable faceted walking floor with edge erosion"
     return obj
 
 
