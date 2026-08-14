@@ -45,8 +45,11 @@ const ENDING_CAMERA = {
 // These offsets leave the authored animation path intact and only widen the
 // open-valley composition so sky, water and distant ridges can share the frame.
 const LOOKDEV_V2_COMPOSITION = {
-  vistaStart: 19,
-  vistaFull: 28,
+  // The complete daytime valley is already present when the viewer clears
+  // the portal. Fog conceals its lower depth; later scrolling explores the
+  // same composition instead of revealing a second, wider camera setup.
+  vistaStart: 11.82,
+  vistaFull: 12.22,
   vistaFadeStart: 56,
   vistaFadeEnd: 68,
   // The source clip opens on a close valley floor. A more deliberate pullback
@@ -64,7 +67,7 @@ const CAVE_LOOK = {
   skyIntensity: 0.19,
   ambientIntensity: 0.14,
   guideLightIntensity: 18,
-  exitLightIntensity: 12,
+  exitLightIntensity: 14,
   materialTint: '#303833',
 }
 
@@ -83,10 +86,22 @@ const smoothstep = (edge0, edge1, value) => {
 
 const CAVE_PORTAL_FADE_START_Z = -1.08
 const CAVE_PORTAL_FADE_END_Z = -2.42
-const CAVE_CAMERA_STRAIGHT_END = 20
-const CAVE_CAMERA_RELEASE_START = 18
-const CAVE_CAMERA_RELEASE_END = 30
-const CAVE_CAMERA_CONTINUATION_DISTANCE = 3.4
+const CAVE_CAMERA_STRAIGHT_END = 12.12
+const CAVE_CAMERA_RELEASE_START = 11.82
+const CAVE_CAMERA_RELEASE_END = 12.72
+const CAVE_CAMERA_CONTINUATION_DISTANCE = 1.05
+const CAVE_EXIT_EYE_LIFT = 1.24
+const VALLEY_REVEAL_START = 11.9
+const VALLEY_REVEAL_END = 12.38
+// Depth fog supplies the cave-exit mist. Camera-facing cards are retained as
+// rollback assets but stay disabled because their projection crosses the sky.
+const USE_VIEW_FACING_FOG_CARDS = false
+
+const getJourneyValleyPresence = (progress) => smoothstep(
+  VALLEY_REVEAL_START,
+  VALLEY_REVEAL_END,
+  progress,
+)
 
 function applyCaveSurfaceDetail(material) {
   const previousCompile = material.onBeforeCompile
@@ -3411,13 +3426,14 @@ function DriftingClouds({ groupRef, materialRefs }) {
               materialRefs.current[index] = material
             }}
             map={cloudTexture}
+            alphaMap={cloudTexture}
             color="#f4f5ef"
             transparent
             opacity={0}
-            alphaTest={0}
+            alphaTest={0.018}
             depthWrite={false}
             depthTest={cloud.depthTest}
-            blending={THREE.AdditiveBlending}
+            blending={THREE.NormalBlending}
             side={THREE.FrontSide}
             toneMapped={false}
           />
@@ -4230,7 +4246,7 @@ function NaturalRiverCorridor({ progress, qualityScale = 1, reflectionDisabled =
   }, [reflectionMaterial, reflectionTarget])
 
   useFrame((state) => {
-    const reveal = smoothstep(16.5, 23.5, progress)
+    const reveal = getJourneyValleyPresence(progress)
     const { nightWeight: night } = getJourneyTimeOfDay(progress)
     if (corridorRef.current) corridorRef.current.visible = reveal > 0.01
     if (reflectionMeshRef.current) reflectionMeshRef.current.visible = reveal > 0.01
@@ -4524,7 +4540,7 @@ function FarRidgeCrown({ progress, biomeMacroTexture }) {
     material.dispose()
   }, [geometry, material])
   useFrame(() => {
-    const reveal = smoothstep(17.5, 24.5, progress)
+    const reveal = getJourneyValleyPresence(progress)
     const { sunsetWeight: sunset, nightWeight: night } = getJourneyTimeOfDay(progress)
     material.opacity = reveal * THREE.MathUtils.lerp(0.44, 0.26, night)
     material.color
@@ -5596,7 +5612,7 @@ function ValleyMeadow({ diagnostics = {}, progress, travelWindRef, qualityScale 
   }, [flowerGeometry, flowerMaterial, flowerPointGeometry, flowerPointMaterial, flowerPointTexture, foregroundGrassGeometry, grassMaterial, groundGeometry, groundMaterial, groundTexture, midGrassGeometry, nearGrassGeometry])
 
   useFrame((state, delta) => {
-    const reveal = smoothstep(17.5, 24.5, progress)
+    const reveal = getJourneyValleyPresence(progress)
     const {
       dayWeight,
       sunsetWeight: sunset,
@@ -5853,7 +5869,7 @@ function ValleyForestEdge({ progress, qualityScale = 1 }) {
   }, [activeCount, material, palette, placements])
 
   useFrame(() => {
-    const reveal = smoothstep(17.5, 24.5, progress)
+    const reveal = getJourneyValleyPresence(progress)
     const { sunsetWeight: sunset, nightWeight: night } = getJourneyTimeOfDay(progress)
     if (meshRef.current) meshRef.current.visible = reveal > 0.002
     material.opacity = reveal * THREE.MathUtils.lerp(0.38, 0.3, night)
@@ -6463,7 +6479,7 @@ export default function JourneyScene({
           clip.duration * storyProgressToClipProgress(0),
         ) ?? camera.position.toArray())
         const introFog = Array.from(cameraSampler.position.evaluate(
-          clip.duration * storyProgressToClipProgress(JOURNEY_CAVE_SEQUENCE.fogGate),
+          clip.duration * storyProgressToClipProgress(JOURNEY_CAVE_SEQUENCE.portalCrossing),
         ) ?? camera.position.toArray())
         cameraScratch.introStartZ = introStart?.[2] ?? camera.position.z
         cameraScratch.introFogZ = introFog?.[2] ?? camera.position.z
@@ -6478,16 +6494,18 @@ export default function JourneyScene({
         cameraScratch.introPoseCaptured = true
       }
 
-      const introLocked = progress <= JOURNEY_CAVE_SEQUENCE.fogGate + 0.001
+      const introLocked = progress <= JOURNEY_CAVE_SEQUENCE.portalCrossing + 0.001
       const introReleaseActive =
         !introLocked && progress < CAVE_CAMERA_RELEASE_END && cameraScratch.introPoseCaptured
       const introAuthoredTransition = introLocked || introReleaseActive
       let introRelease = 0
       if (introLocked && cameraScratch.introPoseCaptured) {
-        const introTravel = smoothstep(0, JOURNEY_CAVE_SEQUENCE.fogGate, progress)
+        const introTravel = smoothstep(0, JOURNEY_CAVE_SEQUENCE.portalCrossing, progress)
+        const exitEyeLift = smoothstep(3.8, 10.9, progress) *
+          CAVE_EXIT_EYE_LIFT
         camera.position.set(
           CAVE_CAMERA.x,
-          CAVE_CAMERA.y,
+          CAVE_CAMERA.y + exitEyeLift,
           THREE.MathUtils.lerp(
             cameraScratch.introStartZ,
             cameraScratch.introFogZ,
@@ -6504,7 +6522,7 @@ export default function JourneyScene({
         introRelease = smoothstep(CAVE_CAMERA_RELEASE_START, CAVE_CAMERA_RELEASE_END, progress)
         cameraScratch.continuationPosition.set(
           CAVE_CAMERA.x,
-          CAVE_CAMERA.y,
+          CAVE_CAMERA.y + CAVE_EXIT_EYE_LIFT,
           THREE.MathUtils.lerp(
             cameraScratch.introFogZ,
             cameraScratch.introFogZ - CAVE_CAMERA_CONTINUATION_DISTANCE,
@@ -6519,7 +6537,11 @@ export default function JourneyScene({
           .slerp(cameraScratch.authoredQuaternion, introRelease)
       }
 
-      const openVista = smoothstep(18, 25, cameraProgress)
+      const openVista = smoothstep(
+        JOURNEY_CAVE_SEQUENCE.portalCrossing,
+        12.22,
+        cameraProgress,
+      )
       const vistaComposition = smoothstep(
         LOOKDEV_V2_COMPOSITION.vistaStart,
         LOOKDEV_V2_COMPOSITION.vistaFull,
@@ -6646,7 +6668,9 @@ export default function JourneyScene({
         .set(1, 0, 0)
         .crossVectors(cameraScratch.forward, cameraScratch.up)
         .normalize()
-      const revealCompositionStrength = introReleaseActive ? introRelease : 1
+      const revealCompositionStrength = introLocked
+        ? 0
+        : smoothstep(JOURNEY_CAVE_SEQUENCE.portalCrossing, 12.22, progress)
       if (!introLocked) {
         camera.position.addScaledVector(
           cameraScratch.forward,
@@ -6687,14 +6711,24 @@ export default function JourneyScene({
       const desiredFov = introLocked
         ? CAVE_CAMERA.fov
         : introReleaseActive
-          ? THREE.MathUtils.lerp(CAVE_CAMERA.fov, authoredDesiredFov, introRelease)
+          ? THREE.MathUtils.lerp(
+            CAVE_CAMERA.fov,
+            authoredDesiredFov,
+            revealCompositionStrength,
+          )
           : authoredDesiredFov
       if (Math.abs(camera.fov - desiredFov) > 0.001) {
         camera.fov = desiredFov
         camera.updateProjectionMatrix()
       }
       const fogPoseLocked = activeGate === 'fog'
-      if (fogPoseLocked && !cameraScratch.holdPoseCaptured) {
+      if (
+        fogPoseLocked &&
+        !cameraScratch.holdPoseCaptured &&
+        cameraScratch.introPoseCaptured &&
+        progress >= CAVE_CAMERA_RELEASE_END &&
+        camera.fov >= CAVE_CAMERA.fov + 10
+      ) {
         cameraScratch.holdPosition.copy(camera.position)
         cameraScratch.holdQuaternion.copy(camera.quaternion)
         cameraScratch.holdFov = camera.fov
@@ -6840,7 +6874,7 @@ export default function JourneyScene({
     const exitAirMix = smoothstep(5.6, 13.7, progress)
     const caveDaylight = Math.max(
       caveRelease,
-      exitAirMix * 0.9,
+      exitAirMix * 0.45,
     )
     const caveExitBounce = smoothstep(4.5, 11.8, progress) *
       (1 - smoothstep(13.15, 15.2, progress))
@@ -6851,7 +6885,10 @@ export default function JourneyScene({
       frameColors.nightSky,
       timeOfDay,
     )
-    const caveBackgroundReveal = smoothstep(9.4, 13.7, progress)
+    // Reveal daylight through the physical opening before any valley geometry
+    // is exposed. The cave remains dark around the viewer, while the portal
+    // itself grows from deep teal into the real daytime sky.
+    const caveBackgroundReveal = smoothstep(5.8, 12.18, progress)
     state.scene.background = frameColors.caveBackground
       .set('#07100f')
       .lerp(skyColor, caveBackgroundReveal)
@@ -6882,11 +6919,15 @@ export default function JourneyScene({
       uniforms.uJourneyNight.value = night
     }
     if (skyAtmosphereRef.current) {
-      skyAtmosphereRef.current.visible = caveBackgroundReveal > 0.002
+      // Before the portal opens, the interpolated scene background is the
+      // light visible through the hole. The opaque sky sphere turns on only
+      // with the valley itself; otherwise it replaces that interpolation in
+      // one frame and reads as a flat bright wall inside the cave.
+      skyAtmosphereRef.current.visible = getJourneyValleyPresence(progress) > 0.002
     }
 
     if (cloudGroupRef.current) {
-      const openSky = smoothstep(15, 21, progress)
+      const openSky = getJourneyValleyPresence(progress)
       const cloudNightFade = 1 - smoothstep(0.12, 0.92, night)
       const cloudsVisible = openSky * cloudNightFade > 0.002
       cloudGroupRef.current.visible = cloudsVisible
@@ -6923,7 +6964,8 @@ export default function JourneyScene({
     const holdClear = clamp01(fogClearProgress)
     const valleyMist = valleyFogArrival * holdFogRemaining
     if (valleyFogGroupRef.current) {
-      const valleyFogVisible = valleyMist > 0.002 && !diagnostics.fog
+      const valleyFogVisible = USE_VIEW_FACING_FOG_CARDS &&
+        valleyMist > 0.002 && !diagnostics.fog
       valleyFogGroupRef.current.visible = valleyFogVisible
       if (valleyFogVisible) {
         const fogColor = frameColors.valleyFog
@@ -6952,8 +6994,9 @@ export default function JourneyScene({
       }
     }
     if (openValleyAtmosphereRef.current) {
-      const atmospherePresence = smoothstep(18, 26, progress)
-      const atmosphereVisible = atmospherePresence > 0.002 && !diagnostics.fog
+      const atmospherePresence = getJourneyValleyPresence(progress)
+      const atmosphereVisible = USE_VIEW_FACING_FOG_CARDS &&
+        atmospherePresence > 0.002 && !diagnostics.fog
       openValleyAtmosphereRef.current.visible = atmosphereVisible
       if (atmosphereVisible) {
         const atmosphereColor = frameColors.atmosphere
@@ -6988,8 +7031,10 @@ export default function JourneyScene({
     const openAirFogDensity = THREE.MathUtils.lerp(0.00098, 0.00076, night)
     // Keep the dark opening legible as rock. Dense atmospheric fog only
     // arrives after the physical portal crossing, then clears during HOLD.
-    const caveAirFog = THREE.MathUtils.lerp(0.0028, 0.0037, exitAirMix)
-    const preHoldFog = THREE.MathUtils.lerp(caveAirFog, 0.0068, valleyFogArrival)
+    // Global distance fog supplies depth but no longer washes out the sky.
+    // Grounded valley banks below provide the dense bottom-up mist profile.
+    const caveAirFog = THREE.MathUtils.lerp(0.0022, 0.00275, exitAirMix)
+    const preHoldFog = THREE.MathUtils.lerp(caveAirFog, 0.0052, valleyFogArrival)
     const entranceFog = THREE.MathUtils.lerp(
       preHoldFog,
       openAirFogDensity,
@@ -7161,7 +7206,7 @@ export default function JourneyScene({
       seatedFigureRef.current.visible = figurePresence > 0.002
     }
 
-    const openValley = smoothstep(16.5, 22, progress)
+    const openValley = getJourneyValleyPresence(progress)
     phase2Groups.ridges.forEach((mesh) => {
       mesh.visible = openValley > 0.01
       const material = mesh.material
@@ -7184,10 +7229,12 @@ export default function JourneyScene({
       }
     })
     phase2Groups.clouds.forEach((cloud, index) => {
-      const isFarCloudSlab = cloud.name.toUpperCase().includes('_FAR')
-      cloud.visible = isFarCloudSlab && openValley > 0.02 && night < 0.98
+      // The legacy Phase-2 cloud sheets are rectangular guide planes. Their
+      // CanvasTexture transparency is not reliable enough to place against a
+      // clear sky, so the authored drifting cloud layer owns the sky instead.
+      cloud.visible = false
       const material = cloud.material
-      material.opacity = isFarCloudSlab ? openValley * (1 - night) * 0.09 : 0
+      material.opacity = 0
       material.color
         .set('#e9eee7')
         .lerp(frameColors.phaseCloudSunset, sunset * 0.58)
@@ -7256,7 +7303,9 @@ export default function JourneyScene({
     // mountains through the portal prevents a full-screen sky color from
     // reading as a white wall, while Fog itself still begins only after the
     // authored portal crossing.
-    const sourceValleyPresence = smoothstep(9.15, JOURNEY_CAVE_SEQUENCE.fogGate, progress)
+    // Do not expose opaque mountain geometry while the camera is still inside
+    // the tunnel; it intersects the portal view as a full-screen black slab.
+    const sourceValleyPresence = getJourneyValleyPresence(progress)
     groups.mountains.forEach((mesh) => {
       mesh.visible = sourceValleyPresence > 0.002
       const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
@@ -7281,7 +7330,7 @@ export default function JourneyScene({
       canopy.material.opacity = 0
     })
     groups.water.forEach((mesh, index) => {
-      const valleyRiverReveal = smoothstep(16.5, 23.5, progress)
+      const valleyRiverReveal = getJourneyValleyPresence(progress)
       mesh.visible = valleyRiverReveal > 0.01
       const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
       materials.forEach((material) => {
@@ -7351,13 +7400,17 @@ export default function JourneyScene({
     // threshold. The rock frame remains solid through the portal plane, then
     // fades only while it travels behind/outside the screen. Reverse traversal
     // evaluates the same signed distance in the opposite direction.
-    const cavePresence = progress <= JOURNEY_CAVE_SEQUENCE.fogGate + 0.001
-      ? smoothstep(
-        CAVE_PORTAL_FADE_END_Z,
-        CAVE_PORTAL_FADE_START_Z,
-        cavePortalCameraZRef.current,
-      )
-      : 0
+    const portalDistancePresence = smoothstep(
+      CAVE_PORTAL_FADE_END_Z,
+      CAVE_PORTAL_FADE_START_Z,
+      cavePortalCameraZRef.current,
+    )
+    const portalTimelinePresence = 1 - smoothstep(
+      JOURNEY_CAVE_SEQUENCE.portalCrossing,
+      JOURNEY_CAVE_SEQUENCE.caveFadeEnd,
+      progress,
+    )
+    const cavePresence = Math.min(portalDistancePresence, portalTimelinePresence)
     if (qaCaptureEnabled) {
       document.documentElement.dataset.journeyCaveGeometryPresence = cavePresence.toFixed(7)
     }
@@ -7380,11 +7433,11 @@ export default function JourneyScene({
           if (baseEmissive && material.emissive) {
             material.emissive.copy(baseEmissive).lerp(
               frameColors.caveExitEmissive,
-              caveExitBounce * 0.78,
+              caveExitBounce * 0.68,
             )
             material.emissiveIntensity =
               (material.userData.journeyCaveBaseEmissiveIntensity ?? 0) +
-              caveExitBounce * 0.18
+              caveExitBounce * 0.22
           }
           // Keep the occlusion policy stable while opacity fades. The old
           // 0.18 cutoff made the cave abruptly stop writing depth mid-scroll.

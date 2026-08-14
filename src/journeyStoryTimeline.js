@@ -14,7 +14,7 @@ export const JOURNEY_CAVE_SEQUENCE = Object.freeze({
   portalCrossing: 11.82,
   portalCleared: 12.08,
   outdoorSettled: 13.5,
-  caveFadeEnd: 13.35,
+  caveFadeEnd: 12.18,
   fogArrivalStart: 12.15,
   fogGate: 13.5,
   fogDuration: 2500,
