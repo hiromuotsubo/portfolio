@@ -7521,3 +7521,97 @@ html[data-portfolio-route-transition='reveal'] .portfolio-site::after {
     transition: none;
   }
 }
+
+/* Portfolio final cohesion pass ------------------------------------------------
+   The Home plane is revealed only after both halves are decoded, preventing
+   the deprecated study frame from flashing during a cold route return. */
+.portfolio-skip-link {
+  position: fixed;
+  z-index: 40;
+  top: 12px;
+  left: 16px;
+  padding: 10px 13px;
+  color: var(--paper);
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  text-decoration: none;
+  background: var(--green-ink);
+  transform: translateY(calc(-100% - 20px));
+  transition: transform 180ms ease;
+}
+
+.portfolio-skip-link:focus-visible {
+  outline: 2px solid var(--green-accent);
+  outline-offset: 3px;
+  transform: translateY(0);
+}
+
+.portfolio-site.is-page-home:not(.is-home-assets-ready) .portfolio-page-transition {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.portfolio-site.is-page-home .portfolio-home__copy h1 {
+  line-height: .86;
+  text-wrap: nowrap;
+}
+
+.portfolio-site.is-page-home .portfolio-home__copy > p {
+  font-weight: 500;
+}
+
+.portfolio-home__meta dt,
+.portfolio-home__meta dd {
+  font-size: clamp(8px, .58vw, 9.5px);
+  font-weight: 600;
+  letter-spacing: .1em;
+}
+
+.portfolio-nav nav button:focus-visible,
+.portfolio-nav__brand:focus-visible,
+.portfolio-nav__toggle:focus-visible {
+  border-radius: 0;
+  outline: 0;
+  box-shadow: inset 0 -1px 0 var(--green-accent);
+}
+
+.portfolio-site.is-page-about .portfolio-panel__copy h3,
+.portfolio-site.is-page-project .portfolio-panel__copy h3,
+.portfolio-contact h2 {
+  text-wrap: balance;
+}
+
+.portfolio-site.is-page-about .portfolio-panel__copy p,
+.portfolio-site.is-page-project .portfolio-panel__copy p,
+.portfolio-contact > p {
+  text-wrap: pretty;
+}
+
+.portfolio-media-v5__item > span,
+.portfolio-media-v5 figcaption,
+.portfolio-figure figcaption,
+.portfolio-kicker,
+.portfolio-story__end > span,
+.portfolio-story__end button {
+  font-weight: 600;
+}
+
+@media (max-width: 760px), (max-aspect-ratio: 4 / 5) {
+  .portfolio-site.is-page-home .portfolio-home__copy h1 {
+    line-height: .84;
+  }
+
+  .portfolio-media-v5__item > span,
+  .portfolio-media-v5 figcaption {
+    font-size: 8px;
+    letter-spacing: .12em;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .portfolio-skip-link {
+    transition: none;
+  }
+}

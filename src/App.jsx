@@ -80,6 +80,24 @@ const PORTFOLIO_PATHS = {
   project: '/project',
   contact: '/contact',
 }
+const PORTFOLIO_META = Object.freeze({
+  home: Object.freeze({
+    title: 'Hiromu Otsubo — Portfolio',
+    description: 'Hiromu Otsubo creates quiet, immersive experiences shaped by nature, space and interaction.',
+  }),
+  about: Object.freeze({
+    title: 'About — Hiromu Otsubo',
+    description: 'About Hiromu Otsubo: designer, developer and researcher exploring awe, perspective and human experience.',
+  }),
+  project: Object.freeze({
+    title: 'Journey — Hiromu Otsubo',
+    description: 'Journey is an interactive landscape that rebuilds the feeling of Kamikochi through space, atmosphere and time.',
+  }),
+  contact: Object.freeze({
+    title: 'Contact — Hiromu Otsubo',
+    description: 'Contact Hiromu Otsubo for collaborations, research and thoughtful ideas.',
+  }),
+})
 
 const getRouteFromLocation = () => {
   const legacyPage = window.location.hash.replace('#/', '')
@@ -242,7 +260,8 @@ const preloadPortfolioImageSource = (source) => new Promise((resolve) => {
     resolve()
   }
   image.decoding = 'async'
-  image.fetchPriority = 'low'
+  image.fetchPriority = 'high'
+  image.loading = 'eager'
   image.onload = finish
   image.onerror = finish
   image.src = source
@@ -791,8 +810,10 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
   const transitioningRef = useRef(false)
   const homeMotionFrameRef = useRef(null)
   const homeMotionTargetRef = useRef(null)
+  const transitionSequenceRef = useRef(0)
   const [activePanel, setActivePanel] = useState('profile')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [homeAssetsReady, setHomeAssetsReady] = useState(false)
   const [panelMotion, setPanelMotion] = useState({})
   const [mistTransition, setMistTransition] = useState({
     phase: 'idle',
@@ -801,7 +822,13 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
   })
 
   useEffect(() => {
-    preloadPortfolioImages()
+    let cancelled = false
+    preloadPortfolioImages().then(() => {
+      if (!cancelled) setHomeAssetsReady(true)
+    })
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   const selectPanel = useCallback((id) => {
@@ -839,23 +866,33 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
       : `${(targetBounds?.top ?? window.innerHeight / 2) + (targetBounds?.height ?? 0) / 2}px`
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     const switchDelay = reduceMotion ? 80 : PORTFOLIO_ROUTE_SWITCH_MS
-    const finishDelay = reduceMotion ? 170 : PORTFOLIO_TRANSITION_MS
+    const revealDelay = reduceMotion
+      ? 90
+      : PORTFOLIO_TRANSITION_MS - PORTFOLIO_ROUTE_SWITCH_MS
+    const sequence = transitionSequenceRef.current + 1
+    transitionSequenceRef.current = sequence
 
     transitioningRef.current = true
     transitionTimersRef.current.forEach(window.clearTimeout)
     setMistTransition({ phase: 'cover', x, y })
 
-    transitionTimersRef.current = [
-      window.setTimeout(() => {
+    transitionTimersRef.current = [window.setTimeout(() => {
+      const targetReady = nextPage === 'home'
+        ? preloadPortfolioImages()
+        : Promise.resolve()
+
+      targetReady.finally(() => {
+        if (transitionSequenceRef.current !== sequence) return
         setActivePanel(nextPage === 'project' ? 'origin' : 'profile')
         onNavigate(nextPage)
         setMistTransition({ phase: 'reveal', x, y })
-      }, switchDelay),
-      window.setTimeout(() => {
-        transitioningRef.current = false
-        setMistTransition({ phase: 'idle', x, y })
-      }, finishDelay),
-    ]
+        transitionTimersRef.current = [window.setTimeout(() => {
+          if (transitionSequenceRef.current !== sequence) return
+          transitioningRef.current = false
+          setMistTransition({ phase: 'idle', x, y })
+        }, revealDelay)]
+      })
+    }, switchDelay)]
   }, [onNavigate, page])
 
   useEffect(() => () => {
@@ -1151,7 +1188,7 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
             caption="A QUIET SENSE OF SCALE"
             className="is-emotion-hero"
           />
-          <div className="portfolio-panel__copy"><span className="portfolio-kicker">EMOTION</span><h3>Wonder grows in quiet moments.</h3><p>The journey ends beneath an immense night sky.<br />A small figure stands against the mountains.<br />For a moment, the landscape feels larger—and we feel smaller within it.</p><button type="button" onClick={onReplay}>EXPERIENCE AGAIN <ShortArrow /></button></div>
+          <div className="portfolio-panel__copy"><span className="portfolio-kicker">EMOTION</span><h3>Wonder grows in quiet moments.</h3><p>The journey ends beneath an immense night sky.<br />A small figure sits beneath the mountains.<br />For a moment, the landscape feels larger—and we feel smaller within it.</p><button type="button" onClick={onReplay}>EXPERIENCE AGAIN <ShortArrow /></button></div>
         </article>
         <footer className="portfolio-story__end">
           <span>END OF PROJECT</span>
@@ -1164,9 +1201,10 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
   return (
     <section
       ref={siteScrollRef}
-      className={`portfolio-site is-page-${page} is-mist-${mistTransition.phase} ${mobileMenuOpen ? 'is-menu-open' : ''}`}
+      className={`portfolio-site is-page-${page} is-mist-${mistTransition.phase} ${homeAssetsReady ? 'is-home-assets-ready' : ''} ${mobileMenuOpen ? 'is-menu-open' : ''}`}
       data-portfolio-page={page}
     >
+      <a className="portfolio-skip-link" href="#portfolio-content">Skip to content</a>
       <header className="portfolio-nav">
         <button className="portfolio-nav__brand" type="button" onClick={(event) => navigate('home', event)}>
           <HiromuMark compact />
@@ -1211,6 +1249,7 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
 
       <div
         key={page}
+        id="portfolio-content"
         className="portfolio-page-transition"
         aria-hidden={mobileMenuOpen || undefined}
       >
@@ -1355,6 +1394,18 @@ function LegacyApp() {
     showOutro,
     !showPortfolio,
   )
+
+  useEffect(() => {
+    const metadata = showPortfolio
+      ? PORTFOLIO_META[portfolioPage]
+      : {
+          title: 'Journey — Hiromu Otsubo',
+          description: 'Journey is an interactive landscape inspired by Kamikochi, shaped through space, atmosphere and time.',
+        }
+    const description = document.querySelector('meta[name="description"]')
+    document.title = metadata.title
+    description?.setAttribute('content', metadata.description)
+  }, [portfolioPage, showPortfolio])
 
   const clearEndingCapture = useCallback(() => {
     activeEndingRequestRef.current = 0
