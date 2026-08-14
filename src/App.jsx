@@ -741,6 +741,8 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
   const siteScrollRef = useRef(null)
   const transitionTimersRef = useRef([])
   const transitioningRef = useRef(false)
+  const homeMotionFrameRef = useRef(null)
+  const homeMotionTargetRef = useRef(null)
   const [activePanel, setActivePanel] = useState('profile')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [panelMotion, setPanelMotion] = useState({})
@@ -806,6 +808,43 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
 
   useEffect(() => () => {
     transitionTimersRef.current.forEach(window.clearTimeout)
+    if (homeMotionFrameRef.current !== null) {
+      window.cancelAnimationFrame(homeMotionFrameRef.current)
+    }
+  }, [])
+
+  const moveHomeAtmosphere = useCallback((event) => {
+    if (
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches ||
+      window.matchMedia('(pointer: coarse)').matches
+    ) return
+
+    const bounds = event.currentTarget.getBoundingClientRect()
+    homeMotionTargetRef.current = {
+      element: event.currentTarget,
+      x: (event.clientX - bounds.left) / bounds.width - 0.5,
+      y: (event.clientY - bounds.top) / bounds.height - 0.5,
+    }
+    if (homeMotionFrameRef.current !== null) return
+
+    homeMotionFrameRef.current = window.requestAnimationFrame(() => {
+      const target = homeMotionTargetRef.current
+      homeMotionFrameRef.current = null
+      if (!target?.element?.isConnected) return
+      target.element.style.setProperty('--home-reality-x', `${target.x * -7}px`)
+      target.element.style.setProperty('--home-memory-x', `${target.x * 9}px`)
+      target.element.style.setProperty('--home-atmosphere-x', `${target.x * 15}px`)
+      target.element.style.setProperty('--home-atmosphere-y', `${target.y * 5}px`)
+      target.element.style.setProperty('--home-copy-x', `${target.x * 3}px`)
+    })
+  }, [])
+
+  const settleHomeAtmosphere = useCallback((event) => {
+    event.currentTarget.style.setProperty('--home-reality-x', '0px')
+    event.currentTarget.style.setProperty('--home-memory-x', '0px')
+    event.currentTarget.style.setProperty('--home-atmosphere-x', '0px')
+    event.currentTarget.style.setProperty('--home-atmosphere-y', '0px')
+    event.currentTarget.style.setProperty('--home-copy-x', '0px')
   }, [])
 
   useEffect(() => {
@@ -1086,19 +1125,47 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
       >
         {page === 'home' ? (
           <section className="portfolio-home portfolio-page" aria-labelledby="portfolio-home-title">
-            <div className="portfolio-home__visual" aria-hidden="true" />
-            <div className="portfolio-home__copy">
-              <span className="portfolio-home__type">IMMERSIVE WEBGL EXPERIENCE</span>
-              <h1 id="portfolio-home-title">Journey</h1>
-              <p>An interactive landscape inspired by Kamikochi.</p>
-              <dl>
-                <div><dt>ROLE</dt><dd>ART DIRECTION / 3D / DEVELOPMENT</dd></div>
-                <div><dt>EXPERIENCE</dt><dd>SCROLL / HOLD / SPATIAL AUDIO</dd></div>
-                <div><dt>BUILT WITH</dt><dd>BLENDER / REACT / THREE.JS</dd></div>
-                <div><dt>YEAR</dt><dd>2026</dd></div>
-              </dl>
-              <button type="button" onClick={onReplay}><span>EXPERIENCE AGAIN</span><ShortArrow /></button>
+            <div
+              className="portfolio-home__diptych"
+              onPointerMove={moveHomeAtmosphere}
+              onPointerLeave={settleHomeAtmosphere}
+            >
+              <figure
+                className="portfolio-home__landscape"
+                aria-label="A Kamikochi field photograph dissolving through mist into the Journey digital valley"
+              >
+                <div className="portfolio-home__reality" aria-hidden="true">
+                  <img
+                    src="/portfolio/project-inspiration-v2.png"
+                    alt=""
+                    decoding="async"
+                    draggable="false"
+                  />
+                </div>
+                <div className="portfolio-home__memory" aria-hidden="true">
+                  <img
+                    src="/portfolio/project-interaction-meadow-v4.jpg"
+                    alt=""
+                    decoding="async"
+                    draggable="false"
+                  />
+                </div>
+                <div className="portfolio-home__threshold" aria-hidden="true" />
+              </figure>
+
+              <div className="portfolio-home__copy">
+                <h1 id="portfolio-home-title">Journey</h1>
+                <p>An interactive landscape inspired by Kamikochi.</p>
+                <button type="button" onClick={onReplay}><span>EXPERIENCE JOURNEY</span><ShortArrow /></button>
+              </div>
             </div>
+
+            <dl className="portfolio-home__meta">
+              <div><dt>ROLE</dt><dd>ART DIRECTION / 3D / DEVELOPMENT</dd></div>
+              <div><dt>EXPERIENCE</dt><dd>SCROLL / HOLD / SPATIAL AUDIO</dd></div>
+              <div><dt>BUILT WITH</dt><dd>BLENDER / REACT / THREE.JS</dd></div>
+              <div><dt>YEAR</dt><dd>2026</dd></div>
+            </dl>
           </section>
         ) : null}
         {page === 'about' ? renderAbout() : null}
