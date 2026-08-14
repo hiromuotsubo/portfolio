@@ -3034,7 +3034,7 @@ textarea,
 
 .portfolio-page-transition {
   min-height: calc(100svh - 92px);
-  animation: portfolio-page-reveal 620ms cubic-bezier(.22, .72, .2, 1) both;
+  animation: none;
 }
 
 .portfolio-home,
@@ -3459,11 +3459,6 @@ textarea,
 .experience-loader__center button span {
   font-size: 9px;
   letter-spacing: 0.18em;
-}
-
-@keyframes portfolio-page-reveal {
-  from { opacity: 0; transform: translateY(12px); }
-  to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes hold-breathe {
@@ -6206,7 +6201,13 @@ textarea,
 }
 
 .portfolio-site .portfolio-mist-transition {
-  background: var(--paper);
+  background:
+    radial-gradient(
+      ellipse 92% 72% at var(--mist-x) var(--mist-y),
+      rgba(248, 246, 239, .99) 0%,
+      rgba(242, 241, 233, .99) 54%,
+      var(--paper) 100%
+    );
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
   clip-path: inset(0) !important;
@@ -6225,7 +6226,13 @@ html[data-portfolio-route-transition='reveal'] .portfolio-site::after {
   inset: 0;
   content: '';
   pointer-events: auto;
-  background: var(--paper);
+  background:
+    radial-gradient(
+      ellipse 92% 72% at 50% 50%,
+      rgba(248, 246, 239, .99) 0%,
+      rgba(242, 241, 233, .99) 54%,
+      var(--paper) 100%
+    );
 }
 
 html[data-portfolio-route-transition='cover'] .portfolio-site::after {
@@ -6245,11 +6252,11 @@ html[data-portfolio-route-transition='reveal'] .portfolio-site::after {
 }
 
 .portfolio-site.is-mist-cover .portfolio-page-transition {
-  animation: portfolio-content-breathe-out 220ms cubic-bezier(.4, 0, .3, 1) both;
+  animation: none;
 }
 
 .portfolio-site.is-mist-reveal .portfolio-page-transition {
-  animation: portfolio-content-breathe-in 260ms cubic-bezier(.2, .7, .2, 1) both;
+  animation: none;
 }
 
 @keyframes portfolio-air-cover {
@@ -6260,16 +6267,6 @@ html[data-portfolio-route-transition='reveal'] .portfolio-site::after {
 @keyframes portfolio-air-reveal {
   from { visibility: visible; opacity: 1; }
   to { visibility: hidden; opacity: 0; }
-}
-
-@keyframes portfolio-content-breathe-out {
-  from { opacity: 1; transform: translate3d(0, 0, 0); }
-  to { opacity: .9; transform: translate3d(0, -2px, 0); }
-}
-
-@keyframes portfolio-content-breathe-in {
-  from { opacity: .9; transform: translate3d(0, 2px, 0); }
-  to { opacity: 1; transform: translate3d(0, 0, 0); }
 }
 
 .journey-3d.is-outro .journey-outro__phrase {
@@ -6830,6 +6827,14 @@ html[data-portfolio-route-transition='reveal'] .portfolio-site::after {
   margin: 0 !important;
 }
 
+/* The older chapter composition offset Interaction with an ID selector.
+   Keep every case-study medium on the same editorial axis; aspect ratio alone
+   carries the intentional rhythm between comparison and cinematic chapters. */
+.portfolio-site.is-page-project #interaction .portfolio-figure.portfolio-media-v5 {
+  width: min(100%, 1040px) !important;
+  margin: 0 !important;
+}
+
 .portfolio-media-v5__grid {
   display: grid;
   gap: clamp(8px, 1vw, 14px);
@@ -6923,6 +6928,27 @@ html[data-portfolio-route-transition='reveal'] .portfolio-site::after {
 }
 
 @media (min-width: 901px) {
+  /* About uses one measured reading axis as well. Earlier per-chapter ID
+     offsets survived the cohesion pass and made Approach copy drift away
+     from its photograph without communicating a content distinction. */
+  .portfolio-site.is-page-about .portfolio-story__panels .portfolio-figure,
+  .portfolio-site.is-page-about #profile .portfolio-figure,
+  .portfolio-site.is-page-about #research .portfolio-figure,
+  .portfolio-site.is-page-about #approach .portfolio-figure,
+  .portfolio-site.is-page-about #motivation .portfolio-figure {
+    width: min(94%, 1020px) !important;
+    margin-left: 0 !important;
+  }
+
+  .portfolio-site.is-page-about .portfolio-story__panels .portfolio-panel__copy,
+  .portfolio-site.is-page-about #profile .portfolio-panel__copy,
+  .portfolio-site.is-page-about #research .portfolio-panel__copy,
+  .portfolio-site.is-page-about #approach .portfolio-panel__copy,
+  .portfolio-site.is-page-about #motivation .portfolio-panel__copy {
+    width: min(100%, 700px) !important;
+    margin-left: 0 !important;
+  }
+
   .portfolio-site.is-page-project .portfolio-story__panels .portfolio-panel,
   .portfolio-site.is-page-project .portfolio-story__panels .portfolio-panel.is-active {
     width: min(100%, 1040px);
@@ -7172,7 +7198,7 @@ html[data-portfolio-route-transition='reveal'] .portfolio-site::after {
   margin: 0;
   overflow: hidden;
   background: #d6dfd5;
-  animation: home-diptych-arrive 620ms cubic-bezier(.22, .72, .2, 1) both;
+  animation: none;
 }
 
 .portfolio-home__reality,
@@ -7295,7 +7321,7 @@ html[data-portfolio-route-transition='reveal'] .portfolio-site::after {
   height: auto;
   opacity: 1;
   transform: translate3d(var(--home-copy-x), -50%, 0);
-  animation: home-diptych-copy-in 560ms cubic-bezier(.22, .72, .2, 1) 60ms both;
+  animation: none;
   transition: transform 1350ms cubic-bezier(.2, .72, .2, 1);
 }
 
@@ -7349,7 +7375,7 @@ html[data-portfolio-route-transition='reveal'] .portfolio-site::after {
   border-top: 1px solid rgba(49, 95, 73, .18);
   border-bottom: 1px solid rgba(49, 95, 73, .18);
   background: var(--paper);
-  animation: home-diptych-meta-in 480ms ease 120ms both;
+  animation: none;
 }
 
 .portfolio-home__meta > div {
@@ -7381,21 +7407,6 @@ html[data-portfolio-route-transition='reveal'] .portfolio-site::after {
   text-align: right;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-@keyframes home-diptych-arrive {
-  from { opacity: 0; transform: scale(1.012); }
-  to { opacity: 1; transform: scale(1); }
-}
-
-@keyframes home-diptych-copy-in {
-  from { opacity: 0; transform: translate3d(calc(var(--home-copy-x) + 12px), -47%, 0); }
-  to { opacity: 1; transform: translate3d(var(--home-copy-x), -50%, 0); }
-}
-
-@keyframes home-diptych-meta-in {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
 }
 
 @media (max-width: 760px), (max-aspect-ratio: 4 / 5) {
@@ -7477,7 +7488,7 @@ html[data-portfolio-route-transition='reveal'] .portfolio-site::after {
     left: 18px;
     width: auto;
     transform: none;
-    animation: home-diptych-mobile-copy-in 560ms cubic-bezier(.22, .72, .2, 1) 60ms both;
+    animation: none;
     transition: none;
   }
 
@@ -7502,10 +7513,6 @@ html[data-portfolio-route-transition='reveal'] .portfolio-site::after {
     padding: 13px 0 11px;
   }
 
-  @keyframes home-diptych-mobile-copy-in {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
