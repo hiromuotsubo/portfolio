@@ -82,19 +82,30 @@ const CAVE_CAMERA = Object.freeze({
 // mathematically unchanged while mobile keeps the cave walls and meadow banks
 // inside its much narrower horizontal field of view.
 const MOBILE_JOURNEY_COMPOSITION = Object.freeze({
-  caveFov: 60,
+  caveFov: 66,
   valleyPullBackNear: -1.05,
   valleyPullBackFar: -2.2,
-  valleyLateralNear: -2,
-  valleyLateralFar: -12.4,
-  valleyCameraLiftNear: 0.08,
-  valleyCameraLiftFar: 0.45,
-  valleyTargetLiftNear: -0.025,
-  valleyTargetLiftFar: 0.015,
-  valleyTargetRightNear: 0.06,
-  valleyTargetRightFar: 0.36,
-  valleyFov: 7,
-  grassHeightScale: 1.18,
+  // Keep the authored desktop centre line. The former twelve-unit lateral
+  // move turned the portrait view into a different camera and cropped the
+  // opposite mountain, river reflection and seated figure out of sequence.
+  valleyLateralNear: -0.35,
+  valleyLateralFar: -1.8,
+  valleyCameraLiftNear: 0.04,
+  valleyCameraLiftFar: 0.12,
+  valleyTargetLiftNear: -0.02,
+  valleyTargetLiftFar: 0,
+  valleyTargetRightNear: 0,
+  valleyTargetRightFar: 0,
+  // A portrait screen cannot retain the desktop horizontal field without an
+  // extreme fisheye. This restrained wide-angle extension preserves the same
+  // viewpoint while keeping both mountain shoulders, meadow and river legible.
+  valleyFov: 23,
+  // Compensate for the smaller projected blade size of the portrait wide
+  // lens; this restores desktop-like meadow presence without touching seeds,
+  // density or any desktop material value.
+  grassHeightScale: 1.68,
+  caveLightScale: 1.16,
+  figureLookRight: 0.23,
 })
 
 const clamp01 = (value) => Math.min(1, Math.max(0, value))
@@ -6665,6 +6676,11 @@ export default function JourneyScene({
         cameraProgress,
       ))
       const portraitVista = smoothstep(12, 25, cameraProgress)
+      const portraitFigureFraming = portraitFactor * smoothstep(
+        76,
+        83,
+        cameraProgress,
+      ) * (1 - smoothstep(97, 100, cameraProgress))
       const endingLift = smoothstep(
         ENDING_CAMERA.liftStart,
         ENDING_CAMERA.liftEnd,
@@ -6832,7 +6848,7 @@ export default function JourneyScene({
             MOBILE_JOURNEY_COMPOSITION.valleyTargetRightNear,
             MOBILE_JOURNEY_COMPOSITION.valleyTargetRightFar,
             portraitVista,
-          ),
+          ) + portraitFigureFraming * MOBILE_JOURNEY_COMPOSITION.figureLookRight,
         )
         camera.up.set(0, 1, 0)
         camera.lookAt(cameraScratch.target)
@@ -7262,14 +7278,21 @@ export default function JourneyScene({
     if (caveGuideLightRef.current && camera?.isCamera) {
       caveGuideLightRef.current.position.copy(camera.position)
       caveGuideLightRef.current.intensity =
-        (1 - smoothstep(8, 16, progress)) * CAVE_LOOK.guideLightIntensity
+        (1 - smoothstep(8, 16, progress)) *
+        CAVE_LOOK.guideLightIntensity *
+        THREE.MathUtils.lerp(1, MOBILE_JOURNEY_COMPOSITION.caveLightScale, portraitFactor)
     }
     const caveGrazingPresence = 1 - smoothstep(10.5, 14.1, progress)
+    const caveMobileLightScale = THREE.MathUtils.lerp(
+      1,
+      MOBILE_JOURNEY_COMPOSITION.caveLightScale,
+      portraitFactor,
+    )
     if (caveLeftGrazingLightRef.current) {
-      caveLeftGrazingLightRef.current.intensity = caveGrazingPresence * 14
+      caveLeftGrazingLightRef.current.intensity = caveGrazingPresence * 14 * caveMobileLightScale
     }
     if (caveRightGrazingLightRef.current) {
-      caveRightGrazingLightRef.current.intensity = caveGrazingPresence * 10
+      caveRightGrazingLightRef.current.intensity = caveGrazingPresence * 10 * caveMobileLightScale
     }
     if (caveExitLightRef.current) {
       // A stable source just beyond the opening lets exterior daylight wrap

@@ -7,6 +7,7 @@ import JourneyScene from './JourneyScene.jsx'
 const QUALITY_PRESETS = {
   low: { name: 'low', dpr: 0.65, particles: 0.52, shadows: false, fogLayers: 3 },
   medium: { name: 'medium', dpr: 0.9, particles: 0.76, shadows: false, fogLayers: 5 },
+  mobile: { name: 'mobile', dpr: 1.1, particles: 0.92, shadows: false, fogLayers: 6 },
   high: { name: 'high', dpr: 0.9, particles: 1, shadows: true, fogLayers: 7 },
 }
 
@@ -15,7 +16,11 @@ const getInitialQuality = () => {
   const memory = navigator.deviceMemory ?? 8
   const cores = navigator.hardwareConcurrency ?? 8
   if (memory < 6 || cores < 6) return 'low'
-  if (memory < 8 || cores < 8 || window.matchMedia('(pointer: coarse)').matches) return 'medium'
+  if (
+    window.matchMedia('(pointer: coarse)').matches &&
+    window.matchMedia('(max-width: 700px)').matches
+  ) return 'mobile'
+  if (memory < 8 || cores < 8) return 'medium'
   return 'high'
 }
 
