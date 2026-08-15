@@ -1,9 +1,14 @@
+// Transition centers at p42 and p64 divide the fixed p20-p86 vista into
+// equal 22-progress day, sunset and night chapters. The overlapping ramps
+// keep the color change continuous while each chapter has equal visual weight.
 export const JOURNEY_VISUAL_TIMING = Object.freeze({
-  sunsetStart: 30,
-  sunsetEnd: 60,
-  nightStart: 58,
-  nightEnd: 86,
-  starsStart: 52,
+  sunsetStart: 34,
+  sunsetEnd: 50,
+  nightStart: 56,
+  nightEnd: 72,
+  starsStart: 58,
+  starsEnd: 78,
+  nightObservationEnd: 86,
 })
 
 const clamp01 = (value) => Math.min(1, Math.max(0, value))
@@ -30,7 +35,7 @@ export const getJourneyTimeOfDay = (progress) => {
   const sunsetWeight = daylightWeight * sunsetRise
   const starWeight = smootherstep(
     JOURNEY_VISUAL_TIMING.starsStart,
-    JOURNEY_VISUAL_TIMING.nightEnd,
+    JOURNEY_VISUAL_TIMING.starsEnd,
     progress,
   )
 

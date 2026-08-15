@@ -33,7 +33,7 @@ export const JOURNEY_CAVE_SEQUENCE = Object.freeze({
 // reverse travel fades the connection with story progress but never arms a
 // second river HOLD during the same Journey.
 export const JOURNEY_NIGHT_SEQUENCE = Object.freeze({
-  fullNight: JOURNEY_VISUAL_TIMING.nightEnd,
+  fullNight: JOURNEY_VISUAL_TIMING.nightObservationEnd,
   riverGate: 88,
   riverHoldDuration: 3300,
   connectionReverseFadeStart: 78,
