@@ -551,13 +551,21 @@
     radial-gradient(ellipse at 48% 28%, rgba(230, 241, 235, 0.7), rgba(188, 213, 210, 0.28) 34%, transparent 68%),
     radial-gradient(ellipse at 12% 64%, rgba(218, 235, 231, 0.44), transparent 52%),
     radial-gradient(ellipse at 86% 68%, rgba(206, 228, 226, 0.4), transparent 54%);
-  filter: blur(24px) saturate(0.82);
-  mix-blend-mode: screen;
+  /* The gradients and vertical mask already supply the required softness.
+     A live full-width blur forced a large offscreen surface every frame at
+     the Fog HOLD; keep the same haze composition without that raster pass. */
   transform: translate3d(calc(var(--valley-mist) * -1.2%), 0, 0) scale(1.04);
   transition: opacity 120ms linear, transform 160ms linear;
   -webkit-mask-image: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, .34) 22%, #000 52%, rgba(0, 0, 0, .74) 100%);
   mask-image: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, .34) 22%, #000 52%, rgba(0, 0, 0, .74) 100%);
-  animation: valley-mist-drift 8s ease-in-out infinite alternate;
+  /* WebGL supplies the living atmosphere. Repainting three viewport-sized
+     gradients through a blend layer every frame was the measured HOLD spike;
+     this subtle grade can remain still while its opacity/mask responds. */
+}
+
+/* Opt-in capture comparator for isolating DOM compositing from WebGL fog. */
+.journey-3d.is-perf-no-dom-fog .valley-mist {
+  display: none;
 }
 
 .valley-mist::after {
@@ -571,7 +579,6 @@
     rgba(189, 218, 213, 0.22) 34%,
     transparent 66%
   );
-  filter: blur(18px);
   transform: scale3d(1.22, 1.08, 1);
   pointer-events: none;
 }
@@ -1189,15 +1196,6 @@
   }
   50% {
     transform: translateY(-5px) rotate(3deg);
-  }
-}
-
-@keyframes valley-mist-drift {
-  from {
-    background-position: 0 0, -18px 0, 22px 0;
-  }
-  to {
-    background-position: 32px 4px, 12px -3px, -16px 5px;
   }
 }
 

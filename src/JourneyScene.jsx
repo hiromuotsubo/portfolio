@@ -150,7 +150,7 @@ function applyCaveSurfaceDetail(material) {
       )
       .replace(
         '#include <worldpos_vertex>',
-        '#include <worldpos_vertex>\nvJourneyCaveWorldPosition = worldPosition.xyz;',
+        '#include <worldpos_vertex>\nvJourneyCaveWorldPosition = (modelMatrix * vec4(transformed, 1.0)).xyz;',
       )
     shader.fragmentShader = shader.fragmentShader
       .replace(
@@ -296,7 +296,7 @@ function applyCaveSurfaceDetail(material) {
       )
   }
   material.customProgramCacheKey = () => (
-    `${previousCacheKey?.() ?? ''}|journey-cave-surface-v5-mobile-clarity`
+    `${previousCacheKey?.() ?? ''}|journey-cave-surface-v6-shadow-independent-world-position`
   )
 }
 

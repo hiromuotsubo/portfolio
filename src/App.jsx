@@ -18,6 +18,10 @@ const JourneyV3 = lazy(() => import('./journey-v3/JourneyV3.jsx'))
 // that lets a reviewer see the finished valley without skipping the normal
 // Enter → cave → valley experience on `/journey`.
 const journeySearch = new URLSearchParams(window.location.search)
+const JOURNEY_DOM_FOG_DIAGNOSTIC_OFF = (
+  journeySearch.get('capture') === '1' &&
+  (journeySearch.get('perfOff') ?? '').split(',').includes('domfog')
+)
 const ENDING_PERFORMANCE_LEGACY = journeySearch.get('endingPerfLegacy') === '1'
 const PUBLIC_SHOWCASE = journeySearch.get('showcase') === 'day'
 const requestedPreviewProgressValue = journeySearch.get('previewProgress')
@@ -78,6 +82,68 @@ const PORTFOLIO_PATHS = {
   about: '/about',
   project: '/project',
   contact: '/contact',
+}
+
+function useWebPerformanceProbe() {
+  useEffect(() => {
+    if (journeySearch.get('capture') !== '1' || typeof PerformanceObserver === 'undefined') {
+      return undefined
+    }
+    const observers = []
+    const metrics = {
+      lcpMs: null,
+      cls: 0,
+      maxInteractionMs: null,
+      resourceTransferBytes: 0,
+      jsHeapBytes: performance.memory?.usedJSHeapSize ?? null,
+    }
+    const publish = () => {
+      metrics.resourceTransferBytes = Math.round(performance.getEntriesByType('resource').reduce(
+        (sum, entry) => sum + (entry.transferSize || 0),
+        0,
+      ))
+      metrics.jsHeapBytes = performance.memory?.usedJSHeapSize ?? null
+      window.__HIROMU_WEB_PERFORMANCE__ = { ...metrics }
+      document.documentElement.dataset.hiromuWebPerformance = JSON.stringify(metrics)
+    }
+    const observe = (type, callback, options = {}) => {
+      try {
+        const observer = new PerformanceObserver((list) => {
+          callback(list.getEntries())
+          publish()
+        })
+        observer.observe({ type, buffered: true, ...options })
+        observers.push(observer)
+      } catch {
+        // Unsupported metrics stay null and are reported as not verified.
+      }
+    }
+    observe('largest-contentful-paint', (entries) => {
+      const last = entries.at(-1)
+      if (last) metrics.lcpMs = Number((last.renderTime || last.startTime).toFixed(2))
+    })
+    observe('layout-shift', (entries) => {
+      entries.forEach((entry) => {
+        if (!entry.hadRecentInput) metrics.cls += entry.value
+      })
+      metrics.cls = Number(metrics.cls.toFixed(5))
+    })
+    observe('event', (entries) => {
+      entries.forEach((entry) => {
+        metrics.maxInteractionMs = Math.max(metrics.maxInteractionMs ?? 0, entry.duration)
+      })
+      if (metrics.maxInteractionMs !== null) {
+        metrics.maxInteractionMs = Number(metrics.maxInteractionMs.toFixed(2))
+      }
+    }, { durationThreshold: 16 })
+    const publishFrame = window.requestAnimationFrame(publish)
+    return () => {
+      window.cancelAnimationFrame(publishFrame)
+      observers.forEach((observer) => observer.disconnect())
+      delete window.__HIROMU_WEB_PERFORMANCE__
+      delete document.documentElement.dataset.hiromuWebPerformance
+    }
+  }, [])
 }
 const PORTFOLIO_META = Object.freeze({
   home: Object.freeze({
@@ -1310,6 +1376,7 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
 }
 
 function LegacyApp() {
+  useWebPerformanceProbe()
   const [entered, setEntered] = useState(
     PREVIEW_ENTERED || INITIAL_VIEW === 'portfolio',
   )
@@ -2265,7 +2332,7 @@ function LegacyApp() {
 
   return (
     <main
-      className={`journey-3d ${entered ? 'is-entered' : ''} ${PUBLIC_SHOWCASE ? 'is-showcase' : ''} ${ENDING_PERFORMANCE_LEGACY ? 'is-ending-perf-legacy' : ''} ${activeGate ? `has-gate is-gate-${activeGate}` : ''} ${activeGate && holdProgress > 0 ? 'is-holding' : ''} ${endingCapturePreparing ? 'is-ending-preparing' : ''} ${endingFrameSource ? 'has-ending-frame' : ''} ${showOutro ? 'is-outro' : ''} ${showPortfolio ? 'is-portfolio' : ''} ${memoryHome ? 'is-memory-home' : ''} ${portfolioScrolled ? 'is-portfolio-scrolled' : ''}`}
+      className={`journey-3d ${entered ? 'is-entered' : ''} ${PUBLIC_SHOWCASE ? 'is-showcase' : ''} ${ENDING_PERFORMANCE_LEGACY ? 'is-ending-perf-legacy' : ''} ${JOURNEY_DOM_FOG_DIAGNOSTIC_OFF ? 'is-perf-no-dom-fog' : ''} ${activeGate ? `has-gate is-gate-${activeGate}` : ''} ${activeGate && holdProgress > 0 ? 'is-holding' : ''} ${endingCapturePreparing ? 'is-ending-preparing' : ''} ${endingFrameSource ? 'has-ending-frame' : ''} ${showOutro ? 'is-outro' : ''} ${showPortfolio ? 'is-portfolio' : ''} ${memoryHome ? 'is-memory-home' : ''} ${portfolioScrolled ? 'is-portfolio-scrolled' : ''}`}
       style={{
         '--cave-depth': caveDepth,
         '--open-air': openAir,
