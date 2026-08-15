@@ -321,7 +321,7 @@ function JourneyV2() {
         SOUND {soundOn ? 'ON' : 'OFF'}
       </button>
 
-      {debugUi && <a className="journey-v2__return" href="/journey">V1 ↗</a>}
+      {debugUi && <a className="journey-v2__return" href="/journey">V1 →</a>}
     </main>
   )
 }

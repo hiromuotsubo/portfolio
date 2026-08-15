@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import './journeyV3.css'
+import NavigationArrow from '../NavigationArrow.jsx'
 
 const JourneyV3Canvas = lazy(() => import('./JourneyV3Canvas.jsx'))
 
@@ -508,7 +509,7 @@ function ExperienceLoader({
             <div className="experience-loader__ready">
               <button type="button" onClick={onEnter}>
                 <span>ENTER THE JOURNEY</span>
-                <i aria-hidden="true">↗</i>
+                <NavigationArrow />
               </button>
             </div>
           ) : null}
@@ -582,14 +583,6 @@ const PROJECT_ITEMS = [
   ['interaction', 'Interaction'],
   ['emotion', 'Emotion'],
 ]
-
-function ShortArrow() {
-  return (
-    <svg className="short-arrow" viewBox="0 0 16 16" aria-hidden="true">
-      <path d="M3.25 12.75 12.5 3.5M6.25 3.5h6.25v6.25" />
-    </svg>
-  )
-}
 
 function PortfolioImage({ src, alt, caption, className = '' }) {
   return (
@@ -817,7 +810,7 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
             <h3>Human scale amplifies vastness.</h3>
             <p>This idea became the foundation of my research on awe in immersive VR, comparing first- and third-person perspectives.</p>
             <p>I also contributed as a co-author to related studies on awe, emotion and human experience.</p>
-            <a href="https://scholar.google.co.jp/citations?user=xiwv18wAAAAJ&hl=ja" target="_blank" rel="noreferrer">VIEW RESEARCH <span>↗</span></a>
+            <a href="https://scholar.google.co.jp/citations?user=xiwv18wAAAAJ&hl=ja" target="_blank" rel="noreferrer">VIEW RESEARCH <NavigationArrow kind="external" /></a>
           </div>
         </article>
 
@@ -879,7 +872,7 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
         </article>
         <article id="emotion" className={panelClassName('emotion', 'is-emotion-panel')} data-story-panel="emotion">
           <PortfolioImage src="/portfolio/project-emotion-v2.png" alt="A small figure beneath the Journey night sky" caption="EMOTION / AFTERGLOW" className="is-dark" />
-          <div className="portfolio-panel__copy"><span className="portfolio-kicker">EMOTION</span><h3>Wonder grows in quiet moments.</h3><p>The journey ends beneath an immense night sky.<br />Nothing changes around.<br />Only the way you feel.</p><button type="button" onClick={onReplay}>EXPERIENCE AGAIN <ShortArrow /></button></div>
+          <div className="portfolio-panel__copy"><span className="portfolio-kicker">EMOTION</span><h3>Wonder grows in quiet moments.</h3><p>The journey ends beneath an immense night sky.<br />Nothing changes around.<br />Only the way you feel.</p><button type="button" onClick={onReplay}>EXPERIENCE AGAIN <NavigationArrow /></button></div>
         </article>
         <footer className="portfolio-story__end">
           <span>END OF PROJECT</span>
@@ -955,7 +948,7 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
                 <div><dt>BUILT WITH</dt><dd>BLENDER / REACT / THREE.JS</dd></div>
                 <div><dt>YEAR</dt><dd>2026</dd></div>
               </dl>
-              <button type="button" onClick={onReplay}><span>EXPERIENCE AGAIN</span><ShortArrow /></button>
+              <button type="button" onClick={onReplay}><span>EXPERIENCE AGAIN</span><NavigationArrow /></button>
             </div>
           </section>
         ) : null}
@@ -967,8 +960,8 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
             <h2 id="contact-title">Let’s Talk</h2>
             <p>For collaborations, research or thoughtful ideas.</p>
             <div className="portfolio-contact__links">
-              <a href="mailto:hiromu.otsubo.design@gmail.com"><small>EMAIL</small><span>hiromu.otsubo.design@gmail.com</span><i>↗</i></a>
-              <a href="https://note.com/tabonnu" target="_blank" rel="noreferrer"><small>WRITING</small><span>note / tabonnu</span><i>↗</i></a>
+              <a href="mailto:hiromu.otsubo.design@gmail.com"><small>EMAIL</small><span>hiromu.otsubo.design@gmail.com</span><NavigationArrow kind="external" /></a>
+              <a href="https://note.com/tabonnu" target="_blank" rel="noreferrer"><small>WRITING</small><span>note / tabonnu</span><NavigationArrow kind="external" /></a>
             </div>
             <footer><span>HIROMU OTSUBO</span><span>PORTFOLIO</span><span>© 2026</span></footer>
           </section>
