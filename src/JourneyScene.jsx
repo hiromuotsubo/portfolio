@@ -88,30 +88,33 @@ const CAVE_CAMERA = Object.freeze({
 // inside its much narrower horizontal field of view.
 const MOBILE_JOURNEY_COMPOSITION = Object.freeze({
   caveFov: 66,
-  // Widen from the authored eye point instead of backing beyond the river
-  // corridor. Moving slightly forward keeps the near water/shore geometry
-  // beneath the portrait frame and avoids exposing the finite river mesh.
-  valleyPullBackNear: 0.12,
-  valleyPullBackFar: 0.48,
+  // A modest mobile-only retreat restores both meadow banks before widening
+  // the lens. The former positive values pushed the eye farther into the
+  // river, so water occupied the lower half while the grass became a strip.
+  valleyPullBackNear: -1.4,
+  valleyPullBackFar: -2.6,
   // Keep the authored desktop centre line. The former twelve-unit lateral
   // move turned the portrait view into a different camera and cropped the
   // opposite mountain, river reflection and seated figure out of sequence.
   valleyLateralNear: 0,
   valleyLateralFar: 0,
-  valleyCameraLiftNear: 0.04,
-  valleyCameraLiftFar: 0.12,
-  valleyTargetLiftNear: -0.02,
-  valleyTargetLiftFar: 0,
+  valleyCameraLiftNear: 0.02,
+  valleyCameraLiftFar: 0.06,
+  // Let the portrait eye settle a few degrees above the river surface. This
+  // keeps the S-curve as the foreground lead while returning visual weight to
+  // the mountain bowl and its meadow shoulders.
+  valleyTargetLiftNear: 0.035,
+  valleyTargetLiftFar: 0.055,
   valleyTargetRightNear: 0,
   valleyTargetRightFar: 0,
   // A portrait screen cannot retain the desktop horizontal field without an
   // extreme fisheye. This restrained wide-angle extension preserves the same
   // viewpoint while keeping both mountain shoulders, meadow and river legible.
-  valleyFov: 19,
+  valleyFov: 18,
   // Compensate for the smaller projected blade size of the portrait wide
   // lens; this restores desktop-like meadow presence without touching seeds,
   // density or any desktop material value.
-  grassHeightScale: 1.68,
+  grassHeightScale: 2.1,
   caveLightScale: 1.9,
 })
 

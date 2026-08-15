@@ -4604,6 +4604,17 @@ textarea,
   letter-spacing: 0;
 }
 
+.experience-loader__count > .experience-loader__phase {
+  margin-top: 11px;
+  color: var(--green-ink);
+  font-family: Inter, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  line-height: 1.4;
+  text-align: center;
+}
+
 .experience-loader__count > i {
   grid-column: 1;
   width: 100%;

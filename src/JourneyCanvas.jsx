@@ -1,6 +1,5 @@
 import { Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { Preload } from '@react-three/drei'
 import * as THREE from 'three'
 import JourneyScene from './JourneyScene.jsx'
 
@@ -268,8 +267,7 @@ const waitForRendererQuiescence = async (gl, isCancelled) => {
       continue
     }
     // Observe a genuinely quiet GPU/resource window rather than unlocking on
-    // an elapsed-time substitute. This also absorbs programs started by
-    // Preload's six offscreen cube faces.
+    // an elapsed-time substitute.
     if (performance.now() - stableSince >= 2000) return
   }
 }
@@ -296,13 +294,13 @@ function JourneyVisualReadyBridge({ onProgress, quality }) {
       await nextAnimationFrame()
       await nextAnimationFrame()
       if (cancelled || generation !== generationRef.current) return
+      onProgressRef.current?.({ active: true, progress: 60 })
 
       const activeCamera = get().camera
-      // `Preload all` uploads geometry offscreen, but its internal synchronous
-      // compile can return while KHR_parallel_shader_compile is still pending.
       // Compile every threshold-hidden object asynchronously while preserving
       // its exact authored visibility; no alternate story frame reaches the
-      // default framebuffer.
+      // default framebuffer. Compile first so KHR_parallel_shader_compile can
+      // do its work before the exhaustive render asks for depth/shadow passes.
       const hiddenObjects = []
       const frustumCulledObjects = []
       scene.traverse((object) => {
@@ -316,6 +314,13 @@ function JourneyVisualReadyBridge({ onProgress, quality }) {
         }
       })
       try {
+        if (typeof gl.compileAsync === 'function') {
+          await gl.compileAsync(scene, activeCamera)
+        } else {
+          gl.compile(scene, activeCamera)
+        }
+        onProgressRef.current?.({ active: true, progress: 78 })
+
         const warmTarget = new THREE.WebGLRenderTarget(16, 16, {
           depthBuffer: true,
           stencilBuffer: false,
@@ -338,11 +343,7 @@ function JourneyVisualReadyBridge({ onProgress, quality }) {
           gl.shadowMap.autoUpdate = previousShadowUpdate
           warmTarget.dispose()
         }
-        if (typeof gl.compileAsync === 'function') {
-          await gl.compileAsync(scene, activeCamera)
-        } else {
-          gl.compile(scene, activeCamera)
-        }
+        onProgressRef.current?.({ active: true, progress: 90 })
       } finally {
         hiddenObjects.forEach((object) => {
           object.visible = false
@@ -373,6 +374,7 @@ function JourneyVisualReadyBridge({ onProgress, quality }) {
         })
       })
       textures.forEach((texture) => gl.initTexture(texture))
+      onProgressRef.current?.({ active: true, progress: 96 })
 
       // Force the parent/loader's final pre-ready React commit while the CTA
       // is still locked. That commit can finalize program variants owned by
@@ -522,7 +524,6 @@ export default function JourneyCanvas({
         {performanceProbeEnabled && (
           <JourneyEndingRendererProbe active={endingActive} />
         )}
-        <Preload all />
         <JourneyVisualReadyBridge onProgress={onAssetsProgress} quality={quality} />
         <JourneyFrameCapture
           captureRequest={endingCaptureRequest}

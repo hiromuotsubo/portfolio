@@ -547,40 +547,26 @@ function ExperienceLoader({
   assetsActive,
   assetProgress,
   audioPrepared,
-  portfolioImagesPrepared,
 }) {
   const [dismissed, setDismissed] = useState(false)
-  const [visualProgress, setVisualProgress] = useState(0)
   const [animationStage, setAnimationStage] = useState(0)
   const safeAssetProgress = Number.isFinite(assetProgress)
     ? clamp(assetProgress, 0, 100)
     : 0
-  const loadComplete = !assetsActive &&
-    safeAssetProgress >= 100 &&
-    audioPrepared &&
-    portfolioImagesPrepared
-  const ready = loadComplete && visualProgress >= 99.5
-
-  useEffect(() => {
-    let frame
-    let previous = performance.now()
-    const tick = (time) => {
-      const elapsed = Math.max(0, Math.min((time - previous) / 1000, 0.05))
-      previous = time
-      setVisualProgress((current) => {
-        const ceiling = loadComplete ? 100 : 92
-        const safeCurrent = Number.isFinite(current) ? clamp(current, 0, 100) : 0
-        return clamp(
-          safeCurrent + elapsed * (loadComplete ? 27 : 22),
-          0,
-          ceiling,
-        )
-      })
-      frame = window.requestAnimationFrame(tick)
-    }
-    frame = window.requestAnimationFrame(tick)
-    return () => window.cancelAnimationFrame(frame)
-  }, [loadComplete])
+  const scenePrepared = !assetsActive && safeAssetProgress >= 100
+  const ready = scenePrepared && audioPrepared
+  const loaderPhase = scenePrepared
+    ? audioPrepared
+      ? { number: 4, label: 'JOURNEY READY' }
+      : { number: 4, label: 'PREPARING SOUND' }
+    : safeAssetProgress >= 90
+      ? { number: 4, label: 'FINALIZING THE WORLD' }
+      : safeAssetProgress >= 78
+        ? { number: 3, label: 'COMPILING LIGHT & MATERIAL' }
+        : safeAssetProgress >= 60
+          ? { number: 2, label: 'UPLOADING THE LANDSCAPE' }
+          : { number: 1, label: 'LOADING THE LANDSCAPE' }
+  const displayedProgress = loaderPhase.number / 4 * 100
 
   useEffect(() => {
     if (ready) {
@@ -603,12 +589,6 @@ function ExperienceLoader({
 
   if (dismissed) return null
 
-  const displayedProgress = clamp(
-    Math.round(Number.isFinite(visualProgress) ? visualProgress : 0),
-    0,
-    100,
-  )
-
   return (
     <div
       className={`experience-loader stage-${animationStage} ${ready ? 'is-ready' : ''} ${entered && ready ? 'is-entering' : ''}`}
@@ -625,15 +605,16 @@ function ExperienceLoader({
         <div
           className="experience-loader__count"
           role="progressbar"
-          aria-label="Loading portfolio"
-          aria-valuemin="0"
-          aria-valuemax="100"
-          aria-valuenow={displayedProgress}
+          aria-label={loaderPhase.label}
+          aria-valuemin="1"
+          aria-valuemax="4"
+          aria-valuenow={loaderPhase.number}
         >
           <span>
-            {displayedProgress}
-            <small>%</small>
+            {loaderPhase.number.toString().padStart(2, '0')}
+            <small>/04</small>
           </span>
+          <small className="experience-loader__phase">{loaderPhase.label}</small>
           <i aria-hidden="true"><b style={{ width: `${displayedProgress}%` }} /></i>
         </div>
         <div className="experience-loader__action">
@@ -1343,7 +1324,6 @@ function LegacyApp() {
   const [displayedMessage, setDisplayedMessage] = useState(null)
   const [messageVisible, setMessageVisible] = useState(false)
   const [journeyAssets, setJourneyAssets] = useState({ active: true, progress: 0 })
-  const [portfolioImagesPrepared, setPortfolioImagesPrepared] = useState(showPortfolio)
   const [endingCaptureRequest, setEndingCaptureRequest] = useState(0)
   const [endingFrameSource, setEndingFrameSource] = useState(null)
   const [endingFrameLoaded, setEndingFrameLoaded] = useState(false)
@@ -1489,21 +1469,6 @@ function LegacyApp() {
         : { active: Boolean(active), progress: safeProgress },
     )
   }, [])
-
-  useEffect(() => {
-    if (showPortfolio) {
-      setPortfolioImagesPrepared(true)
-      return undefined
-    }
-    let cancelled = false
-    setPortfolioImagesPrepared(false)
-    preloadPortfolioImages().finally(() => {
-      if (!cancelled) setPortfolioImagesPrepared(true)
-    })
-    return () => {
-      cancelled = true
-    }
-  }, [showPortfolio])
 
   useEffect(() => {
     const isOutroPreview = DEV_PREVIEW === 'outro'
@@ -2353,7 +2318,6 @@ function LegacyApp() {
           assetsActive={journeyAssets.active}
           assetProgress={journeyAssets.progress}
           audioPrepared={audioPrepared}
-          portfolioImagesPrepared={portfolioImagesPrepared}
         />
       ) : null}
 
