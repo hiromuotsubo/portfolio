@@ -7,6 +7,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { getJourneyTimeOfDay } from './journeyVisualState.js'
 import {
   getJourneyFogArrival,
+  getJourneyCameraProgress,
   getJourneyOutdoorPresence,
   getJourneyValleyDetailPresence,
   getJourneyValleyFarPresence,
@@ -37,14 +38,18 @@ const MEADOW_WIND_POINTER_PAUSE_RESET = 0.18
 const MEADOW_WIND_MAX_AGE = 2.6
 
 const ENDING_CAMERA = {
-  liftStart: 78,
-  liftEnd: 90,
-  wideStart: 86,
-  wideEnd: 100,
-  pullBack: 13.5,
+  liftStart: JOURNEY_NIGHT_SEQUENCE.riverGate,
+  liftEnd: JOURNEY_NIGHT_SEQUENCE.postHoldLiftEnd,
+  wideStart: JOURNEY_NIGHT_SEQUENCE.riverGate,
+  wideEnd: JOURNEY_NIGHT_SEQUENCE.postHoldLiftEnd,
+  pullBack: 6.5,
+  finalWideStart: JOURNEY_NIGHT_SEQUENCE.finalWideStart,
+  finalWideEnd: JOURNEY_NIGHT_SEQUENCE.finalWideEnd,
+  finalPullBack: 7,
   cameraLift: 0.16,
   lift: 0.08,
-  fov: 26,
+  fov: 11.5,
+  finalFov: 14.5,
 }
 
 // V1 framing is preserved on backup/journey-lookdev-v1-e5ec4a3.
@@ -6560,7 +6565,7 @@ export default function JourneyScene({
       if (fade <= 0.002) riverRippleRef.current.visible = false
     }
 
-    const cameraProgress = progress
+    const cameraProgress = getJourneyCameraProgress(progress)
     const clipTime = clip
       ? clip.duration * storyProgressToClipProgress(cameraProgress)
       : 0
@@ -6690,12 +6695,17 @@ export default function JourneyScene({
       const endingLift = smoothstep(
         ENDING_CAMERA.liftStart,
         ENDING_CAMERA.liftEnd,
-        cameraProgress,
+        progress,
       )
       const endingWide = smoothstep(
         ENDING_CAMERA.wideStart,
         ENDING_CAMERA.wideEnd,
-        cameraProgress,
+        progress,
+      )
+      const endingFinalWide = smoothstep(
+        ENDING_CAMERA.finalWideStart,
+        ENDING_CAMERA.finalWideEnd,
+        progress,
       )
       cameraScratch.forward
         .set(0, 0, -1)
@@ -6815,7 +6825,8 @@ export default function JourneyScene({
           cameraScratch.forward,
           (presentationMode ? -1.8 : 0) -
             vistaComposition * LOOKDEV_V2_COMPOSITION.pullBack * revealCompositionStrength -
-            endingWide * ENDING_CAMERA.pullBack +
+            endingWide * ENDING_CAMERA.pullBack -
+            endingFinalWide * ENDING_CAMERA.finalPullBack +
             portraitComposition * THREE.MathUtils.lerp(
               MOBILE_JOURNEY_COMPOSITION.valleyPullBackNear,
               MOBILE_JOURNEY_COMPOSITION.valleyPullBackFar,
@@ -6864,6 +6875,7 @@ export default function JourneyScene({
         openVista * 4.5 +
         vistaComposition * LOOKDEV_V2_COMPOSITION.fov +
         endingWide * ENDING_CAMERA.fov +
+        endingFinalWide * ENDING_CAMERA.finalFov +
         (presentationMode ? 15 : 0) +
         portraitCaveComposition * (MOBILE_JOURNEY_COMPOSITION.caveFov - CAVE_CAMERA.fov) +
         portraitComposition * MOBILE_JOURNEY_COMPOSITION.valleyFov

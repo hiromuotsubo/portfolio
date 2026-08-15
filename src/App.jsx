@@ -206,25 +206,26 @@ const INITIAL_PORTFOLIO_PAGE = INITIAL_VIEW === 'portfolio'
 
 // Creator controls: adjust these values when fine-tuning the experience.
 const EXPERIENCE_TUNING = {
-  scrollSensitivity: 0.005,
-  maxInputStep: 1.5,
-  maxInputLead: 3,
-  followDamping: 2.4,
+  scrollSensitivity: 0.006,
+  maxInputStep: 1.65,
+  maxInputLead: 2.6,
+  followDamping: 3.6,
   reverseSpeedMultiplier: 1.35,
   gateCooldownMs: 520,
 }
 
 // Minimum forward time for each chapter. The final night chapter deliberately slows the exit.
 const EXPERIENCE_PACE = [
-  { start: 0, end: 11.5, minSeconds: 4.5 }, // Walk through the cave.
+  { start: 0, end: 11.5, minSeconds: 4.2 }, // Walk through the cave.
   { start: 11.5, end: 13.5, minSeconds: 1 }, // Cross the portal and reach the outdoor mist.
   { start: 13.5, end: 20, minSeconds: 2.5 }, // Continue from the same view after HOLD.
-  { start: 20, end: 38, minSeconds: 6.5 }, // Let the clear blue valley breathe.
-  { start: 38, end: 54, minSeconds: 7.5 }, // Day drifts gradually into evening.
-  { start: 54, end: 72, minSeconds: 8.5 }, // Evening settles continuously into night.
-  { start: 72, end: 88, minSeconds: 7.5 }, // Scroll reaches full darkness before interaction begins.
-  { start: 88, end: 94, minSeconds: 5.5 }, // Continue after the one river-to-sky HOLD.
-  { start: 94, end: 100, minSeconds: 5 }, // Pull back, hold the scale, then return the figure to the sky.
+  { start: 20, end: 30, minSeconds: 4 }, // Let the clear blue valley breathe at one fixed viewpoint.
+  { start: 30, end: 58, minSeconds: 10 }, // Day drifts gradually into evening without camera travel.
+  { start: 58, end: 86, minSeconds: 10 }, // Evening settles continuously into full night.
+  { start: 86, end: 88, minSeconds: 2.2 }, // Only after darkness, move into the river close-up.
+  { start: 88, end: 92, minSeconds: 4 }, // After HOLD, lift and open the night view.
+  { start: 92, end: 94, minSeconds: 2.5 }, // Let the seated figure gather at the settled view.
+  { start: 94, end: 100, minSeconds: 5.5 }, // Widen once more as the figure returns to the sky.
 ]
 
 const getMaximumProgressRate = (progress) => {
@@ -259,17 +260,18 @@ const STORY_MESSAGES = [
     align: 'left',
   },
   {
-    start: 76,
-    end: 87,
+    start: JOURNEY_NIGHT_SEQUENCE.fullNight,
+    end: JOURNEY_NIGHT_SEQUENCE.riverGate - 0.08,
     number: '02',
     title: ['Night settles', 'over the valley.'],
     tone: 'light',
     align: 'left',
   },
   {
-    start: 89,
-    end: 97,
+    start: JOURNEY_NIGHT_SEQUENCE.riverGate,
+    end: JOURNEY_NIGHT_SEQUENCE.figureReleaseStart,
     number: '03',
+    requiresRiverCompletion: true,
     title: ['A river of light,', 'toward the Milky Way.'],
     tone: 'light',
     align: 'right',
@@ -278,6 +280,11 @@ const STORY_MESSAGES = [
 
 const clamp = (value, min = 0, max = 100) =>
   Math.min(max, Math.max(min, value))
+
+const smoothInteractionProgress = (value) => {
+  const t = clamp(value, 0, 1)
+  return t * t * (3 - 2 * t)
+}
 
 const decodeImageSource = (source) => new Promise((resolve, reject) => {
   const image = new Image()
@@ -2160,11 +2167,15 @@ function LegacyApp() {
       ? getJourneyReverseFogClearance(progress, fogReverseStartProgress)
       : 1
     : activeGate === 'fog'
-      ? holdProgress
+      ? smoothInteractionProgress(holdProgress)
       : 0
   const valleyMist = getJourneyFogArrival(progress) * openAir * (1 - fogClearProgress)
   const queuedMessage = STORY_MESSAGES.find(
-    (message) => progress >= message.start && progress <= message.end,
+    (message) => (
+      progress >= message.start &&
+      progress <= message.end &&
+      (!message.requiresRiverCompletion || skyConnectionProgress >= 0.999)
+    ),
   )
   useEffect(() => {
     const previousProgress = previousStoryProgressRef.current

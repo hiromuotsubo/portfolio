@@ -37,13 +37,41 @@ export const JOURNEY_NIGHT_SEQUENCE = Object.freeze({
   riverGate: 88,
   riverHoldDuration: 3300,
   connectionReverseFadeStart: 78,
-  figureGatherStart: 90,
-  figureGatherEnd: 93,
-  figureSilhouetteStart: 91.15,
-  figureSilhouetteEnd: 92.65,
+  fixedVistaCameraProgress: 20,
+  closeUpCameraProgress: 70,
+  finalCameraProgress: 90,
+  postHoldLiftEnd: 92,
+  figureGatherStart: 92,
+  figureGatherEnd: 94,
+  figureSilhouetteStart: 92.55,
+  figureSilhouetteEnd: 94,
+  finalWideStart: 94,
+  finalWideEnd: 100,
   figureReleaseStart: 97,
   figureReleaseEnd: 100,
 })
+
+// Camera and weather intentionally use different clocks after the valley has
+// opened. Day, sunset and night all share the exact p20 composition; only
+// after full darkness does the authored camera travel into its close view.
+// The river HOLD is therefore world-only at one settled close-up, and later
+// scroll resumes the lift without a hidden camera jump.
+export const getJourneyCameraProgress = (progress) => {
+  const sequence = JOURNEY_NIGHT_SEQUENCE
+  if (progress <= sequence.fixedVistaCameraProgress) return progress
+  if (progress <= sequence.fullNight) return sequence.fixedVistaCameraProgress
+  if (progress <= sequence.riverGate) {
+    return sequence.fixedVistaCameraProgress + (
+      sequence.closeUpCameraProgress - sequence.fixedVistaCameraProgress
+    ) * smootherstep(sequence.fullNight, sequence.riverGate, progress)
+  }
+  if (progress <= sequence.postHoldLiftEnd) {
+    return sequence.closeUpCameraProgress + (
+      sequence.finalCameraProgress - sequence.closeUpCameraProgress
+    ) * smootherstep(sequence.riverGate, sequence.postHoldLiftEnd, progress)
+  }
+  return sequence.finalCameraProgress
+}
 
 export const getJourneyCavePresence = (progress) => 1 - smootherstep(
   JOURNEY_CAVE_SEQUENCE.portalCrossing,
