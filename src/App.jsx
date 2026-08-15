@@ -210,6 +210,7 @@ const EXPERIENCE_TUNING = {
   maxInputStep: 1.65,
   maxInputLead: 2.6,
   followDamping: 3.6,
+  endingFollowSmoothTime: 0.72,
   reverseSpeedMultiplier: 1.35,
   gateCooldownMs: 520,
 }
@@ -280,6 +281,42 @@ const STORY_MESSAGES = [
 
 const clamp = (value, min = 0, max = 100) =>
   Math.min(max, Math.max(min, value))
+
+// A velocity-preserving, critically damped follow for the final camera
+// chapter. The regular exponential follow derives a new velocity from the
+// remaining distance on every frame, so short gaps between wheel/touch events
+// read as repeated stop/start steps while the viewer looks upward. Carrying
+// velocity across target updates gives that same story timeline one continuous
+// acceleration and deceleration without moving the camera independently.
+const dampProgressWithVelocity = (
+  current,
+  target,
+  velocity,
+  smoothTime,
+  maximumSpeed,
+  deltaTime,
+) => {
+  const safeSmoothTime = Math.max(0.0001, smoothTime)
+  const omega = 2 / safeSmoothTime
+  const scaledDelta = omega * deltaTime
+  const exponential = 1 / (
+    1 + scaledDelta + 0.48 * scaledDelta ** 2 + 0.235 * scaledDelta ** 3
+  )
+  const originalTarget = target
+  const maximumChange = maximumSpeed * safeSmoothTime
+  const change = clamp(current - target, -maximumChange, maximumChange)
+  const adjustedTarget = current - change
+  const temporaryVelocity = (velocity + omega * change) * deltaTime
+  let nextVelocity = (velocity - omega * temporaryVelocity) * exponential
+  let next = adjustedTarget + (change + temporaryVelocity) * exponential
+
+  if ((originalTarget - current > 0) === (next > originalTarget)) {
+    next = originalTarget
+    nextVelocity = 0
+  }
+
+  return [next, nextVelocity]
+}
 
 const smoothInteractionProgress = (value) => {
   const t = clamp(value, 0, 1)
@@ -1419,6 +1456,7 @@ function LegacyApp() {
   const [endingHomeTransitioning, setEndingHomeTransitioning] = useState(false)
   const [endingHomeHovered, setEndingHomeHovered] = useState(false)
   const progressRef = useRef(PREVIEW_PROGRESS)
+  const progressVelocityRef = useRef(0)
   const enteredRef = useRef(PREVIEW_ENTERED || INITIAL_VIEW === 'portfolio')
   const targetRef = useRef(PREVIEW_PROGRESS)
   const gateRef = useRef(PREVIEW_GATE)
@@ -1900,14 +1938,35 @@ function LegacyApp() {
       const maximumRate =
         getMaximumProgressRate(current) *
         (difference < 0 ? EXPERIENCE_TUNING.reverseSpeedMultiplier : 1)
-      const maximumStep = maximumRate * elapsed
-      const easedStep = Math.abs(difference) * damping
-      let next =
-        Math.abs(difference) < 0.001
-          ? target
-          : current +
-            Math.sign(difference) *
-              Math.min(Math.abs(difference), easedStep, maximumStep)
+      const endingMotionActive = Math.max(current, target) >= JOURNEY_NIGHT_SEQUENCE.fullNight
+      let next
+      if (Math.abs(difference) < 0.001) {
+        next = target
+        progressVelocityRef.current = 0
+      } else if (endingMotionActive) {
+        const reversingEndingDirection =
+          Math.abs(progressVelocityRef.current) > 0.0001 &&
+          Math.sign(progressVelocityRef.current) !== Math.sign(difference)
+        const [dampedProgress, dampedVelocity] = dampProgressWithVelocity(
+          current,
+          target,
+          progressVelocityRef.current,
+          reversingEndingDirection
+            ? EXPERIENCE_TUNING.endingFollowSmoothTime * 0.45
+            : EXPERIENCE_TUNING.endingFollowSmoothTime,
+          maximumRate,
+          elapsed,
+        )
+        next = dampedProgress
+        progressVelocityRef.current = dampedVelocity
+      } else {
+        progressVelocityRef.current = 0
+        const maximumStep = maximumRate * elapsed
+        const easedStep = Math.abs(difference) * damping
+        next = current +
+          Math.sign(difference) *
+            Math.min(Math.abs(difference), easedStep, maximumStep)
+      }
 
       const pendingGate = pendingGateRef.current
       if (
@@ -1915,6 +1974,7 @@ function LegacyApp() {
         next >= GATES[pendingGate].at - 0.012
       ) {
         next = GATES[pendingGate].at
+        progressVelocityRef.current = 0
         targetRef.current = next
         pendingGateRef.current = null
         setGate(pendingGate)
@@ -1945,6 +2005,11 @@ function LegacyApp() {
       if (Math.abs(next - current) > 0.0001) {
         progressRef.current = next
         setProgress(next)
+      }
+      if (journeySearch.get('capture') === '1') {
+        const captureDataset = document.documentElement.dataset
+        captureDataset.journeyTargetProgress = target.toFixed(4)
+        captureDataset.journeyProgressVelocity = progressVelocityRef.current.toFixed(6)
       }
       frame = requestAnimationFrame(tick)
     }
@@ -2239,6 +2304,7 @@ function LegacyApp() {
     endingCommittedRef.current = false
     enteredRef.current = false
     progressRef.current = 0
+    progressVelocityRef.current = 0
     previousStoryProgressRef.current = 0
     storyDirectionRef.current = 1
     targetRef.current = 0

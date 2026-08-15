@@ -50,6 +50,7 @@ const ENDING_CAMERA = {
   lift: 0.18,
   fov: 11.5,
   finalFov: 14.5,
+  poseFollowDamping: 7.5,
 }
 
 // V1 framing is preserved on backup/journey-lookdev-v1-e5ec4a3.
@@ -6306,6 +6307,10 @@ export default function JourneyScene({
       holdQuaternion: new THREE.Quaternion(),
       holdFov: 0,
       holdPoseCaptured: false,
+      endingSmoothedPosition: new THREE.Vector3(),
+      endingSmoothedQuaternion: new THREE.Quaternion(),
+      endingSmoothedFov: 0,
+      endingSmoothingInitialized: false,
       introStartZ: null,
       introFogZ: null,
       introQuaternion: new THREE.Quaternion(),
@@ -6896,6 +6901,41 @@ export default function JourneyScene({
       if (Math.abs(camera.fov - desiredFov) > 0.001) {
         camera.fov = desiredFov
         camera.updateProjectionMatrix()
+      }
+
+      // The Blender camera is authored at 24fps. Although Three interpolates
+      // those keys, their changing slopes can still read as a sequence of
+      // small catches when combined with intermittent wheel/touch progress.
+      // Follow the fully composed ending pose in real time so position,
+      // orientation and lens movement keep continuous velocity between source
+      // keys. The story progress itself remains authoritative, so the river,
+      // sky and figure never drift onto a separate timeline.
+      const endingPoseSmoothingActive =
+        progress >= JOURNEY_NIGHT_SEQUENCE.postHoldTravelStart - 0.001
+      if (endingPoseSmoothingActive) {
+        if (!cameraScratch.endingSmoothingInitialized) {
+          cameraScratch.endingSmoothedPosition.copy(camera.position)
+          cameraScratch.endingSmoothedQuaternion.copy(camera.quaternion)
+          cameraScratch.endingSmoothedFov = camera.fov
+          cameraScratch.endingSmoothingInitialized = true
+        } else {
+          const poseFollow = 1 - Math.exp(-delta * ENDING_CAMERA.poseFollowDamping)
+          cameraScratch.endingSmoothedPosition.lerp(camera.position, poseFollow)
+          cameraScratch.endingSmoothedQuaternion.slerp(camera.quaternion, poseFollow)
+          cameraScratch.endingSmoothedFov = THREE.MathUtils.lerp(
+            cameraScratch.endingSmoothedFov,
+            camera.fov,
+            poseFollow,
+          )
+          camera.position.copy(cameraScratch.endingSmoothedPosition)
+          camera.quaternion.copy(cameraScratch.endingSmoothedQuaternion)
+          if (Math.abs(camera.fov - cameraScratch.endingSmoothedFov) > 0.000001) {
+            camera.fov = cameraScratch.endingSmoothedFov
+            camera.updateProjectionMatrix()
+          }
+        }
+      } else {
+        cameraScratch.endingSmoothingInitialized = false
       }
       const fogPoseLocked = activeGate === 'fog'
       if (
