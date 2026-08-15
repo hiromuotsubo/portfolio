@@ -2545,6 +2545,7 @@ uniform float uJourneyRiverGlow;
 uniform float uJourneySkyConnect;
 uniform float uJourneyTime;
 uniform float uJourneyTravelWind;
+float journeyWaterSurface;
 
 float journeyWaterHash(vec2 point) {
   return fract(sin(dot(point, vec2(127.1, 311.7))) * 43758.5453123);
@@ -2627,7 +2628,6 @@ normal = normalize(normal + journeyWaterPerturbation * (0.3 + uJourneyTravelWind
       .replace(
         '#include <roughnessmap_fragment>',
         `#include <roughnessmap_fragment>
-float journeyWaterSurface = journeyWaterFlow(vJourneyWaterPosition.xz, uJourneyTime * 0.72);
 float journeyDayRoughness = mix(0.085, 0.18, journeyWaterSurface);
 float journeyNightRoughness = mix(0.035, 0.095, journeyWaterSurface);
 roughnessFactor = mix(journeyDayRoughness, journeyNightRoughness, uJourneyNight);
@@ -2636,7 +2636,8 @@ roughnessFactor += uJourneyTravelWind * 0.035;`,
       .replace(
         '#include <color_fragment>',
         `#include <color_fragment>
-float journeyWaterRipple = journeyWaterFlow(vJourneyWaterPosition.xz, uJourneyTime * 0.72);
+journeyWaterSurface = journeyWaterFlow(vJourneyWaterPosition.xz, uJourneyTime * 0.72);
+float journeyWaterRipple = journeyWaterSurface;
 float journeyWaterCrossRipple = journeyWaterFlow(vJourneyWaterPosition.zx * 1.37 + 27.0, -uJourneyTime * 0.41);
 vec3 journeyWaterView = normalize(cameraPosition - vJourneyWaterPosition);
 vec3 journeyWaterNormal = normalize(cross(dFdx(vJourneyWaterPosition), dFdy(vJourneyWaterPosition)));
@@ -2835,7 +2836,7 @@ gl_FragColor.rgb = mix(gl_FragColor.rgb, diffuseColor.rgb, journeyPigmentStrengt
 gl_FragColor.rgb += vec3(0.16, 0.72, 0.68) * journeyFineCurrent * (1.0 - uJourneyNight) * 0.045;`,
       )
   }
-  material.customProgramCacheKey = () => 'journey-water-reflection-v30-natural-corridor'
+  material.customProgramCacheKey = () => 'journey-water-reflection-v31-shared-flow-field'
 }
 
 function createClearRiverMaterial() {
@@ -7626,7 +7627,15 @@ export default function JourneyScene({
           )
         }
         if (isClearRiver && 'transmission' in material) {
-          material.transmission = THREE.MathUtils.lerp(0.001, 0.54, night)
+          // The constructor keeps the transmission variant resident during
+          // loader warm-up. Once the live story begins, a literal zero avoids
+          // Three's extra transmission framebuffer pass throughout the cave,
+          // Fog/HOLD and daylight sections. The value then rises smoothly
+          // from zero with the authored night weight, using the already-warm
+          // shader instead of compiling mid-journey.
+          material.transmission = night <= 0.000001
+            ? 0
+            : THREE.MathUtils.lerp(0, 0.54, night)
           material.clearcoatRoughness = THREE.MathUtils.lerp(0.14, 0.04, night)
           material.attenuationColor
             .set('#6aa99c')
