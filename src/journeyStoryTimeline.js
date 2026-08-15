@@ -51,7 +51,7 @@ export const JOURNEY_NIGHT_SEQUENCE = Object.freeze({
   figureSilhouetteEnd: 96,
   finalWideStart: 96,
   finalWideEnd: 100,
-  figureReleaseStart: 97.4,
+  figureReleaseStart: 98.2,
   figureReleaseEnd: 100,
 })
 
