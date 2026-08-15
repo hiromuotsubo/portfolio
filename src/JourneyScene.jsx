@@ -83,13 +83,16 @@ const CAVE_CAMERA = Object.freeze({
 // inside its much narrower horizontal field of view.
 const MOBILE_JOURNEY_COMPOSITION = Object.freeze({
   caveFov: 66,
-  valleyPullBackNear: -1.05,
-  valleyPullBackFar: -2.2,
+  // Widen from the authored eye point instead of backing beyond the river
+  // corridor. Moving slightly forward keeps the near water/shore geometry
+  // beneath the portrait frame and avoids exposing the finite river mesh.
+  valleyPullBackNear: 0.12,
+  valleyPullBackFar: 0.48,
   // Keep the authored desktop centre line. The former twelve-unit lateral
   // move turned the portrait view into a different camera and cropped the
   // opposite mountain, river reflection and seated figure out of sequence.
-  valleyLateralNear: -0.35,
-  valleyLateralFar: -1.8,
+  valleyLateralNear: 0,
+  valleyLateralFar: 0,
   valleyCameraLiftNear: 0.04,
   valleyCameraLiftFar: 0.12,
   valleyTargetLiftNear: -0.02,
@@ -99,13 +102,12 @@ const MOBILE_JOURNEY_COMPOSITION = Object.freeze({
   // A portrait screen cannot retain the desktop horizontal field without an
   // extreme fisheye. This restrained wide-angle extension preserves the same
   // viewpoint while keeping both mountain shoulders, meadow and river legible.
-  valleyFov: 23,
+  valleyFov: 19,
   // Compensate for the smaller projected blade size of the portrait wide
   // lens; this restores desktop-like meadow presence without touching seeds,
   // density or any desktop material value.
   grassHeightScale: 1.68,
-  caveLightScale: 1.16,
-  figureLookRight: 0.23,
+  caveLightScale: 1.9,
 })
 
 const clamp01 = (value) => Math.min(1, Math.max(0, value))
@@ -175,8 +177,13 @@ const getJourneyValleyDetailPresence = (progress) => smootherstep(
 function applyCaveSurfaceDetail(material) {
   const previousCompile = material.onBeforeCompile
   const previousCacheKey = material.customProgramCacheKey?.bind(material)
+  const caveSurfaceUniforms = {
+    uJourneyCaveMobileClarity: { value: 0 },
+  }
+  material.userData.journeyCaveSurfaceUniforms = caveSurfaceUniforms
   material.onBeforeCompile = (shader, renderer) => {
     previousCompile?.(shader, renderer)
+    Object.assign(shader.uniforms, caveSurfaceUniforms)
     shader.vertexShader = shader.vertexShader
       .replace(
         '#include <common>',
@@ -192,6 +199,7 @@ function applyCaveSurfaceDetail(material) {
         [
           '#include <common>',
           'varying vec3 vJourneyCaveWorldPosition;',
+          'uniform float uJourneyCaveMobileClarity;',
           'float journeyCaveHash(vec3 point) {',
           '  point = fract(point * 0.1031);',
           '  point += dot(point, point.yzx + 33.33);',
@@ -266,6 +274,21 @@ function applyCaveSurfaceDetail(material) {
           '  diffuseColor.rgb * vec3(0.72, 0.9, 0.83),',
           '  journeyCaveLowWet * (0.18 + journeyCaveMesoNoise * 0.22)',
           ');',
+          '// A portrait phone resolves fewer shaded pixels across the cave.',
+          '// Restore neutral stone separation in the material itself so the',
+          '// interior does not depend on a high-resolution shadow map.',
+          'float journeyCaveMobileRelief = mix(',
+          '  0.72,',
+          '  1.34,',
+          '  clamp(journeyCaveStone * 0.68 + journeyCaveLayer * 0.32, 0.0, 1.0)',
+          ');',
+          'vec3 journeyCaveMobileTone = diffuseColor.rgb *',
+          '  vec3(1.1, 0.96, 0.84) * journeyCaveMobileRelief;',
+          'diffuseColor.rgb = mix(',
+          '  diffuseColor.rgb,',
+          '  journeyCaveMobileTone,',
+          '  uJourneyCaveMobileClarity * 0.72',
+          ');',
         ].join('\n'),
       )
       .replace(
@@ -314,7 +337,7 @@ function applyCaveSurfaceDetail(material) {
       )
   }
   material.customProgramCacheKey = () => (
-    `${previousCacheKey?.() ?? ''}|journey-cave-surface-v4-fractured`
+    `${previousCacheKey?.() ?? ''}|journey-cave-surface-v5-mobile-clarity`
   )
 }
 
@@ -3262,7 +3285,10 @@ function prepareWorld(source, biomeMacroTexture, caveLookdevSource) {
   caveCandidateObjects.forEach((object) => {
     root.add(object)
     groups.cave.push(object)
-    object.frustumCulled = true
+    // The camera begins inside this shell. Some mobile GPUs incorrectly cull
+    // the enclosing mesh at a narrow portrait aspect, leaving only the green
+    // scene background. Two resident cave meshes are cheap enough to keep.
+    object.frustumCulled = false
     object.castShadow = true
     object.receiveShadow = false
     object.userData.journeySkipPlanarReflection = true
@@ -3280,6 +3306,9 @@ function prepareWorld(source, biomeMacroTexture, caveLookdevSource) {
     applyCaveSurfaceDetail(material)
     material.userData.journeyCaveBaseOpacity = material.opacity
     material.userData.journeyCaveBaseColor = material.color.clone()
+    material.userData.journeyCaveMobileColor = new THREE.Color(
+      object.name.includes('FLOOR') ? '#373127' : '#443d34',
+    )
     material.userData.journeyCaveBaseEmissive = material.emissive.clone()
     material.userData.journeyCaveBaseEmissiveIntensity = material.emissiveIntensity
   })
@@ -6354,6 +6383,9 @@ export default function JourneyScene({
       skyGroundNight: new THREE.Color('#111b2a'),
       ambientSunset: new THREE.Color('#b9877e'),
       ambientNight: new THREE.Color('#7185aa'),
+      caveMobileGuide: new THREE.Color('#c8c1ae'),
+      caveMobileWarm: new THREE.Color('#d1ad80'),
+      caveMobileCool: new THREE.Color('#819cac'),
       caveExitTint: new THREE.Color('#718078'),
       caveExitEmissive: new THREE.Color('#567067'),
       ridgeNearSunset: new THREE.Color('#826d63'),
@@ -6676,11 +6708,6 @@ export default function JourneyScene({
         cameraProgress,
       ))
       const portraitVista = smoothstep(12, 25, cameraProgress)
-      const portraitFigureFraming = portraitFactor * smoothstep(
-        76,
-        83,
-        cameraProgress,
-      ) * (1 - smoothstep(97, 100, cameraProgress))
       const endingLift = smoothstep(
         ENDING_CAMERA.liftStart,
         ENDING_CAMERA.liftEnd,
@@ -6848,7 +6875,7 @@ export default function JourneyScene({
             MOBILE_JOURNEY_COMPOSITION.valleyTargetRightNear,
             MOBILE_JOURNEY_COMPOSITION.valleyTargetRightFar,
             portraitVista,
-          ) + portraitFigureFraming * MOBILE_JOURNEY_COMPOSITION.figureLookRight,
+          ),
         )
         camera.up.set(0, 1, 0)
         camera.lookAt(cameraScratch.target)
@@ -7032,6 +7059,7 @@ export default function JourneyScene({
       caveRelease,
       exitAirMix * 0.45,
     )
+    const mobileCaveClarity = portraitFactor * (1 - smoothstep(8.5, 14.2, progress))
     const caveExitBounce = smoothstep(4.5, 11.8, progress) *
       (1 - smoothstep(13.15, 15.2, progress))
     const skyColor = blendTimeOfDayColor(
@@ -7281,6 +7309,9 @@ export default function JourneyScene({
         (1 - smoothstep(8, 16, progress)) *
         CAVE_LOOK.guideLightIntensity *
         THREE.MathUtils.lerp(1, MOBILE_JOURNEY_COMPOSITION.caveLightScale, portraitFactor)
+      caveGuideLightRef.current.color
+        .set('#87928d')
+        .lerp(frameColors.caveMobileGuide, mobileCaveClarity)
     }
     const caveGrazingPresence = 1 - smoothstep(10.5, 14.1, progress)
     const caveMobileLightScale = THREE.MathUtils.lerp(
@@ -7290,9 +7321,15 @@ export default function JourneyScene({
     )
     if (caveLeftGrazingLightRef.current) {
       caveLeftGrazingLightRef.current.intensity = caveGrazingPresence * 14 * caveMobileLightScale
+      caveLeftGrazingLightRef.current.color
+        .set('#918c78')
+        .lerp(frameColors.caveMobileWarm, mobileCaveClarity)
     }
     if (caveRightGrazingLightRef.current) {
       caveRightGrazingLightRef.current.intensity = caveGrazingPresence * 10 * caveMobileLightScale
+      caveRightGrazingLightRef.current.color
+        .set('#6f8d86')
+        .lerp(frameColors.caveMobileCool, mobileCaveClarity)
     }
     if (caveExitLightRef.current) {
       // A stable source just beyond the opening lets exterior daylight wrap
@@ -7610,7 +7647,14 @@ export default function JourneyScene({
           material.opacity = baseOpacity * cavePresence
           const baseColor = material.userData.journeyCaveBaseColor
           if (baseColor && material.color) {
-            material.color.copy(baseColor).lerp(frameColors.caveExitTint, caveExitBounce * 0.28)
+            material.color.copy(baseColor)
+            const mobileColor = material.userData.journeyCaveMobileColor
+            if (mobileColor) material.color.lerp(mobileColor, mobileCaveClarity * 0.82)
+            material.color.lerp(frameColors.caveExitTint, caveExitBounce * 0.28)
+          }
+          const caveSurfaceUniforms = material.userData.journeyCaveSurfaceUniforms
+          if (caveSurfaceUniforms) {
+            caveSurfaceUniforms.uJourneyCaveMobileClarity.value = mobileCaveClarity
           }
           const baseEmissive = material.userData.journeyCaveBaseEmissive
           if (baseEmissive && material.emissive) {
