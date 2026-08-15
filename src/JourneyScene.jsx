@@ -18,7 +18,7 @@ import {
 
 // Versioned query prevents a previously cached GLB from reviving removed assets.
 const MODEL_URL = '/journey/models/journey-v17-runtime-optimized.glb?v=1-selective-runtime'
-const CAVE_LOOKDEV_URL = '/journey/models/journey-cave-macro-v003.glb?v=9-fractured-meso'
+const CAVE_LOOKDEV_URL = '/journey/models/journey-cave-macro-v004.glb?v=11-eroded-floor-edge'
 const PHASE2_ENVIRONMENT_URL = '/journey/models/journey-phase2-environment.glb?v=5-distance-forest'
 const ALPINE_BIOME_MACRO_URL = '/journey/textures/surface/alpine-biome-macro-v1.jpg'
 
