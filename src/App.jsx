@@ -2314,7 +2314,6 @@ function LegacyApp() {
     setFogCompleted(false)
     setDisplayedMessage(null)
     setMessageVisible(false)
-    setMobileLook({ x: 0, y: 0 })
     setPortfolioPage('home')
   }, [clearEndingCapture, resetEndingInputGate])
 
