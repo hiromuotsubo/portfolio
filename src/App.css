@@ -543,6 +543,15 @@
   pointer-events: none;
 }
 
+/* The loader is removed after its exit fade. Keep viewport-wide grading
+   independent from that layout handoff so real wheel input cannot leave a
+   stale absolute-positioned compositor offset at the bottom of the scene. */
+.paper-texture,
+.cave-grade,
+.soft-vignette {
+  position: fixed;
+}
+
 .valley-mist {
   z-index: 4;
   inset: 34% -9% -12%;
