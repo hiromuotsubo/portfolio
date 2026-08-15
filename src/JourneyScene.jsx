@@ -8,6 +8,11 @@ import { getJourneyTimeOfDay } from './journeyVisualState.js'
 import {
   getJourneyFogArrival,
   getJourneyOutdoorPresence,
+  getJourneyValleyDetailPresence,
+  getJourneyValleyFarPresence,
+  getJourneyValleyGroundPresence,
+  getJourneyValleyPresence,
+  getJourneyValleyRiverPresence,
   JOURNEY_CAVE_SEQUENCE,
 } from './journeyStoryTimeline.js'
 
@@ -117,62 +122,13 @@ const smoothstep = (edge0, edge1, value) => {
   return x * x * (3 - 2 * x)
 }
 
-const smootherstep = (edge0, edge1, value) => {
-  const x = clamp01((value - edge0) / (edge1 - edge0))
-  return x * x * x * (x * (x * 6 - 15) + 10)
-}
-
 const CAVE_PORTAL_FADE_START_Z = -1.08
 const CAVE_PORTAL_FADE_END_Z = -2.42
 const CAVE_CAMERA_RELEASE_END = 20
 const CAVE_CAMERA_CONTINUATION_DISTANCE = 2.15
-// The exterior is not one flat layer. Its distant silhouette becomes legible
-// first through the cave opening, then the valley floor and river, with grass
-// resolving last. Keeping these depth bands separate prevents a fast wheel
-// gesture from turning the cave exit into a scene cut.
-const VALLEY_REVEAL_START = 9.1
-const VALLEY_REVEAL_END = 12.55
-const VALLEY_FAR_REVEAL_START = 8.8
-const VALLEY_FAR_REVEAL_END = 12.1
-const VALLEY_GROUND_REVEAL_START = 10
-const VALLEY_GROUND_REVEAL_END = 12.75
-const VALLEY_RIVER_REVEAL_START = 10.25
-const VALLEY_RIVER_REVEAL_END = 12.85
-const VALLEY_DETAIL_REVEAL_START = 10.65
-const VALLEY_DETAIL_REVEAL_END = 13.05
 // Depth fog supplies the cave-exit mist. Camera-facing cards are retained as
 // rollback assets but stay disabled because their projection crosses the sky.
 const USE_VIEW_FACING_FOG_CARDS = false
-
-const getJourneyValleyPresence = (progress) => smootherstep(
-  VALLEY_REVEAL_START,
-  VALLEY_REVEAL_END,
-  progress,
-)
-
-const getJourneyValleyFarPresence = (progress) => smootherstep(
-  VALLEY_FAR_REVEAL_START,
-  VALLEY_FAR_REVEAL_END,
-  progress,
-)
-
-const getJourneyValleyGroundPresence = (progress) => smootherstep(
-  VALLEY_GROUND_REVEAL_START,
-  VALLEY_GROUND_REVEAL_END,
-  progress,
-)
-
-const getJourneyValleyRiverPresence = (progress) => smootherstep(
-  VALLEY_RIVER_REVEAL_START,
-  VALLEY_RIVER_REVEAL_END,
-  progress,
-)
-
-const getJourneyValleyDetailPresence = (progress) => smootherstep(
-  VALLEY_DETAIL_REVEAL_START,
-  VALLEY_DETAIL_REVEAL_END,
-  progress,
-)
 
 function applyCaveSurfaceDetail(material) {
   const previousCompile = material.onBeforeCompile
@@ -6655,21 +6611,42 @@ export default function JourneyScene({
       const introAuthoredTransition = introLocked || introReleaseActive
       let introRelease = 0
       if (introLocked && cameraScratch.introPoseCaptured) {
-        // One continuous walking curve replaces the former approach/portal
-        // curves. Its velocity peaks in the middle of the cave, then keeps
-        // decelerating through the exit and the mist approach: there is no
-        // second acceleration when the portal is crossed.
+        // Solve one continuous cubic against the authored portal sample. The
+        // former curve aimed at a point 2.15 units beyond that sample, so the
+        // camera had already crossed the portal before the story reached the
+        // declared crossing. Anchoring the cubic to the real sample keeps one
+        // walking velocity while making story progress and geometry agree.
         const caveTravelT = clamp01(progress / JOURNEY_CAVE_SEQUENCE.fogGate)
-        const caveTravel =
-          -caveTravelT * caveTravelT * caveTravelT +
-          1.55 * caveTravelT * caveTravelT +
-          0.45 * caveTravelT
+        const caveTravelEndZ = cameraScratch.introFogZ - CAVE_CAMERA_CONTINUATION_DISTANCE
+        const totalTravel = Math.max(
+          Math.abs(caveTravelEndZ - cameraScratch.introStartZ),
+          Number.EPSILON,
+        )
+        const portalTravel = clamp01(
+          Math.abs(cameraScratch.introFogZ - cameraScratch.introStartZ) /
+            totalTravel,
+        )
+        const portalTime = JOURNEY_CAVE_SEQUENCE.portalCrossing /
+          JOURNEY_CAVE_SEQUENCE.fogGate
+        const initialSlope = 0.45
+        const portalTime2 = portalTime * portalTime
+        const portalTime3 = portalTime2 * portalTime
+        const cubicA = (
+          portalTravel - initialSlope * portalTime -
+          (1 - initialSlope) * portalTime2
+        ) / Math.min(portalTime3 - portalTime2, -Number.EPSILON)
+        const cubicB = 1 - initialSlope - cubicA
+        const caveTravel = clamp01(
+          cubicA * caveTravelT * caveTravelT * caveTravelT +
+          cubicB * caveTravelT * caveTravelT +
+          initialSlope * caveTravelT,
+        )
         camera.position.set(
           CAVE_CAMERA.x,
           CAVE_CAMERA.y,
           THREE.MathUtils.lerp(
             cameraScratch.introStartZ,
-            cameraScratch.introFogZ - CAVE_CAMERA_CONTINUATION_DISTANCE,
+            caveTravelEndZ,
             caveTravel,
           ),
         )
@@ -6942,6 +6919,8 @@ export default function JourneyScene({
         captureDataset.journeyActiveGate = activeGate ?? 'none'
         captureDataset.journeyHoldProgress = holdProgress.toFixed(6)
         captureDataset.journeyFogCompleted = String(fogCompleted)
+        captureDataset.journeySkyConnectionProgress =
+          skyConnectionProgress.toFixed(6)
         captureDataset.journeyCameraPosition = JSON.stringify(
           camera.position.toArray().map((value) => Number(value.toFixed(6))),
         )
@@ -7220,7 +7199,7 @@ export default function JourneyScene({
     // that every landscape silhouette disappears into a uniform white field.
     // It gathers to the full HOLD density as the camera reaches its settled
     // outdoor pose, preserving the intended discovery without a blank frame.
-    const caveAirFog = THREE.MathUtils.lerp(0.0022, 0.00275, exitAirMix)
+    const caveAirFog = THREE.MathUtils.lerp(0.00105, 0.00155, exitAirMix)
     const exitFogSettle = smoothstep(10.25, JOURNEY_CAVE_SEQUENCE.fogGate, progress)
     const exteriorFogDensity = THREE.MathUtils.lerp(0.0057, 0.0088, exitFogSettle)
     const preHoldFog = THREE.MathUtils.lerp(

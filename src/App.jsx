@@ -172,22 +172,14 @@ const GATES = {
     at: JOURNEY_CAVE_SEQUENCE.fogGate,
     end: JOURNEY_CAVE_SEQUENCE.fogGate,
     duration: JOURNEY_CAVE_SEQUENCE.fogDuration,
-    advanceStoryDuringHold: false,
     label: 'HOLD',
   },
   river: {
     at: 70,
-    end: 76,
+    end: 70,
     duration: 3300,
-    advanceStoryDuringHold: true,
     label: 'HOLD',
   },
-}
-
-const SKY_CONNECTION = {
-  start: 76,
-  end: 80,
-  duration: 2200,
 }
 
 const STORY_MESSAGES = [
@@ -1328,16 +1320,15 @@ function LegacyApp() {
   const [holdProgress, setHoldProgress] = useState(PREVIEW_HOLD_PROGRESS)
   const [holdOrigin, setHoldOrigin] = useState({ x: 50, y: 50 })
   const [skyConnectionProgress, setSkyConnectionProgress] = useState(
-    ['riverhold', 'river', 'forming', 'figure', 'final', 'wide', 'outro'].includes(DEV_PREVIEW) ? 1 : 0,
+    DEV_PREVIEW === 'riverhold'
+      ? PREVIEW_HOLD_PROGRESS
+      : ['river', 'forming', 'figure', 'final', 'wide', 'outro'].includes(DEV_PREVIEW) ? 1 : 0,
   )
-  const [isSkyConnecting, setIsSkyConnecting] = useState(false)
   const [fogCompleted, setFogCompleted] = useState(PREVIEW_FOG_COMPLETED)
   const [fogReverseActive, setFogReverseActive] = useState(false)
   const [fogReverseStartProgress, setFogReverseStartProgress] = useState(
     JOURNEY_CAVE_SEQUENCE.reverseFogStart,
   )
-  const [fogReverseAtGate, setFogReverseAtGate] = useState(false)
-  const [fogReverseAtGateProgress, setFogReverseAtGateProgress] = useState(0)
   const [showOutro, setShowOutro] = useState(
     DEV_PREVIEW === 'portfolio' || INITIAL_VIEW === 'portfolio',
   )
@@ -1369,10 +1360,10 @@ function LegacyApp() {
   const fogCompletedRef = useRef(PREVIEW_FOG_COMPLETED)
   const fogReverseActiveRef = useRef(false)
   const fogReverseStartProgressRef = useRef(JOURNEY_CAVE_SEQUENCE.reverseFogStart)
-  const fogReverseAtGateRef = useRef({ frame: null, startedAt: 0 })
-  const riverCompletedRef = useRef(false)
+  const riverCompletedRef = useRef(
+    ['river', 'forming', 'figure', 'final', 'wide', 'outro'].includes(DEV_PREVIEW),
+  )
   const holdRef = useRef({ frame: null, startedAt: 0, pointerId: null })
-  const skyConnectionRef = useRef({ frame: null, startedAt: 0 })
   const touchRef = useRef({ active: false, x: 0, y: 0, startX: 0, startY: 0, mode: null })
   const activeMessageNumberRef = useRef(null)
   const previousStoryProgressRef = useRef(PREVIEW_PROGRESS)
@@ -1749,40 +1740,6 @@ function LegacyApp() {
     setHoldProgress(0)
   }, [])
 
-  const restoreFogAtGateForReverse = useCallback(() => {
-    if (fogReverseAtGateRef.current.frame || !fogCompletedRef.current) return
-    targetRef.current = JOURNEY_CAVE_SEQUENCE.fogGate
-    fogReverseActiveRef.current = true
-    setFogReverseActive(true)
-    setFogReverseAtGate(true)
-    setFogReverseAtGateProgress(0)
-    fogReverseAtGateRef.current.startedAt = performance.now()
-
-    const tick = (time) => {
-      const value = clamp(
-        (time - fogReverseAtGateRef.current.startedAt) /
-          JOURNEY_CAVE_SEQUENCE.reverseFogAtGateDuration,
-        0,
-        1,
-      )
-      setFogReverseAtGateProgress(value)
-      if (value >= 1) {
-        fogReverseAtGateRef.current.frame = null
-        fogReverseActiveRef.current = false
-        fogCompletedRef.current = false
-        setFogReverseActive(false)
-        setFogReverseAtGate(false)
-        setFogReverseAtGateProgress(0)
-        setFogCompleted(false)
-        setGate('fog')
-        return
-      }
-      fogReverseAtGateRef.current.frame = requestAnimationFrame(tick)
-    }
-
-    fogReverseAtGateRef.current.frame = requestAnimationFrame(tick)
-  }, [setGate])
-
   const advance = useCallback(
     (rawDelta) => {
       if (
@@ -1791,9 +1748,7 @@ function LegacyApp() {
         portfolioRef.current ||
         endingCommittedRef.current ||
         !rawDelta ||
-        holdRef.current.frame ||
-        fogReverseAtGateRef.current.frame ||
-        skyConnectionRef.current.frame
+        holdRef.current.frame
       ) return
       const direction = Math.sign(rawDelta)
       const active = gateRef.current
@@ -1814,16 +1769,7 @@ function LegacyApp() {
       if (
         direction < 0 &&
         fogCompletedRef.current &&
-        targetRef.current <= JOURNEY_CAVE_SEQUENCE.fogGate + 0.02
-      ) {
-        restoreFogAtGateForReverse()
-        return
-      }
-
-      if (
-        direction < 0 &&
-        fogCompletedRef.current &&
-        targetRef.current > JOURNEY_CAVE_SEQUENCE.fogGate &&
+        targetRef.current >= JOURNEY_CAVE_SEQUENCE.fogGate - 0.02 &&
         !fogReverseActiveRef.current
       ) {
         const reverseStart = clamp(
@@ -1885,20 +1831,18 @@ function LegacyApp() {
         pendingGateRef.current = 'river'
       }
 
-      if (riverCompletedRef.current) {
-        setSkyConnectionProgress(
-          clamp(
-            (next - SKY_CONNECTION.start) /
-              (SKY_CONNECTION.end - SKY_CONNECTION.start),
-            0,
-            1,
-          ),
-        )
+      if (
+        direction < 0 &&
+        riverCompletedRef.current &&
+        next < GATES.river.at
+      ) {
+        riverCompletedRef.current = false
+        setSkyConnectionProgress(0)
       }
 
       setTarget(next)
     },
-    [endingCapturePreparing, endingFrameSource, restoreFogAtGateForReverse, setTarget],
+    [endingCapturePreparing, endingFrameSource, setTarget],
   )
 
   useEffect(() => {
@@ -1937,7 +1881,7 @@ function LegacyApp() {
       if (
         fogReverseActiveRef.current &&
         difference < 0 &&
-        next <= JOURNEY_CAVE_SEQUENCE.fogGate
+        next <= JOURNEY_CAVE_SEQUENCE.portalCrossing
       ) {
         fogReverseActiveRef.current = false
         fogReverseStartProgressRef.current = JOURNEY_CAVE_SEQUENCE.reverseFogStart
@@ -2055,39 +1999,6 @@ function LegacyApp() {
     }
   }, [advance, endingCapturePreparing, markEndingInputReady, waitForEndingInputRelease])
 
-  const startSkyConnection = useCallback(() => {
-    if (skyConnectionRef.current.frame) return
-    setIsSkyConnecting(true)
-    setSkyConnectionProgress(0)
-    skyConnectionRef.current.startedAt = performance.now()
-
-    const tick = (time) => {
-      const value = clamp(
-        (time - skyConnectionRef.current.startedAt) / SKY_CONNECTION.duration,
-        0,
-        1,
-      )
-      setSkyConnectionProgress(value)
-      setTarget(
-        SKY_CONNECTION.start +
-          value * (SKY_CONNECTION.end - SKY_CONNECTION.start),
-      )
-
-      if (value >= 1) {
-        skyConnectionRef.current.frame = null
-        riverCompletedRef.current = true
-        setIsSkyConnecting(false)
-        inputCooldownUntilRef.current =
-          performance.now() + EXPERIENCE_TUNING.gateCooldownMs
-        setTarget(SKY_CONNECTION.end)
-        return
-      }
-      skyConnectionRef.current.frame = requestAnimationFrame(tick)
-    }
-
-    skyConnectionRef.current.frame = requestAnimationFrame(tick)
-  }, [setTarget])
-
   const finishHold = useCallback(
     (type) => {
       cancelAnimationFrame(holdRef.current.frame)
@@ -2101,10 +2012,15 @@ function LegacyApp() {
         setFogReverseStartProgress(JOURNEY_CAVE_SEQUENCE.reverseFogStart)
         setFogCompleted(true)
       } else {
+        riverCompletedRef.current = true
+        setSkyConnectionProgress(1)
         gateRef.current = null
         setActiveGate(null)
-        setTarget(GATES.river.end)
-        startSkyConnection()
+        inputCooldownUntilRef.current =
+          performance.now() + EXPERIENCE_TUNING.gateCooldownMs
+        // River/HOLD changes only the world. Camera and story remain at the
+        // gate until the visitor supplies a new scroll input.
+        setTarget(GATES.river.at)
         return
       }
       gateRef.current = null
@@ -2113,7 +2029,7 @@ function LegacyApp() {
         performance.now() + EXPERIENCE_TUNING.gateCooldownMs
       setTarget(GATES[type].end)
     },
-    [setTarget, startSkyConnection],
+    [setTarget],
   )
 
   const startHold = useCallback(
@@ -2134,13 +2050,11 @@ function LegacyApp() {
       holdRef.current.pointerId = event?.pointerId ?? null
       holdRef.current.startedAt = performance.now()
       const config = GATES[type]
-      if (!config.advanceStoryDuringHold) setTarget(config.at)
+      setTarget(config.at)
       const tick = (time) => {
         const value = clamp((time - holdRef.current.startedAt) / config.duration, 0, 1)
         setHoldProgress(value)
-        if (config.advanceStoryDuringHold) {
-          setTarget(config.at + value * (config.end - config.at))
-        }
+        if (type === 'river') setSkyConnectionProgress(value)
         if (value >= 1) {
           finishHold(type)
           return
@@ -2158,6 +2072,7 @@ function LegacyApp() {
     cancelAnimationFrame(holdRef.current.frame)
     holdRef.current.frame = null
     setHoldProgress(0)
+    if (type === 'river') setSkyConnectionProgress(0)
     setTarget(GATES[type].at)
   }, [setTarget])
 
@@ -2198,8 +2113,6 @@ function LegacyApp() {
   useEffect(
     () => () => {
       cancelAnimationFrame(holdRef.current.frame)
-      cancelAnimationFrame(fogReverseAtGateRef.current.frame)
-      cancelAnimationFrame(skyConnectionRef.current.frame)
     },
     [],
   )
@@ -2210,9 +2123,7 @@ function LegacyApp() {
   const openAir = getJourneyOutdoorPresence(progress)
   const fogClearProgress = fogCompleted
     ? fogReverseActive
-      ? fogReverseAtGate
-        ? 1 - fogReverseAtGateProgress
-        : getJourneyReverseFogClearance(progress, fogReverseStartProgress)
+      ? getJourneyReverseFogClearance(progress, fogReverseStartProgress)
       : 1
     : activeGate === 'fog'
       ? holdProgress
@@ -2287,8 +2198,6 @@ function LegacyApp() {
     pendingGateRef.current = null
     fogReverseActiveRef.current = false
     fogReverseStartProgressRef.current = JOURNEY_CAVE_SEQUENCE.reverseFogStart
-    cancelAnimationFrame(fogReverseAtGateRef.current.frame)
-    fogReverseAtGateRef.current.frame = null
     fogCompletedRef.current = false
     riverCompletedRef.current = false
     inputCooldownUntilRef.current = 0
@@ -2307,10 +2216,7 @@ function LegacyApp() {
     setHoldProgress(0)
     setFogReverseActive(false)
     setFogReverseStartProgress(JOURNEY_CAVE_SEQUENCE.reverseFogStart)
-    setFogReverseAtGate(false)
-    setFogReverseAtGateProgress(0)
     setSkyConnectionProgress(0)
-    setIsSkyConnecting(false)
     setFogCompleted(false)
     setDisplayedMessage(null)
     setMessageVisible(false)
@@ -2518,7 +2424,7 @@ function LegacyApp() {
 
       <div
         key={operationState}
-        className={`journey-ui__operation ${activeGate ? 'is-hold' : ''} ${activeGate && holdProgress > 0 ? 'is-holding' : ''} ${activeMessage && !activeGate ? 'is-quiet' : ''} ${isSkyConnecting ? 'is-transition' : ''} ${progress >= 99 ? 'is-complete' : ''}`}
+        className={`journey-ui__operation ${activeGate ? 'is-hold' : ''} ${activeGate && holdProgress > 0 ? 'is-holding' : ''} ${activeMessage && !activeGate ? 'is-quiet' : ''} ${progress >= 99 ? 'is-complete' : ''}`}
         role="status"
         aria-live="polite"
         aria-hidden={progress >= 99 ? 'true' : undefined}

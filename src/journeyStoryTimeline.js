@@ -13,16 +13,16 @@ const smootherstep = (start, end, value) => {
 // at the established 13.5 visual anchor so the later valley/TOD baseline stays
 // unchanged.
 export const JOURNEY_CAVE_SEQUENCE = Object.freeze({
+  portalApproach: 8.2,
   portalCrossing: 11.82,
   portalCleared: 12.74,
   outdoorSettled: 13.5,
   caveFadeEnd: 13.05,
-  fogArrivalStart: 8.85,
-  fogArrivalEnd: 9.55,
+  fogArrivalStart: 11.82,
+  fogArrivalEnd: 13.5,
   fogGate: 13.5,
   fogDuration: 2500,
   reverseFogStart: 15.5,
-  reverseFogAtGateDuration: 900,
 })
 
 export const getJourneyCavePresence = (progress) => 1 - smootherstep(
@@ -43,11 +43,46 @@ export const getJourneyFogArrival = (progress) => smootherstep(
   progress,
 )
 
+// Every exterior layer belongs to the same physical portal handoff. Distant
+// forms are readable first through the opening; ground, river and meadow then
+// resolve only as the camera crosses into open air. These weights are pure
+// functions of the actual story/camera progress, so forward and reverse are
+// identical at the same checkpoint.
+export const getJourneyValleyFarPresence = (progress) => smootherstep(
+  JOURNEY_CAVE_SEQUENCE.portalApproach,
+  JOURNEY_CAVE_SEQUENCE.portalCleared,
+  progress,
+)
+
+export const getJourneyValleyPresence = (progress) => smootherstep(
+  JOURNEY_CAVE_SEQUENCE.portalCrossing,
+  JOURNEY_CAVE_SEQUENCE.outdoorSettled,
+  progress,
+)
+
+export const getJourneyValleyGroundPresence = (progress) => smootherstep(
+  JOURNEY_CAVE_SEQUENCE.portalCrossing,
+  JOURNEY_CAVE_SEQUENCE.caveFadeEnd,
+  progress,
+)
+
+export const getJourneyValleyRiverPresence = (progress) => smootherstep(
+  JOURNEY_CAVE_SEQUENCE.portalCrossing,
+  JOURNEY_CAVE_SEQUENCE.outdoorSettled - 0.2,
+  progress,
+)
+
+export const getJourneyValleyDetailPresence = (progress) => smootherstep(
+  JOURNEY_CAVE_SEQUENCE.portalCleared,
+  JOURNEY_CAVE_SEQUENCE.outdoorSettled,
+  progress,
+)
+
 export const getJourneyReverseFogClearance = (
   progress,
   reverseStart = JOURNEY_CAVE_SEQUENCE.reverseFogStart,
 ) => smootherstep(
-  JOURNEY_CAVE_SEQUENCE.fogGate,
-  Math.max(JOURNEY_CAVE_SEQUENCE.fogGate + 0.001, reverseStart),
+  JOURNEY_CAVE_SEQUENCE.portalCrossing,
+  Math.max(JOURNEY_CAVE_SEQUENCE.portalCrossing + 0.001, reverseStart),
   progress,
 )
