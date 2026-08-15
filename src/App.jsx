@@ -1415,6 +1415,7 @@ function LegacyApp() {
   const [endingCaptureBlocked, setEndingCaptureBlocked] = useState(false)
   const [endingReleaseRequested, setEndingReleaseRequested] = useState(false)
   const [endingInputReady, setEndingInputReady] = useState(DEV_PREVIEW === 'outro')
+  const [endingHomeTransitioning, setEndingHomeTransitioning] = useState(false)
   const progressRef = useRef(PREVIEW_PROGRESS)
   const enteredRef = useRef(PREVIEW_ENTERED || INITIAL_VIEW === 'portfolio')
   const targetRef = useRef(PREVIEW_PROGRESS)
@@ -1440,6 +1441,7 @@ function LegacyApp() {
   const endingInputReadyRef = useRef(DEV_PREVIEW === 'outro')
   const endingReleaseRequestedRef = useRef(false)
   const endingInputReleaseTimerRef = useRef(null)
+  const portfolioActivationFrameRef = useRef(null)
   const endingCommittedRef = useRef(
     DEV_PREVIEW === 'portfolio' || INITIAL_VIEW === 'portfolio',
   )
@@ -1805,10 +1807,9 @@ function LegacyApp() {
         !endingFrameSource &&
         progressRef.current >= ENDING_SETTLE_PROGRESS
       ) {
-        if (endingInputReadyRef.current && !endingReleaseRequestedRef.current) {
-          endingReleaseRequestedRef.current = true
-          setEndingReleaseRequested(true)
-        }
+        // The completed Journey now has one explicit exit. Additional wheel or
+        // touch input must not start a second, hidden ending timeline behind
+        // the visible Return Home control.
         return
       }
 
@@ -2234,6 +2235,7 @@ function LegacyApp() {
     endingCaptureFailureCountRef.current = 0
     setEndingCapturePreparing(false)
     setEndingCaptureBlocked(false)
+    setEndingHomeTransitioning(false)
     resetEndingInputGate()
     portfolioRef.current = false
     endingCommittedRef.current = false
@@ -2276,8 +2278,12 @@ function LegacyApp() {
     window.history.pushState(null, '', `/journey${window.location.search}`)
   }, [resetExperience])
 
-  const openPortfolioPage = useCallback((page, { updateHistory = true } = {}) => {
+  const openPortfolioPage = useCallback((page, {
+    updateHistory = true,
+    historyMode = 'push',
+  } = {}) => {
     const nextPage = PORTFOLIO_PAGES.includes(page) ? page : 'home'
+    const wasPortfolioVisible = portfolioRef.current
     portfolioRef.current = true
     clearEndingCapture()
     endingCaptureFailureCountRef.current = 0
@@ -2289,10 +2295,25 @@ function LegacyApp() {
     setShowOutro(true)
     setShowPortfolio(true)
     setMemoryHome(false)
+    setEndingHomeTransitioning(false)
     setPortfolioPage(nextPage)
     setPortfolioScrolled(nextPage !== 'home')
     if (updateHistory) {
-      window.history.pushState(null, '', `${PORTFOLIO_PATHS[nextPage]}${window.location.search}`)
+      const nextUrl = `${PORTFOLIO_PATHS[nextPage]}${window.location.search}`
+      if (historyMode === 'replace') window.history.replaceState(null, '', nextUrl)
+      else window.history.pushState(null, '', nextUrl)
+    }
+
+    if (!wasPortfolioVisible) {
+      window.cancelAnimationFrame(portfolioActivationFrameRef.current)
+      portfolioActivationFrameRef.current = window.requestAnimationFrame(() => {
+        portfolioActivationFrameRef.current = window.requestAnimationFrame(() => {
+          portfolioActivationFrameRef.current = null
+          document.querySelector(
+            '.portfolio-page h1[tabindex="-1"], .portfolio-page h2[tabindex="-1"]',
+          )?.focus({ preventScroll: true })
+        })
+      })
     }
   }, [clearEndingCapture, resetEndingInputGate])
 
@@ -2301,19 +2322,43 @@ function LegacyApp() {
   const transitionPortfolioRoute = useCallback((page, options = {}) => {
     const nextPage = PORTFOLIO_PAGES.includes(page) ? page : 'home'
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const targetReady = nextPage === 'home'
+      ? preloadPortfolioImages()
+      : Promise.resolve()
     window.clearTimeout(portfolioRouteTransitionRef.current)
     document.documentElement.dataset.portfolioRouteTransition = 'cover'
     portfolioRouteTransitionRef.current = window.setTimeout(() => {
-      openPortfolioPage(nextPage, options)
-      document.documentElement.dataset.portfolioRouteTransition = 'reveal'
-      portfolioRouteTransitionRef.current = window.setTimeout(() => {
-        delete document.documentElement.dataset.portfolioRouteTransition
-      }, reduceMotion ? 100 : PORTFOLIO_ROUTE_SWITCH_MS)
+      targetReady.finally(() => {
+        openPortfolioPage(nextPage, options)
+        document.documentElement.dataset.portfolioRouteTransition = 'reveal'
+        portfolioRouteTransitionRef.current = window.setTimeout(() => {
+          delete document.documentElement.dataset.portfolioRouteTransition
+        }, reduceMotion ? 100 : PORTFOLIO_ROUTE_SWITCH_MS)
+      })
     }, reduceMotion ? 80 : PORTFOLIO_ROUTE_SWITCH_MS)
   }, [openPortfolioPage])
 
+  const returnHomeFromJourney = useCallback(() => {
+    if (
+      endingHomeTransitioning ||
+      portfolioRef.current ||
+      !endingCapturePreparing ||
+      !endingInputReadyRef.current
+    ) return
+
+    endingCommittedRef.current = true
+    setEndingHomeTransitioning(true)
+    try {
+      window.localStorage.setItem(JOURNEY_STORAGE_KEY, 'true')
+    } catch {
+      // Navigation remains available when storage is unavailable.
+    }
+    transitionPortfolioRoute('home', { historyMode: 'replace' })
+  }, [endingCapturePreparing, endingHomeTransitioning, transitionPortfolioRoute])
+
   useEffect(() => () => {
     window.clearTimeout(portfolioRouteTransitionRef.current)
+    window.cancelAnimationFrame(portfolioActivationFrameRef.current)
     delete document.documentElement.dataset.portfolioRouteTransition
   }, [])
 
@@ -2423,14 +2468,15 @@ function LegacyApp() {
       ) : null}
 
       {endingCapturePreparing && endingInputReady && !endingFrameSource && !showOutro ? (
-        <div
-          className={`journey-ending-pause-cue ${endingReleaseRequested ? 'is-releasing' : ''}`}
-          role="status"
-          aria-live="polite"
+        <button
+          className={`journey-ending-home-cue ${endingHomeTransitioning ? 'is-releasing' : ''}`}
+          type="button"
+          onClick={returnHomeFromJourney}
+          disabled={endingHomeTransitioning}
         >
-          <span>FEEL THE VIEW</span>
-          <small>SCROLL WHEN READY</small>
-        </div>
+          <span>RETURN HOME</span>
+          <ShortArrow />
+        </button>
       ) : null}
 
       <header className="journey-ui__header">

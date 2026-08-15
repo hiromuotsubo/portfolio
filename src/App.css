@@ -6240,8 +6240,8 @@ textarea,
   display: none;
 }
 
-html[data-portfolio-route-transition='cover'] .portfolio-site::after,
-html[data-portfolio-route-transition='reveal'] .portfolio-site::after {
+html[data-portfolio-route-transition='cover'] .journey-3d::after,
+html[data-portfolio-route-transition='reveal'] .journey-3d::after {
   position: fixed;
   z-index: 140;
   inset: 0;
@@ -6256,11 +6256,11 @@ html[data-portfolio-route-transition='reveal'] .portfolio-site::after {
     );
 }
 
-html[data-portfolio-route-transition='cover'] .portfolio-site::after {
+html[data-portfolio-route-transition='cover'] .journey-3d::after {
   animation: portfolio-air-cover 220ms ease both;
 }
 
-html[data-portfolio-route-transition='reveal'] .portfolio-site::after {
+html[data-portfolio-route-transition='reveal'] .journey-3d::after {
   animation: portfolio-air-reveal 260ms ease both;
 }
 
@@ -7048,53 +7048,56 @@ html[data-portfolio-route-transition='reveal'] .portfolio-site::after {
   box-shadow: 0 0 0 5px rgba(255, 253, 245, .13);
 }
 
-/* Hybrid C ending: the night keeps its quiet hold, while a restrained cue
-   tells the visitor that one more scroll may release it into memory. */
-.journey-ending-pause-cue {
+/* The final landscape remains the hero. Its only exit uses the same unboxed
+   white UI language as Scroll and HOLD, while its arrow connects the Journey
+   to the Portfolio navigation system. */
+.journey-ending-home-cue {
   position: absolute;
   z-index: 10;
   left: 50%;
   bottom: clamp(58px, 9vh, 96px);
-  display: grid;
-  justify-items: center;
-  gap: 9px;
-  width: min(82vw, 286px);
-  padding: 17px 26px 15px;
+  display: inline-flex;
+  align-items: center;
+  gap: 13px;
+  margin: 0;
+  padding: 10px 0;
   color: #fffdf5;
-  border-block: 1px solid rgba(255, 253, 245, .3);
-  background:
-    radial-gradient(ellipse at 50% 35%, rgba(72, 117, 126, .22), transparent 68%),
-    linear-gradient(180deg, rgba(5, 21, 38, .36), rgba(3, 17, 31, .58));
-  box-shadow:
-    0 16px 42px rgba(1, 10, 20, .22),
-    inset 0 1px rgba(255, 255, 255, .04);
-  text-align: center;
-  pointer-events: none;
-  transform: translateX(-50%);
-  backdrop-filter: blur(5px);
-  -webkit-backdrop-filter: blur(5px);
-  animation: ending-pause-cue-in 760ms ease 320ms both;
-  transition: opacity 360ms ease, transform 480ms ease;
-}
-
-.journey-ending-pause-cue span {
+  border: 0;
+  background: transparent;
+  font-family: var(--font-ui);
   font-size: 13px;
-  font-weight: 700;
-  letter-spacing: .26em;
-  line-height: 1;
-  text-shadow: 0 1px 12px rgba(0, 0, 0, .72);
-}
-
-.journey-ending-pause-cue small {
-  opacity: .88;
-  font-size: 9px;
-  font-weight: 650;
+  font-weight: 500;
   letter-spacing: .2em;
   line-height: 1;
-  text-shadow: 0 1px 8px rgba(0, 0, 0, .72);
+  text-align: left;
+  cursor: pointer;
+  transform: translateX(-50%);
+  animation: ending-pause-cue-in 760ms ease 320ms both;
+  filter: drop-shadow(0 1px 2px rgba(2, 9, 18, .9)) drop-shadow(0 0 12px rgba(2, 9, 18, .48));
+  transition: opacity 300ms ease, transform 420ms ease;
 }
 
-.journey-ending-pause-cue.is-releasing {
+.journey-ending-home-cue .short-arrow {
+  width: 15px;
+  height: 15px;
+  transition: transform 260ms cubic-bezier(.2, .72, .2, 1);
+}
+
+.journey-ending-home-cue:hover .short-arrow,
+.journey-ending-home-cue:focus-visible .short-arrow {
+  transform: translate(2px, -2px);
+}
+
+.journey-ending-home-cue:focus-visible {
+  outline: 1px solid rgba(255, 253, 245, .82);
+  outline-offset: 7px;
+}
+
+.journey-ending-home-cue:disabled {
+  cursor: default;
+}
+
+.journey-ending-home-cue.is-releasing {
   opacity: 0;
   transform: translate(-50%, -5px);
 }
@@ -7165,18 +7168,10 @@ html[data-portfolio-route-transition='reveal'] .portfolio-site::after {
 }
 
 @media (max-width: 720px), (max-aspect-ratio: 4 / 5) {
-  .journey-ending-pause-cue {
+  .journey-ending-home-cue {
     bottom: max(88px, calc(env(safe-area-inset-bottom) + 76px));
-    width: min(78vw, 266px);
-    padding: 16px 22px 14px;
-  }
-
-  .journey-ending-pause-cue span {
     font-size: 12px;
-  }
-
-  .journey-ending-pause-cue small {
-    font-size: 8px;
+    letter-spacing: .18em;
   }
 
   .journey-ending-frame__air {
@@ -7188,12 +7183,12 @@ html[data-portfolio-route-transition='reveal'] .portfolio-site::after {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .journey-ending-pause-cue {
+  .journey-ending-home-cue {
     animation: none;
     opacity: 1;
   }
 
-  .journey-ending-pause-cue.is-releasing {
+  .journey-ending-home-cue.is-releasing {
     opacity: 0;
     transform: translateX(-50%);
   }
