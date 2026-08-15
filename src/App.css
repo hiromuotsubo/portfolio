@@ -7594,6 +7594,24 @@ html[data-portfolio-route-transition='reveal'] .portfolio-site::after {
   transform: translateY(0);
 }
 
+.portfolio-route-status {
+  position: fixed;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  border: 0;
+  white-space: nowrap;
+}
+
+.portfolio-page h1[tabindex='-1']:focus,
+.portfolio-page h2[tabindex='-1']:focus {
+  outline: 0;
+}
+
 .portfolio-site.is-page-home:not(.is-home-assets-ready) .portfolio-page-transition {
   opacity: 0;
   visibility: hidden;

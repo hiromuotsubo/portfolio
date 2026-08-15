@@ -779,6 +779,7 @@ function PortfolioMediaFigure({ items, caption, className = '' }) {
 
 function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }) {
   const siteScrollRef = useRef(null)
+  const previousPageRef = useRef(page)
   const transitionTimersRef = useRef([])
   const transitioningRef = useRef(false)
   const homeMotionFrameRef = useRef(null)
@@ -793,6 +794,20 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
     x: '50vw',
     y: '50vh',
   })
+  const [routeAnnouncement, setRouteAnnouncement] = useState('')
+
+  useEffect(() => {
+    if (previousPageRef.current === page) return undefined
+    previousPageRef.current = page
+    const frame = window.requestAnimationFrame(() => {
+      const heading = siteScrollRef.current?.querySelector(
+        '.portfolio-page h1[tabindex="-1"], .portfolio-page h2[tabindex="-1"]',
+      )
+      heading?.focus({ preventScroll: true })
+      setRouteAnnouncement(`${page[0].toUpperCase()}${page.slice(1)} page`)
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [page])
 
   useEffect(() => {
     let cancelled = false
@@ -1020,7 +1035,7 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
     <section className="portfolio-story portfolio-page" aria-labelledby="about-title">
       <aside className="portfolio-story__rail">
         <span className="portfolio-kicker">ABOUT</span>
-        <h2 id="about-title">Hiromu Otsubo</h2>
+        <h2 id="about-title" tabIndex={-1}>Hiromu Otsubo</h2>
         <nav aria-label="About chapters">
           {ABOUT_ITEMS.map(([id, label], index) => (
             <button key={id} type="button" className={activePanel === id ? 'is-current' : ''} onClick={() => selectPanel(id)}>
@@ -1086,7 +1101,7 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
     <section className="portfolio-story portfolio-page is-project" aria-labelledby="project-title">
       <aside className="portfolio-story__rail">
         <span className="portfolio-kicker">PROJECT</span>
-        <h2 id="project-title">Journey</h2>
+        <h2 id="project-title" tabIndex={-1}>Journey</h2>
         <nav aria-label="Project chapters">
           {PROJECT_ITEMS.map(([id, label], index) => (
             <button key={id} type="button" className={activePanel === id ? 'is-current' : ''} onClick={() => selectPanel(id)}>
@@ -1178,6 +1193,9 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
       data-portfolio-page={page}
     >
       <a className="portfolio-skip-link" href="#portfolio-content">Skip to content</a>
+      <p className="portfolio-route-status" role="status" aria-live="polite" aria-atomic="true">
+        {routeAnnouncement}
+      </p>
       <header className="portfolio-nav">
         <button className="portfolio-nav__brand" type="button" onClick={(event) => navigate('home', event)}>
           <HiromuMark compact />
@@ -1259,7 +1277,7 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
               </figure>
 
               <div className="portfolio-home__copy">
-                <h1 id="portfolio-home-title">Journey</h1>
+                <h1 id="portfolio-home-title" tabIndex={-1}>Journey</h1>
                 <p>An interactive landscape inspired by Kamikochi.</p>
                 <button type="button" onClick={onReplay}><span>EXPERIENCE JOURNEY</span><ShortArrow /></button>
               </div>
@@ -1278,7 +1296,7 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
         {page === 'contact' ? (
           <section className="portfolio-contact portfolio-page" aria-labelledby="contact-title">
             <span className="portfolio-kicker">CONTACT</span>
-            <h2 id="contact-title">Let’s Talk</h2>
+            <h2 id="contact-title" tabIndex={-1}>Let’s Talk</h2>
             <p>For collaborations, research or thoughtful ideas.</p>
             <div className="portfolio-contact__links">
               <a href="mailto:hiromu.otsubo.design@gmail.com"><small>EMAIL</small><span>hiromu.otsubo.design@gmail.com</span><ShortArrow /></a>
@@ -2045,6 +2063,7 @@ function LegacyApp() {
     const onPointerDown = (event) => startHold(event)
     const onPointerUp = () => cancelHold()
     const onKeyDown = (event) => {
+      if (portfolioRef.current || showPortfolio) return
       if ((event.code === 'Space' || event.code === 'Enter') && !event.repeat) {
         startHold(event)
       } else if (event.code === 'ArrowDown' || event.code === 'PageDown') {
@@ -2056,6 +2075,7 @@ function LegacyApp() {
       }
     }
     const onKeyUp = (event) => {
+      if (portfolioRef.current || showPortfolio) return
       if (event.code === 'Space' || event.code === 'Enter') cancelHold()
     }
 
@@ -2073,7 +2093,7 @@ function LegacyApp() {
       window.removeEventListener('keyup', onKeyUp)
       window.removeEventListener('blur', onPointerUp)
     }
-  }, [advance, cancelHold, startHold])
+  }, [advance, cancelHold, showPortfolio, startHold])
 
   useEffect(
     () => () => {
