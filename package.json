@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "build:journey": "sh scripts/build_journey_assets.sh",
+    "optimize:journey-cave": "node scripts/optimize_journey_v1_cave.mjs",
     "lint": "oxlint",
     "preview": "vite preview"
   },

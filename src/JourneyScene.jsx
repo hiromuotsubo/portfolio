@@ -14,11 +14,12 @@ import {
   getJourneyValleyPresence,
   getJourneyValleyRiverPresence,
   JOURNEY_CAVE_SEQUENCE,
+  JOURNEY_NIGHT_SEQUENCE,
 } from './journeyStoryTimeline.js'
 
 // Versioned query prevents a previously cached GLB from reviving removed assets.
 const MODEL_URL = '/journey/models/journey-v17-runtime-optimized.glb?v=1-selective-runtime'
-const CAVE_LOOKDEV_URL = '/journey/models/journey-cave-macro-v004.glb?v=11-eroded-floor-edge'
+const CAVE_LOOKDEV_URL = '/journey/models/journey-cave-macro-v004.glb?v=12-meshopt-shape-preserved'
 const PHASE2_ENVIRONMENT_URL = '/journey/models/journey-phase2-environment.glb?v=5-distance-forest'
 const ALPINE_BIOME_MACRO_URL = '/journey/textures/surface/alpine-biome-macro-v1.jpg'
 
@@ -2789,6 +2790,7 @@ diffuseColor.rgb += journeyRiverLight * journeyMysticCurrent * (0.34 + uJourneyN
 diffuseColor.rgb += vec3(0.08, 0.76, 0.98) * journeyLuminousThread * (0.34 + uJourneyNight * 1.16);
 diffuseColor.rgb += vec3(0.42, 0.94, 1.0) * journeyConnectionPulse * uJourneySkyConnect * journeyGroundRiver * 1.85;
 diffuseColor.rgb += vec3(0.12, 0.46, 0.72) * journeyConnectionWake * uJourneySkyConnect * journeyGroundRiver * 0.58;
+diffuseColor.rgb += vec3(0.08, 0.42, 0.62) * journeyConnectionWake * uJourneySkyConnect * journeyGroundRiver * 0.48;
 // The source terrain contains a pale guide ribbon below the water. Keep the
 // daytime surface optically deep enough to hide it, while preserving apparent
 // clarity through the procedural riverbed detail above.
@@ -2814,6 +2816,7 @@ diffuseColor.a *= journeyChannelEdge * mix(journeyDayAlpha, journeyNightAlpha, u
 vec3 journeyEmissiveFlow = mix(vec3(0.04, 0.45, 0.5), vec3(0.18, 0.48, 0.98), uJourneyNight);
 totalEmissiveRadiance += journeyEmissiveFlow * journeyMysticCurrent * (0.62 + uJourneyNight * 1.72);
 totalEmissiveRadiance += vec3(0.1, 0.72, 1.0) * journeyLuminousThread * (1.1 + uJourneyNight * 3.6);
+totalEmissiveRadiance += vec3(0.08, 0.46, 0.72) * journeyConnectionWake * uJourneySkyConnect * journeyGroundRiver * 1.18;
 totalEmissiveRadiance += vec3(0.32, 0.82, 1.0) * journeyConnectionPulse * uJourneySkyConnect * journeyGroundRiver * 3.15;`,
       )
       .replace(
@@ -2922,11 +2925,12 @@ function createRiverGlowMaterial() {
         float edgeFade = pow(max(0.0, sin(vJourneyUv.x * 3.14159265)), 0.82);
         float alpha = reveal * activation * edgeFade * (0.028 + strand * 0.56 + sparkle * 0.42);
         alpha += connectionPulse * uJourneySkyConnect * edgeFade * 0.78;
-        alpha += wake * uJourneySkyConnect * strand * edgeFade * 0.24;
+        alpha += wake * uJourneySkyConnect * edgeFade * (0.085 + strand * 0.38);
         vec3 cyan = vec3(0.07, 0.72, 0.92);
         vec3 celestial = vec3(0.34, 0.72, 1.0);
         vec3 color = mix(cyan, celestial, uJourneySkyConnect * 0.72 + path * 0.12);
         color *= 0.88 + strand * 2.15 + sparkle * 2.72;
+        color += wake * uJourneySkyConnect * vec3(0.06, 0.34, 0.54) * 0.52;
         color += connectionPulse * vec3(0.38, 0.92, 1.0) * 3.2;
         gl_FragColor = vec4(color, clamp(alpha, 0.0, 1.0));
       }
@@ -6378,7 +6382,6 @@ export default function JourneyScene({
   const previousProgressRef = useRef(progress)
   const shadowProgressRef = useRef(-Infinity)
   const travelWindRef = useRef(0)
-  const gateCueRef = useRef({ type: null, elapsed: 0 })
   const sunRef = useRef(null)
   const skyLightRef = useRef(null)
   const ambientRef = useRef(null)
@@ -6478,6 +6481,14 @@ export default function JourneyScene({
       starWeight,
     } = timeOfDay
     const eveningProgress = sunset + night
+    // HOLD owns the only river-to-sky illumination. Reverse travel may fade
+    // that completed world state back into ordinary night, but it does not
+    // re-arm a second HOLD or a separate progress-driven river flash.
+    const riverConnectionProgress = skyConnectionProgress * smoothstep(
+      JOURNEY_NIGHT_SEQUENCE.connectionReverseFadeStart,
+      JOURNEY_NIGHT_SEQUENCE.riverGate,
+      progress,
+    )
     if (
       quality.shadows &&
       Math.abs(progress - shadowProgressRef.current) >= 0.18
@@ -6495,18 +6506,6 @@ export default function JourneyScene({
       delta,
     )
     previousProgressRef.current = progress
-
-    if (gateCueRef.current.type !== activeGate) {
-      gateCueRef.current.type = activeGate
-      gateCueRef.current.elapsed = 0
-    } else if (activeGate) {
-      gateCueRef.current.elapsed += delta
-    }
-    const gateCueElapsed = gateCueRef.current.elapsed
-    const gateArrivalPulse = activeGate ? Math.exp(-gateCueElapsed * 1.55) : 0
-    const gateBreath = activeGate
-      ? 0.5 + 0.5 * Math.sin(gateCueElapsed * 1.7)
-      : 0
 
     if (holdProgress <= 0.001) {
       interactionRef.current.capturedGate = null
@@ -6923,6 +6922,8 @@ export default function JourneyScene({
         captureDataset.journeyHoldProgress = holdProgress.toFixed(6)
         captureDataset.journeyFogCompleted = String(fogCompleted)
         captureDataset.journeySkyConnectionProgress =
+          riverConnectionProgress.toFixed(6)
+        captureDataset.journeySkyConnectionState =
           skyConnectionProgress.toFixed(6)
         captureDataset.journeyCameraPosition = JSON.stringify(
           camera.position.toArray().map((value) => Number(value.toFixed(6))),
@@ -7337,7 +7338,7 @@ export default function JourneyScene({
         (ambientRef.current?.intensity ?? 0).toFixed(6)
       document.documentElement.dataset.journeyCaveLookdev =
         groups.cave.some((object) => object.userData.journeyCaveLookdevVersion)
-          ? 'v003-fractured-meso'
+          ? 'v004-natural-floor-meshopt'
           : 'production'
     }
 
@@ -7352,14 +7353,14 @@ export default function JourneyScene({
     if (qaCaptureEnabled) {
       document.documentElement.dataset.journeyStarsVisible = String(starOpacity > 0.002)
     }
-    const bridgeReveal = smoothstep(0, 0.72, skyConnectionProgress)
-    const milkyWayReveal = smoothstep(0.28, 1, skyConnectionProgress)
-    const bridgeFade = 1 - smoothstep(0.7, 1, skyConnectionProgress) * 0.94
+    const bridgeReveal = smoothstep(0, 0.72, riverConnectionProgress)
+    const milkyWayReveal = smoothstep(0.28, 1, riverConnectionProgress)
+    const bridgeFade = 1 - smoothstep(0.7, 1, riverConnectionProgress) * 0.94
     if (skyBridgeRef.current) {
       const uniforms = skyBridgeRef.current.material.uniforms
       uniforms.uJourneyReveal.value = bridgeReveal
       uniforms.uJourneyOpacity.value =
-        smoothstep(0, 0.08, skyConnectionProgress) * bridgeFade
+        smoothstep(0, 0.08, riverConnectionProgress) * bridgeFade
       uniforms.uJourneyTime.value = state.clock.elapsedTime
       skyBridgeRef.current.visible = bridgeReveal > 0.002 && !diagnostics.stars
     }
@@ -7375,19 +7376,31 @@ export default function JourneyScene({
       )
     }
 
-    const figureGather = smoothstep(80, 83, progress)
-    const figureRelease = smoothstep(96, 100, progress)
+    const figureGather = smoothstep(
+      JOURNEY_NIGHT_SEQUENCE.figureGatherStart,
+      JOURNEY_NIGHT_SEQUENCE.figureGatherEnd,
+      progress,
+    )
+    const figureRelease = smoothstep(
+      JOURNEY_NIGHT_SEQUENCE.figureReleaseStart,
+      JOURNEY_NIGHT_SEQUENCE.figureReleaseEnd,
+      progress,
+    )
     const figurePresence = figureGather * (1 - figureRelease)
     if (seatedFigureMaterialRef.current) {
       seatedFigureMaterialRef.current.uniforms.uJourneyMorph.value = figurePresence
       seatedFigureMaterialRef.current.uniforms.uJourneyOpacity.value =
-        smoothstep(80, 82.8, progress) * (1 - smoothstep(97, 100, progress)) * 0.96
+        figureGather * (1 - figureRelease) * 0.96
       seatedFigureMaterialRef.current.uniforms.uJourneyTime.value = state.clock.elapsedTime
     }
     if (seatedFigureSilhouetteMaterialRef.current) {
-      const silhouetteReveal = smoothstep(81.15, 82.65, progress)
+      const silhouetteReveal = smoothstep(
+        JOURNEY_NIGHT_SEQUENCE.figureSilhouetteStart,
+        JOURNEY_NIGHT_SEQUENCE.figureSilhouetteEnd,
+        progress,
+      )
       seatedFigureSilhouetteMaterialRef.current.opacity =
-        silhouetteReveal * (1 - smoothstep(97, 100, progress)) * 0.82
+        silhouetteReveal * (1 - figureRelease) * 0.82
     }
     if (seatedFigureRef.current) {
       seatedFigureRef.current.scale.setScalar(0.74)
@@ -7420,7 +7433,7 @@ export default function JourneyScene({
       if (uniforms) {
         uniforms.uJourneySunset.value = sunset
         uniforms.uJourneyNight.value = night
-        uniforms.uJourneyRiverLight.value = night * skyConnectionProgress * 0.16
+        uniforms.uJourneyRiverLight.value = night * riverConnectionProgress * 0.16
         uniforms.uJourneyDiscovery.value = 0
         uniforms.uJourneyTime.value = state.clock.elapsedTime
         uniforms.uJourneyEntranceReveal.value = ridgeReveal
@@ -7489,13 +7502,13 @@ export default function JourneyScene({
         42 + Math.sin(state.clock.elapsedTime * 0.23) * 1.1
     }
 
-    const riverPromptGlow = activeGate === 'river'
-      ? 0.018 + gateArrivalPulse * 0.027 + gateBreath * 0.006
-      : 0
-    const riverGlow = Math.max(smoothstep(70, 76, progress), riverPromptGlow)
+    // `uJourneyRiverGlow` was the second, progress-driven illumination that
+    // fired after the HOLD. Keep it at zero; the preferred first light is the
+    // moving connection pulse driven by `uJourneySkyConnect` below.
+    const riverGlow = 0
     if (riverMysticLightRef.current) {
       riverMysticLightRef.current.intensity =
-        night * (riverGlow * 1.35 + skyConnectionProgress * 1.8)
+        night * riverConnectionProgress * 1.8
     }
     // The exterior has physical depth before the Fog/HOLD gate. Showing its
     // mountains through the portal prevents a full-screen sky color from
@@ -7519,7 +7532,7 @@ export default function JourneyScene({
           uniforms.uJourneySunset.value = sunset
           uniforms.uJourneyNight.value = night
           uniforms.uJourneyRiverLight.value =
-            night * Math.max(riverGlow * 0.92, skyConnectionProgress * 0.72)
+            night * riverConnectionProgress * 0.72
           uniforms.uJourneyDiscovery.value =
             openValley * (1 - night) * (0.045 + cloudbreakDiscovery * 0.955)
           uniforms.uJourneyTime.value = state.clock.elapsedTime
@@ -7579,7 +7592,7 @@ export default function JourneyScene({
           uniforms.uJourneySunset.value = sunset
           uniforms.uJourneyNight.value = night
           uniforms.uJourneyRiverGlow.value = riverGlow
-          uniforms.uJourneySkyConnect.value = skyConnectionProgress
+          uniforms.uJourneySkyConnect.value = riverConnectionProgress
           uniforms.uJourneyTime.value = state.clock.elapsedTime
           uniforms.uJourneyTravelWind.value = travelWindRef.current
         }
@@ -7594,9 +7607,9 @@ export default function JourneyScene({
       const uniforms = mesh.material.userData.journeyRiverGlowUniforms
       if (!uniforms) return
       uniforms.uJourneyGlow.value = riverGlow
-      uniforms.uJourneySkyConnect.value = skyConnectionProgress
+      uniforms.uJourneySkyConnect.value = riverConnectionProgress
       uniforms.uJourneyTime.value = state.clock.elapsedTime
-      mesh.visible = night > 0.06 && riverGlow > 0.01
+      mesh.visible = night > 0.06 && riverConnectionProgress > 0.002
     })
     // Portal culling follows the actual camera crossing, not a story-progress
     // threshold. The rock frame remains solid through the portal plane, then

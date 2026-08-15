@@ -1,3 +1,5 @@
+import { JOURNEY_VISUAL_TIMING } from './journeyVisualState.js'
+
 const clamp01 = (value) => Math.min(1, Math.max(0, value))
 
 const smootherstep = (start, end, value) => {
@@ -23,6 +25,24 @@ export const JOURNEY_CAVE_SEQUENCE = Object.freeze({
   fogGate: 13.5,
   fogDuration: 2500,
   reverseFogStart: 15.5,
+})
+
+// The valley reaches its fully dark night state through scroll alone. Only
+// after that visual state has settled does one world-only HOLD illuminate the
+// river and carry the same light into the Milky Way. Completion is one-shot:
+// reverse travel fades the connection with story progress but never arms a
+// second river HOLD during the same Journey.
+export const JOURNEY_NIGHT_SEQUENCE = Object.freeze({
+  fullNight: JOURNEY_VISUAL_TIMING.nightEnd,
+  riverGate: 88,
+  riverHoldDuration: 3300,
+  connectionReverseFadeStart: 78,
+  figureGatherStart: 90,
+  figureGatherEnd: 93,
+  figureSilhouetteStart: 91.15,
+  figureSilhouetteEnd: 92.65,
+  figureReleaseStart: 97,
+  figureReleaseEnd: 100,
 })
 
 export const getJourneyCavePresence = (progress) => 1 - smootherstep(

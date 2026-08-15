@@ -7,6 +7,7 @@ import {
   getJourneyOutdoorPresence,
   getJourneyReverseFogClearance,
   JOURNEY_CAVE_SEQUENCE,
+  JOURNEY_NIGHT_SEQUENCE,
 } from './journeyStoryTimeline.js'
 
 const JourneyCanvas = lazy(() => import('./JourneyCanvas.jsx'))
@@ -44,13 +45,13 @@ const PREVIEW_PROGRESS = DEV_PREVIEW_PROGRESS ?? ({
   fogclear: JOURNEY_CAVE_SEQUENCE.fogGate,
   day: 30,
   sunset: 46,
-  night: 68,
-  riverready: 70,
-  riverhold: 70,
-  river: 80,
-  forming: 82,
-  figure: 84,
-  final: 92,
+  night: JOURNEY_NIGHT_SEQUENCE.fullNight,
+  riverready: JOURNEY_NIGHT_SEQUENCE.riverGate,
+  riverhold: JOURNEY_NIGHT_SEQUENCE.riverGate,
+  river: JOURNEY_NIGHT_SEQUENCE.riverGate,
+  forming: 92,
+  figure: 94,
+  final: 96,
   wide: 96,
   portfolio: 28,
   outro: 100,
@@ -219,10 +220,10 @@ const EXPERIENCE_PACE = [
   { start: 13.5, end: 20, minSeconds: 2.5 }, // Continue from the same view after HOLD.
   { start: 20, end: 38, minSeconds: 6.5 }, // Let the clear blue valley breathe.
   { start: 38, end: 54, minSeconds: 7.5 }, // Day drifts gradually into evening.
-  { start: 54, end: 70, minSeconds: 8 }, // Evening settles continuously into night.
-  { start: 70, end: 80, minSeconds: 5.5 }, // Illuminate and connect the river after night arrives.
-  { start: 80, end: 92, minSeconds: 6.5 }, // Look up slowly while the figure gathers from stars.
-  { start: 92, end: 100, minSeconds: 5 }, // Pull back, hold the scale, then return the figure to the sky.
+  { start: 54, end: 72, minSeconds: 8.5 }, // Evening settles continuously into night.
+  { start: 72, end: 88, minSeconds: 7.5 }, // Scroll reaches full darkness before interaction begins.
+  { start: 88, end: 94, minSeconds: 5.5 }, // Continue after the one river-to-sky HOLD.
+  { start: 94, end: 100, minSeconds: 5 }, // Pull back, hold the scale, then return the figure to the sky.
 ]
 
 const getMaximumProgressRate = (progress) => {
@@ -240,9 +241,9 @@ const GATES = {
     label: 'HOLD',
   },
   river: {
-    at: 70,
-    end: 70,
-    duration: 3300,
+    at: JOURNEY_NIGHT_SEQUENCE.riverGate,
+    end: JOURNEY_NIGHT_SEQUENCE.riverGate,
+    duration: JOURNEY_NIGHT_SEQUENCE.riverHoldDuration,
     label: 'HOLD',
   },
 }
@@ -258,17 +259,17 @@ const STORY_MESSAGES = [
   },
   {
     start: 76,
-    end: 84,
+    end: 87,
     number: '02',
-    title: ['A river of light,', 'toward the Milky Way.'],
+    title: ['Night settles', 'over the valley.'],
     tone: 'light',
     align: 'left',
   },
   {
-    start: 88,
+    start: 89,
     end: 97,
     number: '03',
-    title: ['Night settles', 'over the valley.'],
+    title: ['A river of light,', 'toward the Milky Way.'],
     tone: 'light',
     align: 'right',
   },
@@ -1876,15 +1877,6 @@ function LegacyApp() {
       ) {
         next = GATES.river.at
         pendingGateRef.current = 'river'
-      }
-
-      if (
-        direction < 0 &&
-        riverCompletedRef.current &&
-        next < GATES.river.at
-      ) {
-        riverCompletedRef.current = false
-        setSkyConnectionProgress(0)
       }
 
       setTarget(next)
