@@ -4,7 +4,7 @@ import { useGLTF, useTexture } from '@react-three/drei'
 import * as THREE from 'three'
 import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader.js'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
-import { getJourneyTimeOfDay } from './journeyVisualState.js'
+import { getJourneyTimeOfDay, smootherstep } from './journeyVisualState.js'
 import {
   getJourneyFogArrival,
   getJourneyCameraProgress,
@@ -38,16 +38,16 @@ const MEADOW_WIND_POINTER_PAUSE_RESET = 0.18
 const MEADOW_WIND_MAX_AGE = 2.6
 
 const ENDING_CAMERA = {
-  liftStart: JOURNEY_NIGHT_SEQUENCE.riverGate,
+  liftStart: JOURNEY_NIGHT_SEQUENCE.postHoldLookUpStart,
   liftEnd: JOURNEY_NIGHT_SEQUENCE.postHoldLiftEnd,
-  wideStart: JOURNEY_NIGHT_SEQUENCE.riverGate,
+  wideStart: JOURNEY_NIGHT_SEQUENCE.postHoldWidenStart,
   wideEnd: JOURNEY_NIGHT_SEQUENCE.postHoldLiftEnd,
   pullBack: 6.5,
   finalWideStart: JOURNEY_NIGHT_SEQUENCE.finalWideStart,
   finalWideEnd: JOURNEY_NIGHT_SEQUENCE.finalWideEnd,
   finalPullBack: 7,
-  cameraLift: 0.16,
-  lift: 0.08,
+  cameraLift: 0.22,
+  lift: 0.18,
   fov: 11.5,
   finalFov: 14.5,
 }
@@ -6692,17 +6692,17 @@ export default function JourneyScene({
         cameraProgress,
       ))
       const portraitVista = smoothstep(12, 25, cameraProgress)
-      const endingLift = smoothstep(
+      const endingLift = smootherstep(
         ENDING_CAMERA.liftStart,
         ENDING_CAMERA.liftEnd,
         progress,
       )
-      const endingWide = smoothstep(
+      const endingWide = smootherstep(
         ENDING_CAMERA.wideStart,
         ENDING_CAMERA.wideEnd,
         progress,
       )
-      const endingFinalWide = smoothstep(
+      const endingFinalWide = smootherstep(
         ENDING_CAMERA.finalWideStart,
         ENDING_CAMERA.finalWideEnd,
         progress,

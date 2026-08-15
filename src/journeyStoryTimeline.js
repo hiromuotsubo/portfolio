@@ -38,16 +38,20 @@ export const JOURNEY_NIGHT_SEQUENCE = Object.freeze({
   riverHoldDuration: 3300,
   connectionReverseFadeStart: 78,
   fixedVistaCameraProgress: 20,
+  closeUpCameraStartProgress: 55,
   closeUpCameraProgress: 70,
   finalCameraProgress: 90,
-  postHoldLiftEnd: 92,
-  figureGatherStart: 92,
-  figureGatherEnd: 94,
-  figureSilhouetteStart: 92.55,
-  figureSilhouetteEnd: 94,
-  finalWideStart: 94,
+  postHoldTravelStart: 88.35,
+  postHoldLookUpStart: 88.35,
+  postHoldWidenStart: 89.45,
+  postHoldLiftEnd: 94,
+  figureGatherStart: 94,
+  figureGatherEnd: 96,
+  figureSilhouetteStart: 94.55,
+  figureSilhouetteEnd: 96,
+  finalWideStart: 96,
   finalWideEnd: 100,
-  figureReleaseStart: 97,
+  figureReleaseStart: 97.4,
   figureReleaseEnd: 100,
 })
 
@@ -61,14 +65,19 @@ export const getJourneyCameraProgress = (progress) => {
   if (progress <= sequence.fixedVistaCameraProgress) return progress
   if (progress <= sequence.fullNight) return sequence.fixedVistaCameraProgress
   if (progress <= sequence.riverGate) {
-    return sequence.fixedVistaCameraProgress + (
-      sequence.closeUpCameraProgress - sequence.fixedVistaCameraProgress
+    // The authored clip is visually still from p20 to roughly p55. Starting
+    // this chapter at the last identical pose spends the full interval on the
+    // visible close-up instead of hiding most of the allotted time in a flat
+    // section of the source animation.
+    return sequence.closeUpCameraStartProgress + (
+      sequence.closeUpCameraProgress - sequence.closeUpCameraStartProgress
     ) * smootherstep(sequence.fullNight, sequence.riverGate, progress)
   }
+  if (progress <= sequence.postHoldTravelStart) return sequence.closeUpCameraProgress
   if (progress <= sequence.postHoldLiftEnd) {
     return sequence.closeUpCameraProgress + (
       sequence.finalCameraProgress - sequence.closeUpCameraProgress
-    ) * smootherstep(sequence.riverGate, sequence.postHoldLiftEnd, progress)
+    ) * smootherstep(sequence.postHoldTravelStart, sequence.postHoldLiftEnd, progress)
   }
   return sequence.finalCameraProgress
 }

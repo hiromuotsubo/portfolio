@@ -222,10 +222,10 @@ const EXPERIENCE_PACE = [
   { start: 20, end: 30, minSeconds: 4 }, // Let the clear blue valley breathe at one fixed viewpoint.
   { start: 30, end: 58, minSeconds: 10 }, // Day drifts gradually into evening without camera travel.
   { start: 58, end: 86, minSeconds: 10 }, // Evening settles continuously into full night.
-  { start: 86, end: 88, minSeconds: 2.2 }, // Only after darkness, move into the river close-up.
-  { start: 88, end: 92, minSeconds: 4 }, // After HOLD, lift and open the night view.
-  { start: 92, end: 94, minSeconds: 2.5 }, // Let the seated figure gather at the settled view.
-  { start: 94, end: 100, minSeconds: 5.5 }, // Widen once more as the figure returns to the sky.
+  { start: 86, end: 88, minSeconds: 5.6 }, // Let full night breathe before the river close-up settles.
+  { start: 88, end: 94, minSeconds: 8 }, // After HOLD, look upward first, then open the night view.
+  { start: 94, end: 96, minSeconds: 2.8 }, // Let the seated figure gather at the settled view.
+  { start: 96, end: 100, minSeconds: 5.2 }, // Widen once more as the figure returns to the sky.
 ]
 
 const getMaximumProgressRate = (progress) => {
@@ -1417,6 +1417,7 @@ function LegacyApp() {
   const [endingReleaseRequested, setEndingReleaseRequested] = useState(false)
   const [endingInputReady, setEndingInputReady] = useState(DEV_PREVIEW === 'outro')
   const [endingHomeTransitioning, setEndingHomeTransitioning] = useState(false)
+  const [endingHomeHovered, setEndingHomeHovered] = useState(false)
   const progressRef = useRef(PREVIEW_PROGRESS)
   const enteredRef = useRef(PREVIEW_ENTERED || INITIAL_VIEW === 'portfolio')
   const targetRef = useRef(PREVIEW_PROGRESS)
@@ -1477,6 +1478,7 @@ function LegacyApp() {
     endingInputReleaseTimerRef.current = null
     endingInputReadyRef.current = false
     endingReleaseRequestedRef.current = false
+    setEndingHomeHovered(false)
     setEndingInputReady(false)
     setEndingReleaseRequested(false)
   }, [])
@@ -2343,6 +2345,7 @@ function LegacyApp() {
     ) return
 
     endingCommittedRef.current = true
+    setEndingHomeHovered(false)
     setEndingHomeTransitioning(true)
     try {
       window.localStorage.setItem(JOURNEY_STORAGE_KEY, 'true')
@@ -2373,7 +2376,7 @@ function LegacyApp() {
 
   return (
     <main
-      className={`journey-3d ${entered ? 'is-entered' : ''} ${PUBLIC_SHOWCASE ? 'is-showcase' : ''} ${ENDING_PERFORMANCE_LEGACY ? 'is-ending-perf-legacy' : ''} ${JOURNEY_DOM_FOG_DIAGNOSTIC_OFF ? 'is-perf-no-dom-fog' : ''} ${activeGate ? `has-gate is-gate-${activeGate}` : ''} ${activeGate && holdProgress > 0 ? 'is-holding' : ''} ${endingCapturePreparing ? 'is-ending-preparing' : ''} ${endingFrameSource ? 'has-ending-frame' : ''} ${showOutro ? 'is-outro' : ''} ${showPortfolio ? 'is-portfolio' : ''} ${memoryHome ? 'is-memory-home' : ''} ${portfolioScrolled ? 'is-portfolio-scrolled' : ''}`}
+      className={`journey-3d ${entered ? 'is-entered' : ''} ${PUBLIC_SHOWCASE ? 'is-showcase' : ''} ${ENDING_PERFORMANCE_LEGACY ? 'is-ending-perf-legacy' : ''} ${JOURNEY_DOM_FOG_DIAGNOSTIC_OFF ? 'is-perf-no-dom-fog' : ''} ${activeGate ? `has-gate is-gate-${activeGate}` : ''} ${activeGate && holdProgress > 0 ? 'is-holding' : ''} ${endingCapturePreparing ? 'is-ending-preparing' : ''} ${endingInputReady ? 'is-ending-input-ready' : ''} ${endingHomeHovered ? 'is-ending-home-hovered' : ''} ${endingFrameSource ? 'has-ending-frame' : ''} ${showOutro ? 'is-outro' : ''} ${showPortfolio ? 'is-portfolio' : ''} ${memoryHome ? 'is-memory-home' : ''} ${portfolioScrolled ? 'is-portfolio-scrolled' : ''}`}
       style={{
         '--cave-depth': caveDepth,
         '--open-air': openAir,
@@ -2468,6 +2471,10 @@ function LegacyApp() {
           className={`journey-ending-home-cue ${endingHomeTransitioning ? 'is-releasing' : ''}`}
           type="button"
           onClick={returnHomeFromJourney}
+          onPointerEnter={() => setEndingHomeHovered(true)}
+          onPointerLeave={() => setEndingHomeHovered(false)}
+          onFocus={() => setEndingHomeHovered(true)}
+          onBlur={() => setEndingHomeHovered(false)}
           disabled={endingHomeTransitioning}
         >
           <span>RETURN HOME</span>
@@ -2543,7 +2550,7 @@ function LegacyApp() {
         {fogCompleted ? 'SOUND ON' : 'SOUND ON HOLD'}
       </div>
 
-      <CursorFollower entered={entered} active={Boolean(activeGate)} />
+      <CursorFollower entered={entered} active={Boolean(activeGate) || endingHomeHovered} />
     </main>
   )
 }
