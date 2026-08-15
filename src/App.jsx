@@ -69,8 +69,7 @@ const ENDING_SETTLE_MS = 2600
 const ENDING_INPUT_RELEASE_MS = 420
 const ENDING_INPUT_NEUTRAL_MS = 520
 const ENDING_CAPTURE_MAX_ATTEMPTS = 3
-const ENDING_MEMORY_HOME_MS = 4850
-const ENDING_MEMORY_COMPLETE_MS = 6900
+const ENDING_PERFORMANCE_WINDOW_MS = 6840
 const PORTFOLIO_TRANSITION_MS = 480
 const PORTFOLIO_ROUTE_SWITCH_MS = 220
 const PORTFOLIO_PAGES = ['home', 'about', 'project', 'contact']
@@ -1596,32 +1595,29 @@ function LegacyApp() {
     }
   }, [endingFrameLoaded, endingFrameSource, showOutro, showPortfolio])
 
-  useEffect(() => {
-    if (!showOutro || portfolioRef.current) return undefined
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    const homeDelay = reduceMotion ? 220 : ENDING_MEMORY_HOME_MS
-    const completeDelay = reduceMotion ? 760 : ENDING_MEMORY_COMPLETE_MS
-    const homeTimeout = window.setTimeout(() => {
-      portfolioRef.current = true
-      setPortfolioPage('home')
-      setMemoryHome(true)
-      try {
-        window.localStorage.setItem(JOURNEY_STORAGE_KEY, 'true')
-      } catch {
-        // The experience still completes when storage is unavailable.
-      }
-      window.history.replaceState(null, '', '/')
-      setShowPortfolio(true)
-    }, homeDelay)
-    const completeTimeout = window.setTimeout(() => {
-      clearEndingCapture()
-      setEndingCapturePreparing(false)
-    }, completeDelay)
-    return () => {
-      window.clearTimeout(homeTimeout)
-      window.clearTimeout(completeTimeout)
+  const completeEndingMemory = useCallback((event) => {
+    if (
+      event.target !== event.currentTarget ||
+      !['memory-frame-release', 'memory-frame-release-reduced'].includes(event.animationName) ||
+      portfolioRef.current
+    ) return
+
+    // The visible memory frame is the lifecycle clock. Home is revealed only
+    // after that exact CSS animation completes, so route state cannot overtake
+    // the final visual beat on either normal or reduced-motion timelines.
+    portfolioRef.current = true
+    setPortfolioPage('home')
+    setMemoryHome(true)
+    try {
+      window.localStorage.setItem(JOURNEY_STORAGE_KEY, 'true')
+    } catch {
+      // The experience still completes when storage is unavailable.
     }
-  }, [clearEndingCapture, showOutro])
+    window.history.replaceState(null, '', '/')
+    setShowPortfolio(true)
+    clearEndingCapture()
+    setEndingCapturePreparing(false)
+  }, [clearEndingCapture])
 
   useEffect(() => {
     if (!showOutro || journeySearch.get('capture') !== '1') return undefined
@@ -1685,7 +1681,7 @@ function LegacyApp() {
     const tick = (time) => {
       deltas.push(time - previousFrame)
       previousFrame = time
-      if (time - startedAt >= ENDING_MEMORY_COMPLETE_MS + 240) {
+      if (time - startedAt >= ENDING_PERFORMANCE_WINDOW_MS) {
         finish()
         observer?.disconnect()
         mutationObserver.disconnect()
@@ -2303,7 +2299,11 @@ function LegacyApp() {
       ) : null}
 
       {endingFrameSource ? (
-        <div className="journey-ending-frame" aria-hidden="true">
+        <div
+          className="journey-ending-frame"
+          aria-hidden="true"
+          onAnimationEnd={completeEndingMemory}
+        >
           <img
             className="journey-ending-frame__landscape"
             src={endingFrameSource}
