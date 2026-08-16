@@ -6612,7 +6612,7 @@ export default function JourneyScene({
     }
   }, [clip, mixer, root])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!camera?.isCamera) return undefined
     scene.userData.previousJourneyCamera = camera
     camera.aspect = size.width / size.height
