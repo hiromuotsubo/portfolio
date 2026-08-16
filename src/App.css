@@ -7759,24 +7759,52 @@ html[data-portfolio-route-transition='reveal'] .journey-3d::after {
   }
 }
 
-/* Breathing Media ------------------------------------------------------------
-   Scroll position is written as a shared custom property on each figure.
-   Keep the existing outer figure reveal untouched; only the media window
-   narrows away from the reading focus. */
+/* Chapter Stack Lite ---------------------------------------------------------
+   The right-column chapter wrapper shifts only around a handoff boundary.
+   Its natural layout height remains the source of truth for normal reading. */
 @media (min-width: 901px) and (prefers-reduced-motion: no-preference) {
-  .portfolio-site.is-page-about [data-breathing-media='image'] .portfolio-figure__image,
-  .portfolio-site.is-page-project [data-breathing-media='gallery'] .portfolio-media-v5__frame {
-    /* Gallery frames share their parent figure's single scroll value. */
-    -webkit-clip-path: inset(0 var(--breathing-media-static-inset, 0%) 0);
-    clip-path: inset(0 var(--breathing-media-static-inset, 0%) 0);
-    transition: clip-path 150ms cubic-bezier(.22, .61, .36, 1);
-    will-change: clip-path;
+  .portfolio-site.is-page-about .portfolio-panel.is-chapter-handoff,
+  .portfolio-site.is-page-project .portfolio-panel.is-chapter-handoff {
+    position: relative;
+    z-index: 1;
+    transform: translate3d(0, var(--chapter-stack-shift, 0px), 0);
+    will-change: transform;
   }
 
-  .portfolio-site.is-page-project [data-breathing-media='video'] .portfolio-media-v5__frame {
-    -webkit-clip-path: inset(0 var(--breathing-media-video-inset, 0%) 0);
-    clip-path: inset(0 var(--breathing-media-video-inset, 0%) 0);
-    transition: clip-path 150ms cubic-bezier(.22, .61, .36, 1);
-    will-change: clip-path;
+  .portfolio-site.is-page-about .portfolio-panel.is-chapter-handoff {
+    background: var(--paper);
   }
+
+  .portfolio-site.is-page-project .portfolio-panel.is-chapter-handoff {
+    background: var(--paper);
+  }
+}
+
+/* The measured label keeps the navigation geometry fixed while its visible
+   layer briefly resolves a small, restrained character substitution. */
+.portfolio-nav__label {
+  position: relative;
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.portfolio-nav__label-measure {
+  visibility: hidden;
+}
+
+.portfolio-nav__label-decode {
+  position: absolute;
+  inset: 0;
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .portfolio-nav__label.is-decoding .portfolio-nav__label-decode {
+    animation: portfolio-nav-soft-decode 150ms ease-out both;
+  }
+}
+
+@keyframes portfolio-nav-soft-decode {
+  0% { opacity: .72; }
+  58% { opacity: .94; }
+  100% { opacity: 1; }
 }

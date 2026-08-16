@@ -813,7 +813,7 @@ const PROJECT_ITEMS = [
 
 function PortfolioImage({ src, alt, caption, className = '' }) {
   return (
-    <figure className={`portfolio-figure ${className}`} data-breathing-media="image">
+    <figure className={`portfolio-figure ${className}`}>
       <div className="portfolio-figure__image">
         <img src={src} alt={alt} loading="lazy" />
       </div>
@@ -862,10 +862,8 @@ function PortfolioVideo({ src, poster, alt }) {
 }
 
 function PortfolioMediaFigure({ items, caption, className = '' }) {
-  const mediaKind = items.some((item) => item.type === 'video') ? 'video' : 'gallery'
-
   return (
-    <figure className={`portfolio-figure portfolio-media-v5 ${className}`} data-breathing-media={mediaKind}>
+    <figure className={`portfolio-figure portfolio-media-v5 ${className}`}>
       <div className="portfolio-media-v5__grid">
         {items.map((item) => (
           <div className="portfolio-media-v5__item" key={item.src}>
@@ -892,6 +890,7 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
   const transitioningRef = useRef(false)
   const homeMotionFrameRef = useRef(null)
   const homeMotionTargetRef = useRef(null)
+  const navDecodeTimersRef = useRef({})
   const transitionSequenceRef = useRef(0)
   const [activePanel, setActivePanel] = useState('profile')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -902,6 +901,7 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
     x: '50vw',
     y: '50vh',
   })
+  const [navDecode, setNavDecode] = useState({})
   const [routeAnnouncement, setRouteAnnouncement] = useState('')
 
   useEffect(() => {
@@ -949,6 +949,31 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
     scroller.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' })
   }, [])
 
+  const triggerNavDecode = useCallback((label) => {
+    if (
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches ||
+      !window.matchMedia('(hover: hover) and (pointer: fine)').matches
+    ) return
+
+    window.clearTimeout(navDecodeTimersRef.current[label])
+    const characters = [...label]
+    const positions = label.length > 5 ? [1, label.length - 2] : [1]
+    positions.forEach((position, index) => {
+      characters[position] = index === 0 ? '.' : '/'
+    })
+    const decodedLabel = characters.join('')
+    setNavDecode((current) => ({ ...current, [label]: decodedLabel }))
+    navDecodeTimersRef.current[label] = window.setTimeout(() => {
+      setNavDecode((current) => {
+        if (!current[label]) return current
+        const next = { ...current }
+        delete next[label]
+        return next
+      })
+      delete navDecodeTimersRef.current[label]
+    }, 150)
+  }, [])
+
   const navigate = useCallback((nextPage, event) => {
     if (nextPage === page || transitioningRef.current) return
     setMobileMenuOpen(false)
@@ -993,6 +1018,7 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
 
   useEffect(() => () => {
     transitionTimersRef.current.forEach(window.clearTimeout)
+    Object.values(navDecodeTimersRef.current).forEach(window.clearTimeout)
     if (homeMotionFrameRef.current !== null) {
       window.cancelAnimationFrame(homeMotionFrameRef.current)
     }
@@ -1089,58 +1115,66 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
     if (page !== 'about' && page !== 'project') return undefined
     const root = siteScrollRef.current
     const scroller = root?.querySelector('.portfolio-story__panels')
-    const media = scroller ? [...scroller.querySelectorAll('[data-breathing-media]')] : []
-    if (!scroller || !media.length) return undefined
+    const panels = scroller ? [...scroller.querySelectorAll('[data-story-panel]')] : []
+    if (!scroller || panels.length < 2) return undefined
 
-    const mediaQuery = window.matchMedia('(min-width: 901px) and (prefers-reduced-motion: no-preference)')
+    const motionQuery = window.matchMedia('(min-width: 901px) and (prefers-reduced-motion: no-preference)')
     let frame = null
-    const clearMediaState = () => {
-      media.forEach((element) => {
-        element.style.removeProperty('--breathing-media-static-inset')
-        element.style.removeProperty('--breathing-media-video-inset')
+    const clearChapterStack = () => {
+      panels.forEach((panel) => {
+        panel.classList.remove('is-chapter-handoff')
+        panel.style.removeProperty('--chapter-stack-shift')
       })
     }
-    const updateMediaState = () => {
+    const updateChapterStack = () => {
       frame = null
-      if (!mediaQuery.matches) {
-        clearMediaState()
+      if (!motionQuery.matches) {
+        clearChapterStack()
         return
       }
 
       const bounds = scroller.getBoundingClientRect()
-      const focusLine = bounds.top + scroller.clientHeight * 0.5
-      const falloff = Math.max(scroller.clientHeight * 0.72, 1)
-      media.forEach((element) => {
-        const elementBounds = element.getBoundingClientRect()
-        const distance = Math.abs(elementBounds.top + elementBounds.height * 0.5 - focusLine)
-        const progress = Math.max(0, 1 - distance / falloff)
-        const open = progress * progress * (3 - 2 * progress)
-        const inset = (1 - open) * (element.dataset.breathingMedia === 'video' ? 2.25 : 4)
-        const property = element.dataset.breathingMedia === 'video'
-          ? '--breathing-media-video-inset'
-          : '--breathing-media-static-inset'
-        element.style.setProperty(property, `${inset.toFixed(3)}%`)
+      const handoffRange = Math.max(scroller.clientHeight * 0.22, 1)
+      const handoffLift = Math.min(scroller.clientHeight * 0.08, 88)
+      panels.forEach((panel, index) => {
+        if (index === 0) return
+        const visualTarget = panel.querySelector('.portfolio-figure')
+        const previousShift = Number.parseFloat(panel.style.getPropertyValue('--chapter-stack-shift')) || 0
+        const targetTop = (visualTarget?.getBoundingClientRect().top ?? panel.getBoundingClientRect().top) - previousShift
+        const progress = Math.max(0, Math.min(1,
+          (bounds.bottom + handoffRange - targetTop) / (handoffRange * 2),
+        ))
+        if (progress <= 0 || progress >= 1) {
+          panel.classList.remove('is-chapter-handoff')
+          panel.style.removeProperty('--chapter-stack-shift')
+          return
+        }
+
+        const easedProgress = progress * progress * (3 - 2 * progress)
+        const handoffStrength = 4 * easedProgress * (1 - easedProgress)
+        panel.style.setProperty('--chapter-stack-shift', `${(-handoffLift * handoffStrength).toFixed(2)}px`)
+        panel.classList.add('is-chapter-handoff')
       })
     }
-    const scheduleMediaState = () => {
+    const scheduleChapterStack = () => {
       if (frame !== null) return
-      frame = requestAnimationFrame(updateMediaState)
+      frame = requestAnimationFrame(updateChapterStack)
     }
-    const handleMediaPreference = () => {
-      if (mediaQuery.matches) scheduleMediaState()
-      else clearMediaState()
+    const handleMotionPreference = () => {
+      if (motionQuery.matches) scheduleChapterStack()
+      else clearChapterStack()
     }
 
-    scroller.addEventListener('scroll', scheduleMediaState, { passive: true })
-    window.addEventListener('resize', scheduleMediaState)
-    mediaQuery.addEventListener('change', handleMediaPreference)
-    scheduleMediaState()
+    scroller.addEventListener('scroll', scheduleChapterStack, { passive: true })
+    window.addEventListener('resize', scheduleChapterStack)
+    motionQuery.addEventListener('change', handleMotionPreference)
+    scheduleChapterStack()
     return () => {
-      scroller.removeEventListener('scroll', scheduleMediaState)
-      window.removeEventListener('resize', scheduleMediaState)
-      mediaQuery.removeEventListener('change', handleMediaPreference)
+      scroller.removeEventListener('scroll', scheduleChapterStack)
+      window.removeEventListener('resize', scheduleChapterStack)
+      motionQuery.removeEventListener('change', handleMotionPreference)
       if (frame !== null) cancelAnimationFrame(frame)
-      clearMediaState()
+      clearChapterStack()
     }
   }, [page])
 
@@ -1394,13 +1428,21 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
               key={item}
               type="button"
               className={page === item ? 'is-current' : ''}
+              aria-label={item}
               aria-current={page === item ? 'page' : undefined}
+              onPointerEnter={() => triggerNavDecode(item)}
+              onFocus={(event) => {
+                if (event.currentTarget.matches(':focus-visible')) triggerNavDecode(item)
+              }}
               onClick={(event) => {
                 setMobileMenuOpen(false)
                 navigate(item, event)
               }}
             >
-              {item}
+              <span className={`portfolio-nav__label ${navDecode[item] ? 'is-decoding' : ''}`} aria-hidden="true">
+                <span className="portfolio-nav__label-measure">{item}</span>
+                <span className="portfolio-nav__label-decode">{navDecode[item] ?? item}</span>
+              </span>
             </button>
           ))}
         </nav>
