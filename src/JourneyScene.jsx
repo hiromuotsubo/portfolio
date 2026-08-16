@@ -41,15 +41,15 @@ const ENDING_CAMERA = {
   liftStart: JOURNEY_NIGHT_SEQUENCE.postHoldLookUpStart,
   liftEnd: JOURNEY_NIGHT_SEQUENCE.postHoldLiftEnd,
   wideStart: JOURNEY_NIGHT_SEQUENCE.postHoldWidenStart,
-  wideEnd: JOURNEY_NIGHT_SEQUENCE.postHoldLiftEnd,
-  pullBack: 6.5,
+  wideEnd: JOURNEY_NIGHT_SEQUENCE.postHoldWidenEnd,
+  pullBack: 5.2,
   finalWideStart: JOURNEY_NIGHT_SEQUENCE.finalWideStart,
   finalWideEnd: JOURNEY_NIGHT_SEQUENCE.finalWideEnd,
-  finalPullBack: 7,
-  cameraLift: 0.22,
-  lift: 0.18,
-  fov: 11.5,
-  finalFov: 14.5,
+  finalPullBack: 5.4,
+  cameraLift: 0.14,
+  lift: 0.1,
+  fov: 9.5,
+  finalFov: 11.5,
   poseFollowDamping: 7.5,
 }
 
@@ -60,7 +60,8 @@ const LOOKDEV_V2_COMPOSITION = {
   // The complete daytime valley is already present when the viewer clears
   // the portal. Fog conceals its lower depth; later scrolling explores the
   // same composition instead of revealing a second, wider camera setup.
-  vistaStart: 13.5,
+  revealStart: 14.8,
+  vistaStart: 14.8,
   vistaFull: 20,
   vistaFadeStart: 56,
   vistaFadeEnd: 68,
@@ -491,19 +492,35 @@ function buildStarField(count, radius, milkyWay = false) {
   const stars = []
 
   for (let index = 0; index < count; index += 1) {
-    const pathProgress = milkyWay ? seededRandom(index + 4100) : 0
+    const rawPathProgress = milkyWay ? seededRandom(index + 4100) : 0
+    const pathProgress = milkyWay
+      ? clamp01(
+          rawPathProgress +
+          Math.sin(rawPathProgress * 19.7 + 0.8) * 0.009 +
+          Math.sin(rawPathProgress * 43.1 + 2.2) * 0.004,
+        )
+      : 0
     const pathCenter =
       -12 +
       Math.sin(pathProgress * 2.35 - 0.42) * 20 +
-      pathProgress * 10
-    const pathWidth = 6 + Math.pow(pathProgress, 1.75) * 145
+      pathProgress * 10 +
+      Math.sin(pathProgress * 15.7 + 0.9) * (1.2 + pathProgress * 2.8)
+    const pathWidthVariation =
+      1 +
+      Math.sin(pathProgress * 18.2 + 0.6) * 0.08 +
+      Math.sin(pathProgress * 37.4 + 2.1) * 0.035
+    const pathWidth = (16 + Math.pow(pathProgress, 1.68) * 135) * pathWidthVariation
     const edgeBiasSeed = seededRandom(index + 9300)
     const horizontalSpread = Math.sign(edgeBiasSeed - 0.5) * Math.pow(
       Math.abs(edgeBiasSeed - 0.5) * 2,
       0.74,
     )
+    const milkySide = seededRandom(index + 1) - 0.5
+    const milkyAsymmetry = milkySide < 0
+      ? 0.91 + Math.sin(pathProgress * 11.3 + 0.4) * 0.06
+      : 1.08 + Math.cos(pathProgress * 13.1 + 1.2) * 0.07
     const horizontal = milkyWay
-      ? pathCenter + (seededRandom(index + 1) - 0.5) * pathWidth
+      ? pathCenter + milkySide * pathWidth * milkyAsymmetry
       : horizontalSpread * radius * 0.98 +
         Math.sin(index * 1.913) * (6 + seededRandom(index + 11200) * 18)
     const vertical = milkyWay
@@ -779,7 +796,7 @@ function createSeatedFigureMaterial() {
         float twinkle = 0.84 + 0.16 * sin(uJourneyTime * 0.8 + vJourneySeed * 9.0);
         float alpha = softness * uJourneyOpacity * twinkle;
         if (alpha < 0.01) discard;
-        gl_FragColor = vec4(vec3(0.78, 0.88, 1.0), alpha);
+        gl_FragColor = vec4(vec3(0.64, 0.72, 0.84), alpha);
       }
     `,
     transparent: true,
@@ -5123,6 +5140,17 @@ function createMeadowMaterial(kind, alphaMap = null) {
                 'diffuseColor.rgb = mix(journeyMeadowHue * vec3(0.9, 0.95, 0.8), journeyMeadowHue * vec3(1.2, 1.16, 0.93), vJourneyMeadowTip);',
               ].join('\n'),
           'diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(1.12, 0.82, 0.62), uJourneySunset * 0.34);',
+          kind === 'grass'
+            ? [
+                'float journeyMeadowNightLuma = dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722));',
+                'vec3 journeyMeadowNightTone = mix(',
+                '  diffuseColor.rgb * vec3(0.64, 0.7, 0.8),',
+                '  vec3(journeyMeadowNightLuma) * vec3(0.6, 0.68, 0.78),',
+                '  0.45',
+                ');',
+                'diffuseColor.rgb = mix(diffuseColor.rgb, journeyMeadowNightTone, uJourneyNight * 0.56);',
+              ].join('\n')
+            : '',
           'diffuseColor.a *= uJourneyReveal * (1.0 - uJourneyNight * ' + nightFade + ') * ' + alphaMask + ';',
         ].join('\n'),
       )
@@ -6788,7 +6816,7 @@ export default function JourneyScene({
         camera.quaternion.copy(cameraScratch.introQuaternion)
       } else if (introReleaseActive) {
         introRelease = smoothstep(
-          JOURNEY_CAVE_SEQUENCE.fogGate,
+          LOOKDEV_V2_COMPOSITION.revealStart,
           CAVE_CAMERA_RELEASE_END,
           progress,
         )
@@ -6806,7 +6834,7 @@ export default function JourneyScene({
       }
 
       const openVista = smoothstep(
-        JOURNEY_CAVE_SEQUENCE.fogGate,
+        LOOKDEV_V2_COMPOSITION.revealStart,
         CAVE_CAMERA_RELEASE_END,
         cameraProgress,
       )
@@ -6945,7 +6973,7 @@ export default function JourneyScene({
       const revealCompositionStrength = introLocked
         ? 0
         : smoothstep(
-          JOURNEY_CAVE_SEQUENCE.fogGate,
+          LOOKDEV_V2_COMPOSITION.revealStart,
           CAVE_CAMERA_RELEASE_END,
           progress,
         )
@@ -7567,9 +7595,9 @@ export default function JourneyScene({
     )
     const figurePresence = figureGather * (1 - figureRelease)
     if (seatedFigureMaterialRef.current) {
-      seatedFigureMaterialRef.current.uniforms.uJourneyMorph.value = figurePresence
+      seatedFigureMaterialRef.current.uniforms.uJourneyMorph.value = figureGather
       seatedFigureMaterialRef.current.uniforms.uJourneyOpacity.value =
-        figureGather * (1 - figureRelease) * 0.96
+        figureGather * (1 - figureRelease) * 0.7
       seatedFigureMaterialRef.current.uniforms.uJourneyTime.value = state.clock.elapsedTime
     }
     if (seatedFigureSilhouetteMaterialRef.current) {
@@ -7579,7 +7607,7 @@ export default function JourneyScene({
         progress,
       )
       seatedFigureSilhouetteMaterialRef.current.opacity =
-        silhouetteReveal * (1 - figureRelease) * 0.82
+        silhouetteReveal * (1 - figureRelease) * 0.7
     }
     if (seatedFigureRef.current) {
       seatedFigureRef.current.scale.setScalar(0.74)

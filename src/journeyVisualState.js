@@ -1,10 +1,10 @@
-// Transition centers at p42 and p64 divide the fixed p20-p86 vista into
-// equal 22-progress day, sunset and night chapters. The overlapping ramps
-// keep the color change continuous while each chapter has equal visual weight.
+// The sunset and night ramps overlap slightly so the fixed valley never rests
+// on one unchanging evening grade. Day and full-night anchors stay in place;
+// only the middle of the same long transition keeps moving into blue hour.
 export const JOURNEY_VISUAL_TIMING = Object.freeze({
   sunsetStart: 34,
-  sunsetEnd: 50,
-  nightStart: 56,
+  sunsetEnd: 52,
+  nightStart: 48,
   nightEnd: 72,
   starsStart: 58,
   starsEnd: 78,
