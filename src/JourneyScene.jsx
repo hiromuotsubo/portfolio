@@ -118,6 +118,13 @@ const MOBILE_JOURNEY_COMPOSITION = Object.freeze({
   // extreme fisheye. This restrained wide-angle extension preserves the same
   // viewpoint while keeping both mountain shoulders, meadow and river legible.
   valleyFov: 18,
+  // Preserve the established portrait framing through the figure reveal, then
+  // temper only the final p96→100 expansion. Without this counter-composition,
+  // the general mobile retreat and wide lens stack on top of the authored
+  // ending pull-back and expose the finite river/terrain edge below frame.
+  endingPullBackCompensation: 2.2,
+  endingFovCompensation: 14,
+  endingTargetLift: 0.08,
   // Compensate for the smaller projected blade size of the portrait wide
   // lens; this restores desktop-like meadow presence without touching seeds,
   // density or any desktop material value.
@@ -6828,6 +6835,7 @@ export default function JourneyScene({
         ENDING_CAMERA.finalWideEnd,
         progress,
       )
+      const portraitEndingFinal = portraitComposition * endingFinalWide
       cameraScratch.forward
         .set(0, 0, -1)
         .applyQuaternion(camera.quaternion)
@@ -6948,6 +6956,7 @@ export default function JourneyScene({
             vistaComposition * LOOKDEV_V2_COMPOSITION.pullBack * revealCompositionStrength -
             endingWide * ENDING_CAMERA.pullBack -
             endingFinalWide * ENDING_CAMERA.finalPullBack +
+            portraitEndingFinal * MOBILE_JOURNEY_COMPOSITION.endingPullBackCompensation +
             portraitComposition * THREE.MathUtils.lerp(
               MOBILE_JOURNEY_COMPOSITION.valleyPullBackNear,
               MOBILE_JOURNEY_COMPOSITION.valleyPullBackFar,
@@ -6975,6 +6984,7 @@ export default function JourneyScene({
           (presentationMode ? 0.12 : 0) +
           vistaComposition * LOOKDEV_V2_COMPOSITION.targetLift * revealCompositionStrength +
           endingLift * ENDING_CAMERA.lift +
+          portraitEndingFinal * MOBILE_JOURNEY_COMPOSITION.endingTargetLift +
           portraitComposition * (1 - endingLift) * THREE.MathUtils.lerp(
             MOBILE_JOURNEY_COMPOSITION.valleyTargetLiftNear,
             MOBILE_JOURNEY_COMPOSITION.valleyTargetLiftFar,
@@ -6997,6 +7007,7 @@ export default function JourneyScene({
         vistaComposition * LOOKDEV_V2_COMPOSITION.fov +
         endingWide * ENDING_CAMERA.fov +
         endingFinalWide * ENDING_CAMERA.finalFov +
+        portraitEndingFinal * -MOBILE_JOURNEY_COMPOSITION.endingFovCompensation +
         (presentationMode ? 15 : 0) +
         portraitCaveComposition * (MOBILE_JOURNEY_COMPOSITION.caveFov - CAVE_CAMERA.fov) +
         portraitComposition * MOBILE_JOURNEY_COMPOSITION.valleyFov
