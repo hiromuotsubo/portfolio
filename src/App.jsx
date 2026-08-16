@@ -1188,7 +1188,10 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
           <PortfolioImage src="/portfolio/about-origin.webp" alt="Kamikochi mountains and the Azusa River seen from Kappa Bridge" caption="KAMIKOCHI" className="is-about-photo" />
           <div className="portfolio-panel__copy">
             <span className="portfolio-kicker">MOTIVATION</span>
-            <h3>Photographs preserve views, not feelings.</h3>
+            <h3>
+              <span className="portfolio-heading-line">Photographs preserve</span>{' '}
+              <span className="portfolio-heading-line">views, not feelings.</span>
+            </h3>
             <p>Six weeks in Kamikochi taught me that photographs can preserve scenery, but not the feeling of being there. Journey translates that experience through depth, sound and interaction.</p>
           </div>
         </article>
@@ -1279,7 +1282,15 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
             caption="A QUIET SENSE OF SCALE"
             className="is-emotion-hero"
           />
-          <div className="portfolio-panel__copy"><span className="portfolio-kicker">EMOTION</span><h3>Wonder grows in quiet moments.</h3><p>The journey ends beneath an immense night sky.<br />A small figure sits beneath the mountains.<br />For a moment, the landscape feels larger—and we feel smaller within it.</p><button type="button" onClick={onReplay}>EXPERIENCE AGAIN <NavigationArrow /></button></div>
+          <div className="portfolio-panel__copy">
+            <span className="portfolio-kicker">EMOTION</span>
+            <h3>
+              <span className="portfolio-heading-line">Wonder grows</span>{' '}
+              <span className="portfolio-heading-line">in quiet moments.</span>
+            </h3>
+            <p>The journey ends beneath an immense night sky.<br />A small figure sits beneath the mountains.<br />For a moment, the landscape feels larger—and we feel smaller within it.</p>
+            <button type="button" onClick={onReplay}>EXPERIENCE AGAIN <NavigationArrow /></button>
+          </div>
         </article>
         <footer className="portfolio-story__end">
           <span>END OF PROJECT</span>
