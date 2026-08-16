@@ -2136,6 +2136,54 @@ totalEmissiveRadiance += vec3(0.01, 0.024, 0.055) * uJourneyNight;`,
   material.customProgramCacheKey = () => `journey-alpine-${isFarRidge ? 'far' : 'near'}-v31-macro-biome-texture`
 }
 
+function journeyProductionCpuHash(x, y) {
+  const value = Math.sin(x * 127.1 + y * 311.7) * 43758.5453123
+  return value - Math.floor(value)
+}
+
+function journeyProductionCpuNoise(x, y) {
+  const cellX = Math.floor(x)
+  const cellY = Math.floor(y)
+  const localX = x - cellX
+  const localY = y - cellY
+  const smoothX = localX * localX * (3 - 2 * localX)
+  const smoothY = localY * localY * (3 - 2 * localY)
+  const a = journeyProductionCpuHash(cellX, cellY)
+  const b = journeyProductionCpuHash(cellX + 1, cellY)
+  const c = journeyProductionCpuHash(cellX, cellY + 1)
+  const d = journeyProductionCpuHash(cellX + 1, cellY + 1)
+  const lower = THREE.MathUtils.lerp(a, b, smoothX)
+  const upper = THREE.MathUtils.lerp(c, d, smoothX)
+  return THREE.MathUtils.lerp(lower, upper, smoothY)
+}
+
+function attachAlpineProductionNoiseAttributes(objectOrGeometry) {
+  const object = objectOrGeometry?.isObject3D ? objectOrGeometry : null
+  const geometry = object?.geometry ?? objectOrGeometry
+  const positions = geometry?.getAttribute?.('position')
+  if (!positions) return geometry
+  const noise = new Float32Array(positions.count * 2)
+  const point = new THREE.Vector3()
+  if (object) object.updateWorldMatrix(true, false)
+  for (let index = 0; index < positions.count; index += 1) {
+    point.fromBufferAttribute(positions, index)
+    if (object) point.applyMatrix4(object.matrixWorld)
+    noise[index * 2] = journeyProductionCpuNoise(
+      point.x * 0.008 + point.z * 0.002 + 12.7,
+      point.z * 0.006 - point.y * 0.004 - 31.4,
+    )
+    noise[index * 2 + 1] = journeyProductionCpuNoise(
+      point.x * 0.024 - point.z * 0.008 - 44,
+      point.y * 0.018 + point.z * 0.016 + 18,
+    )
+  }
+  geometry.setAttribute(
+    'aJourneyProductionNoise',
+    new THREE.BufferAttribute(noise, 2),
+  )
+  return geometry
+}
+
 function applyAlpineProduction(material, isFarRidge, biomeMacroTexture) {
   if (
     !material.isMeshLambertMaterial &&
@@ -2163,13 +2211,18 @@ function applyAlpineProduction(material, isFarRidge, biomeMacroTexture) {
         '#include <common>',
         `#include <common>
 varying vec3 vJourneyWorldPosition;
-varying vec3 vJourneyWorldNormal;`,
+varying vec3 vJourneyWorldNormal;
+varying float vJourneyProductionMacro;
+varying float vJourneyProductionMeso;
+attribute vec2 aJourneyProductionNoise;`,
       )
       .replace(
         '#include <worldpos_vertex>',
         `#include <worldpos_vertex>
 vJourneyWorldPosition = (modelMatrix * vec4(transformed, 1.0)).xyz;
-vJourneyWorldNormal = normalize(mat3(modelMatrix) * objectNormal);`,
+vJourneyWorldNormal = normalize(mat3(modelMatrix) * objectNormal);
+vJourneyProductionMacro = aJourneyProductionNoise.x;
+vJourneyProductionMeso = aJourneyProductionNoise.y;`,
       )
     shader.fragmentShader = shader.fragmentShader
       .replace(
@@ -2177,6 +2230,8 @@ vJourneyWorldNormal = normalize(mat3(modelMatrix) * objectNormal);`,
         `#include <common>
 varying vec3 vJourneyWorldPosition;
 varying vec3 vJourneyWorldNormal;
+varying float vJourneyProductionMacro;
+varying float vJourneyProductionMeso;
 uniform float uJourneySunset;
 uniform float uJourneyNight;
 uniform float uJourneyRiverLight;
@@ -2246,14 +2301,8 @@ vec3 journeyProductionSource = diffuseColor.rgb;`,
 vec3 journeyProductionNormal = normalize(vJourneyWorldNormal);
 float journeyProductionSteepness = smoothstep(0.2, 0.88, 1.0 - abs(journeyProductionNormal.y));
 float journeyProductionAltitude = smoothstep(24.0, 132.0, vJourneyWorldPosition.y);
-float journeyProductionMacro = journeyProductionNoise(vec2(
-  vJourneyWorldPosition.x * 0.008 + vJourneyWorldPosition.z * 0.002,
-  vJourneyWorldPosition.z * 0.006 - vJourneyWorldPosition.y * 0.004
-) + vec2(12.7, -31.4));
-float journeyProductionMeso = journeyProductionNoise(vec2(
-  vJourneyWorldPosition.x * 0.024 - vJourneyWorldPosition.z * 0.008,
-  vJourneyWorldPosition.y * 0.018 + vJourneyWorldPosition.z * 0.016
-) + vec2(-44.0, 18.0));
+float journeyProductionMacro = vJourneyProductionMacro;
+float journeyProductionMeso = vJourneyProductionMeso;
 vec2 journeyProductionWarp = vec2(
   (journeyProductionMacro - 0.5) * 0.1,
   (journeyProductionMeso - 0.5) * 0.085
@@ -2409,7 +2458,7 @@ totalEmissiveRadiance += vec3(0.01, 0.024, 0.055) * uJourneyNight;`,
       )
   }
   material.customProgramCacheKey = () =>
-    `journey-alpine-production-${material.type}-${isFarRidge ? 'far' : 'near'}-v5-entrance-depth-reveal`
+    `journey-alpine-production-${material.type}-${isFarRidge ? 'far' : 'near'}-v7-precomputed-macro-noise`
   material.needsUpdate = true
 }
 
@@ -3210,6 +3259,7 @@ function prepareWorld(source, biomeMacroTexture, caveLookdevSource) {
       identity.includes('MASSIF') ||
       identity.includes('RIDGE')
     ) {
+      attachAlpineProductionNoiseAttributes(object)
       const alpineMaterials = materials.map(createAlpineLambertMaterial)
       object.material = Array.isArray(object.material)
         ? alpineMaterials
@@ -3299,6 +3349,7 @@ function prepareWorld(source, biomeMacroTexture, caveLookdevSource) {
 
 function preparePhase2Environment(source, biomeMacroTexture) {
   const root = source.clone(true)
+  root.updateMatrixWorld(true)
   const cloudTexture = createCloudTexture(240809)
   const groups = {
     ridges: [],
@@ -3346,6 +3397,7 @@ function preparePhase2Environment(source, biomeMacroTexture) {
 
     if (identity.includes('P2_RIDGE_')) {
       const far = identity.includes('_FAR')
+      attachAlpineProductionNoiseAttributes(object)
       const sourceMaterial = material
       material = createAlpineLambertMaterial(sourceMaterial)
       object.material = material
@@ -4593,17 +4645,19 @@ function buildDistantRidgeVolume({ frontZ, backZ, baseY, width, heights, hueOffs
 }
 
 function FarRidgeCrown({ progress, biomeMacroTexture }) {
-  const geometry = useMemo(() => buildDistantRidgeVolume({
-    frontZ: -426,
-    backZ: -510,
-    baseY: 70,
-    width: 302,
-    hueOffset: 4.7,
-    far: true,
-    // Repeated shoulders and saddles support the existing left/right massif;
-    // none of these values creates a single dominant central pyramid.
-    heights: [184, 198, 191, 207, 195, 212, 202, 218, 188, 205, 194, 214, 199, 210, 193, 202, 184],
-  }), [])
+  const geometry = useMemo(() => attachAlpineProductionNoiseAttributes(
+    buildDistantRidgeVolume({
+      frontZ: -426,
+      backZ: -510,
+      baseY: 70,
+      width: 302,
+      hueOffset: 4.7,
+      far: true,
+      // Repeated shoulders and saddles support the existing left/right massif;
+      // none of these values creates a single dominant central pyramid.
+      heights: [184, 198, 191, 207, 195, 212, 202, 218, 188, 205, 194, 214, 199, 210, 193, 202, 184],
+    }),
+  ), [])
   const material = useMemo(() => {
     const result = new THREE.MeshLambertMaterial({
       color: '#d6e4dd',
@@ -4878,6 +4932,13 @@ function createMeadowMaterial(kind, alphaMap = null) {
     uJourneyAmbientWind: { value: 0 },
     uJourneyMotionScale: { value: 1 },
     uJourneyBladeHeightScale: { value: 1 },
+    // Time-only wind phases are evaluated once on the CPU each frame. The
+    // matching per-instance phase coefficients are stored on the geometry,
+    // reproducing the authored sine waves without five transcendental calls
+    // for every blade vertex.
+    uJourneyWindWaveSin: { value: new THREE.Vector4() },
+    uJourneyWindWaveCos: { value: new THREE.Vector4(1, 1, 1, 1) },
+    uJourneyWindPulseSinCos: { value: new THREE.Vector2(0, 1) },
     // The 320x200 planar pass keeps every blade and its ambient motion, but
     // pointer-gust micro-deformation is below its pixel footprint. Bypassing
     // that 30-slot loop there preserves the reflected meadow while removing
@@ -4922,15 +4983,18 @@ function createMeadowMaterial(kind, alphaMap = null) {
         '#include <common>',
         [
           '#include <common>',
-          'attribute float aJourneyMeadowPhase;',
-          'attribute float aJourneyMeadowStiffness;',
-          'attribute float aJourneyMeadowResponseDelay;',
-          'attribute float aJourneyMeadowRecovery;',
-          'attribute float aJourneyMeadowMaxBend;',
+          'attribute vec4 aJourneyMeadowResponse;',
+          'attribute vec4 aJourneyMeadowShape;',
+          'attribute vec4 aJourneyMeadowWaveSin;',
+          'attribute vec4 aJourneyMeadowWaveCos;',
+          'attribute vec2 aJourneyMeadowPulseSinCos;',
           'uniform float uJourneyTime;',
           'uniform float uJourneyAmbientWind;',
           'uniform float uJourneyMotionScale;',
           'uniform float uJourneyBladeHeightScale;',
+          'uniform vec4 uJourneyWindWaveSin;',
+          'uniform vec4 uJourneyWindWaveCos;',
+          'uniform vec2 uJourneyWindPulseSinCos;',
           'uniform float uJourneyReflectionPass;',
           'uniform float uJourneyActiveImpulseCount;',
           'uniform vec4 uJourneyWindImpulse[' + MEADOW_WIND_IMPULSE_COUNT + '];',
@@ -4946,16 +5010,16 @@ function createMeadowMaterial(kind, alphaMap = null) {
           'transformed.y *= uJourneyBladeHeightScale;',
           'float journeyBladeTip = ' + bladeTip + ';',
           'vec4 journeyBladeBase = modelMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);',
-          'float journeyAmbientField =',
-          '  sin(uJourneyTime * 0.61 + aJourneyMeadowPhase * 7.0 + journeyBladeBase.z * 0.105) * 0.46 +',
-          '  sin(uJourneyTime * 0.29 - aJourneyMeadowPhase * 13.0 + journeyBladeBase.x * 0.086 - journeyBladeBase.z * 0.031) * 0.31 +',
-          '  sin(uJourneyTime * 0.87 + aJourneyMeadowPhase * 3.0 + journeyBladeBase.x * 0.025) * 0.17;',
-          'vec2 journeyRawInstanceX = vec2(instanceMatrix[0].x, instanceMatrix[0].z);',
-          'vec2 journeyRawInstanceZ = vec2(instanceMatrix[2].x, instanceMatrix[2].z);',
-          'float journeyInstanceScaleX = max(length(journeyRawInstanceX), 0.001);',
-          'float journeyInstanceScaleZ = max(length(journeyRawInstanceZ), 0.001);',
-          'vec2 journeyInstanceX = journeyRawInstanceX / journeyInstanceScaleX;',
-          'vec2 journeyInstanceZ = journeyRawInstanceZ / journeyInstanceScaleZ;',
+          'float aJourneyMeadowPhase = aJourneyMeadowResponse.x;',
+          'float aJourneyMeadowStiffness = aJourneyMeadowResponse.y;',
+          'float aJourneyMeadowResponseDelay = aJourneyMeadowResponse.z;',
+          'float aJourneyMeadowRecovery = aJourneyMeadowResponse.w;',
+          'float aJourneyMeadowMaxBend = aJourneyMeadowShape.x;',
+          'vec4 journeyWindWave = uJourneyWindWaveSin * aJourneyMeadowWaveCos +',
+          '  uJourneyWindWaveCos * aJourneyMeadowWaveSin;',
+          'float journeyAmbientField = dot(journeyWindWave.xyz, vec3(0.46, 0.31, 0.17));',
+          'vec2 journeyInstanceX = vec2(aJourneyMeadowShape.z, -aJourneyMeadowShape.y);',
+          'vec2 journeyInstanceZ = vec2(aJourneyMeadowShape.y, aJourneyMeadowShape.z);',
           // Derive the tiny directional drift from the already-computed
           // spatial field. This keeps the meadow asynchronous without adding
           // another per-vertex trigonometric evaluation.
@@ -4968,11 +5032,9 @@ function createMeadowMaterial(kind, alphaMap = null) {
           '  dot(journeyWorldAmbient, journeyInstanceX),',
           '  dot(journeyWorldAmbient, journeyInstanceZ)',
           ');',
-          'float journeyBroadWind = sin(',
-          '  uJourneyTime * 0.48 + journeyBladeBase.z * 0.06 - journeyBladeBase.x * 0.018',
-          ');',
+          'float journeyBroadWind = journeyWindWave.w;',
           'float journeyAmbientPulse = 0.88 +',
-          '  sin(uJourneyTime * 0.21 + journeyBladeBase.z * 0.043 - journeyBladeBase.x * 0.019 + aJourneyMeadowPhase * 1.3) * 0.12;',
+          '  dot(uJourneyWindPulseSinCos, vec2(aJourneyMeadowPulseSinCos.y, aJourneyMeadowPulseSinCos.x)) * 0.12;',
           'float journeyAmbientStrength = (0.065 + uJourneyAmbientWind * 0.34 +',
           '  journeyAmbientField * 0.055 + journeyBroadWind * 0.085) * journeyAmbientPulse;',
           'vec2 journeySway = journeyLocalAmbient * max(0.016, journeyAmbientStrength) * uJourneyMotionScale;',
@@ -5015,9 +5077,8 @@ function createMeadowMaterial(kind, alphaMap = null) {
           'float journeyFlex = mix(1.14, 0.6, aJourneyMeadowStiffness) *',
           '  mix(0.68, 1.15, aJourneyMeadowMaxBend);',
           'journeySway *= journeyFlex;',
-          'float journeyRestLean = aJourneyMeadowPhase * 6.2831853;',
-          'transformed.x += sin(journeyRestLean) * journeyBladeTip * journeyBladeTip * 0.045;',
-          'transformed.z += cos(journeyRestLean) * journeyBladeTip * journeyBladeTip * 0.025;',
+          'transformed.x += aJourneyMeadowShape.y * journeyBladeTip * journeyBladeTip * 0.045;',
+          'transformed.z += aJourneyMeadowShape.z * journeyBladeTip * journeyBladeTip * 0.025;',
           'transformed.x += journeySway.x * journeyBladeTip * journeyBladeTip * journeyBladeTip;',
           'transformed.z += journeySway.y * journeyBladeTip * journeyBladeTip * 0.42;',
           'vJourneyMeadowTip = journeyBladeTip;',
@@ -5055,7 +5116,7 @@ function createMeadowMaterial(kind, alphaMap = null) {
         ].join('\n'),
       )
   }
-  material.customProgramCacheKey = () => 'journey-meadow-' + kind + '-v13-mobile-presence'
+  material.customProgramCacheKey = () => 'journey-meadow-' + kind + '-v14-precomputed-wind-phase'
   material.userData.journeyMeadowUniforms = uniforms
   return material
 }
@@ -5115,17 +5176,19 @@ function createMeadowPetalMaterial(texture, windUniforms) {
       .replace(
         '#include <common>',
         `#include <common>
-	attribute float aJourneyMeadowPhase;
-	attribute float aJourneyMeadowStiffness;
-	attribute float aJourneyMeadowResponseDelay;
-	attribute float aJourneyMeadowRecovery;
-	attribute float aJourneyMeadowMaxBend;
-	attribute float aJourneyMeadowScale;
+	attribute vec4 aJourneyMeadowResponse;
+	attribute vec4 aJourneyMeadowShape;
+	attribute vec4 aJourneyMeadowWaveSin;
+	attribute vec4 aJourneyMeadowWaveCos;
+	attribute vec2 aJourneyMeadowPulseSinCos;
 	uniform float uJourneyTime;
 	uniform float uJourneyAmbientWind;
 uniform float uJourneyMotionScale;
 uniform float uJourneyReflectionPass;
 uniform float uJourneyActiveImpulseCount;
+uniform vec4 uJourneyWindWaveSin;
+uniform vec4 uJourneyWindWaveCos;
+uniform vec2 uJourneyWindPulseSinCos;
 uniform vec4 uJourneyWindImpulse[${MEADOW_WIND_IMPULSE_COUNT}];
 uniform vec4 uJourneyWindDirection[${MEADOW_WIND_IMPULSE_COUNT}];`,
       )
@@ -5133,20 +5196,23 @@ uniform vec4 uJourneyWindDirection[${MEADOW_WIND_IMPULSE_COUNT}];`,
         '#include <begin_vertex>',
         `#include <begin_vertex>
 vec4 journeyPetalBase = modelMatrix * vec4(position, 1.0);
-float journeyPetalField =
-  sin(uJourneyTime * 0.61 + aJourneyMeadowPhase * 7.0 + journeyPetalBase.z * 0.105) * 0.46 +
-  sin(uJourneyTime * 0.29 - aJourneyMeadowPhase * 13.0 + journeyPetalBase.x * 0.086 - journeyPetalBase.z * 0.031) * 0.31 +
-  sin(uJourneyTime * 0.87 + aJourneyMeadowPhase * 3.0 + journeyPetalBase.x * 0.025) * 0.17;
+float aJourneyMeadowPhase = aJourneyMeadowResponse.x;
+float aJourneyMeadowStiffness = aJourneyMeadowResponse.y;
+float aJourneyMeadowResponseDelay = aJourneyMeadowResponse.z;
+float aJourneyMeadowRecovery = aJourneyMeadowResponse.w;
+float aJourneyMeadowMaxBend = aJourneyMeadowShape.x;
+float aJourneyMeadowScale = aJourneyMeadowShape.w;
+vec4 journeyPetalWave = uJourneyWindWaveSin * aJourneyMeadowWaveCos +
+  uJourneyWindWaveCos * aJourneyMeadowWaveSin;
+float journeyPetalField = dot(journeyPetalWave.xyz, vec3(0.46, 0.31, 0.17));
 float journeyPetalTurn = journeyPetalField * 0.22;
 vec2 journeyPetalAmbientDirection = normalize(vec2(
   0.82 - journeyPetalTurn * 0.42,
   0.42 + journeyPetalTurn * 0.82
 ));
-float journeyPetalBroadWind = sin(
-  uJourneyTime * 0.48 + journeyPetalBase.z * 0.06 - journeyPetalBase.x * 0.018
-);
+float journeyPetalBroadWind = journeyPetalWave.w;
 float journeyPetalAmbientPulse = 0.88 +
-  sin(uJourneyTime * 0.21 + journeyPetalBase.z * 0.043 - journeyPetalBase.x * 0.019 + aJourneyMeadowPhase * 1.3) * 0.12;
+  dot(uJourneyWindPulseSinCos, vec2(aJourneyMeadowPulseSinCos.y, aJourneyMeadowPulseSinCos.x)) * 0.12;
 float journeyPetalAmbientStrength = (0.065 + uJourneyAmbientWind * 0.34 +
   journeyPetalField * 0.055 + journeyPetalBroadWind * 0.085) * journeyPetalAmbientPulse;
 	vec2 journeyPetalSway = journeyPetalAmbientDirection *
@@ -5207,27 +5273,53 @@ diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(1.12, 0.82, 0.6
 diffuseColor.a *= uJourneyReveal * (1.0 - uJourneyNight * 0.72);`,
       )
   }
-	material.customProgramCacheKey = () => 'journey-meadow-petals-v8-broad-idle-wind'
+	material.customProgramCacheKey = () => 'journey-meadow-petals-v9-precomputed-wind-phase'
   return material
 }
 
 function attachMeadowResponseAttributes(geometry, items, { instanced = true, includeScale = false } = {}) {
   const Attribute = instanced ? THREE.InstancedBufferAttribute : THREE.BufferAttribute
-  const setAttribute = (name, property, fallback) => {
-    geometry.setAttribute(
-      name,
-      new Attribute(
-        new Float32Array(items.map((item) => item[property] ?? fallback)),
-        1,
-      ),
-    )
-  }
-  setAttribute('aJourneyMeadowPhase', 'phase', 0)
-  setAttribute('aJourneyMeadowStiffness', 'stiffness', 0.5)
-  setAttribute('aJourneyMeadowResponseDelay', 'responseDelay', 0)
-  setAttribute('aJourneyMeadowRecovery', 'recovery', 0.5)
-  setAttribute('aJourneyMeadowMaxBend', 'maxBend', 0.5)
-  if (includeScale) setAttribute('aJourneyMeadowScale', 'scale', 1)
+  const response = new Float32Array(items.length * 4)
+  const shape = new Float32Array(items.length * 4)
+  const waveSin = new Float32Array(items.length * 4)
+  const waveCos = new Float32Array(items.length * 4)
+  const pulseSinCos = new Float32Array(items.length * 2)
+  items.forEach((item, index) => {
+    const phase = item.phase ?? 0
+    const x = item.position?.[0] ?? 0
+    const z = item.position?.[2] ?? 0
+    const rotation = phase * Math.PI * 2
+    response.set([
+      phase,
+      item.stiffness ?? 0.5,
+      item.responseDelay ?? 0,
+      item.recovery ?? 0.5,
+    ], index * 4)
+    shape.set([
+      item.maxBend ?? 0.5,
+      Math.sin(rotation),
+      Math.cos(rotation),
+      includeScale ? item.scale ?? 1 : 1,
+    ], index * 4)
+    const spatialPhases = [
+      phase * 7 + z * 0.105,
+      -phase * 13 + x * 0.086 - z * 0.031,
+      phase * 3 + x * 0.025,
+      z * 0.06 - x * 0.018,
+    ]
+    spatialPhases.forEach((spatialPhase, waveIndex) => {
+      waveSin[index * 4 + waveIndex] = Math.sin(spatialPhase)
+      waveCos[index * 4 + waveIndex] = Math.cos(spatialPhase)
+    })
+    const pulsePhase = z * 0.043 - x * 0.019 + phase * 1.3
+    pulseSinCos[index * 2] = Math.sin(pulsePhase)
+    pulseSinCos[index * 2 + 1] = Math.cos(pulsePhase)
+  })
+  geometry.setAttribute('aJourneyMeadowResponse', new Attribute(response, 4))
+  geometry.setAttribute('aJourneyMeadowShape', new Attribute(shape, 4))
+  geometry.setAttribute('aJourneyMeadowWaveSin', new Attribute(waveSin, 4))
+  geometry.setAttribute('aJourneyMeadowWaveCos', new Attribute(waveCos, 4))
+  geometry.setAttribute('aJourneyMeadowPulseSinCos', new Attribute(pulseSinCos, 2))
   return geometry
 }
 
@@ -5762,12 +5854,30 @@ function ValleyMeadow({
     let frameAmbientWind = 0
     let frameActiveGusts = 0
     let frameStrongestGust = 0
+    const windTime = state.clock.elapsedTime
+    const windWaveSin = [
+      Math.sin(windTime * 0.61),
+      Math.sin(windTime * 0.29),
+      Math.sin(windTime * 0.87),
+      Math.sin(windTime * 0.48),
+    ]
+    const windWaveCos = [
+      Math.cos(windTime * 0.61),
+      Math.cos(windTime * 0.29),
+      Math.cos(windTime * 0.87),
+      Math.cos(windTime * 0.48),
+    ]
+    const windPulseSin = Math.sin(windTime * 0.21)
+    const windPulseCos = Math.cos(windTime * 0.21)
     ;[grassMaterial, flowerMaterial].forEach((material, materialIndex) => {
       const uniforms = material.userData.journeyMeadowUniforms
       uniforms.uJourneyReveal.value = reveal
       uniforms.uJourneySunset.value = sunset
       uniforms.uJourneyNight.value = night
-      uniforms.uJourneyTime.value = state.clock.elapsedTime
+      uniforms.uJourneyTime.value = windTime
+      uniforms.uJourneyWindWaveSin.value.fromArray(windWaveSin)
+      uniforms.uJourneyWindWaveCos.value.fromArray(windWaveCos)
+      uniforms.uJourneyWindPulseSinCos.value.set(windPulseSin, windPulseCos)
       const timeOfDayWind =
         dayWeight * 0.36 +
         sunset * (0.4 + Math.sin(state.clock.elapsedTime * 0.17) * 0.022) +
@@ -5833,16 +5943,17 @@ function ValleyMeadow({
   return (
     <group name="JOURNEY_V1_VALLEY_MEADOW" renderOrder={3}>
       <mesh ref={groundRef} geometry={groundGeometry} material={groundMaterial} renderOrder={2} frustumCulled={false} />
-      <instancedMesh ref={nearGrassRef} args={[nearGrassGeometry, grassMaterial, nearGrassCount]} renderOrder={7} frustumCulled={false} />
-      <instancedMesh ref={midGrassRef} args={[midGrassGeometry, grassMaterial, midGrassCount]} renderOrder={7} frustumCulled={false} />
-      <instancedMesh ref={foregroundGrassRef} args={[foregroundGrassGeometry, grassMaterial, foregroundGrassCount]} renderOrder={7} frustumCulled={false} />
-      <instancedMesh ref={flowerRef} args={[flowerGeometry, flowerMaterial, flowerStemCount]} renderOrder={8} frustumCulled={false} />
+      <instancedMesh ref={nearGrassRef} args={[nearGrassGeometry, grassMaterial, nearGrassCount]} renderOrder={7} frustumCulled={false} userData={{ journeySkipPlanarReflection: true }} />
+      <instancedMesh ref={midGrassRef} args={[midGrassGeometry, grassMaterial, midGrassCount]} renderOrder={7} frustumCulled={false} userData={{ journeySkipPlanarReflection: true }} />
+      <instancedMesh ref={foregroundGrassRef} args={[foregroundGrassGeometry, grassMaterial, foregroundGrassCount]} renderOrder={7} frustumCulled={false} userData={{ journeySkipPlanarReflection: true }} />
+      <instancedMesh ref={flowerRef} args={[flowerGeometry, flowerMaterial, flowerStemCount]} renderOrder={8} frustumCulled={false} userData={{ journeySkipPlanarReflection: true }} />
       <points
         ref={flowerPointsRef}
         geometry={flowerPointGeometry}
         material={flowerPointMaterial}
         renderOrder={9}
         frustumCulled={false}
+        userData={{ journeySkipPlanarReflection: true }}
       />
     </group>
   )
