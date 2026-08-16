@@ -813,7 +813,7 @@ const PROJECT_ITEMS = [
 
 function PortfolioImage({ src, alt, caption, className = '' }) {
   return (
-    <figure className={`portfolio-figure ${className}`}>
+    <figure className={`portfolio-figure ${className}`} data-breathing-media="image">
       <div className="portfolio-figure__image">
         <img src={src} alt={alt} loading="lazy" />
       </div>
@@ -862,8 +862,10 @@ function PortfolioVideo({ src, poster, alt }) {
 }
 
 function PortfolioMediaFigure({ items, caption, className = '' }) {
+  const mediaKind = items.some((item) => item.type === 'video') ? 'video' : 'gallery'
+
   return (
-    <figure className={`portfolio-figure portfolio-media-v5 ${className}`}>
+    <figure className={`portfolio-figure portfolio-media-v5 ${className}`} data-breathing-media={mediaKind}>
       <div className="portfolio-media-v5__grid">
         {items.map((item) => (
           <div className="portfolio-media-v5__item" key={item.src}>
@@ -1080,6 +1082,65 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
     return () => {
       scroller.removeEventListener('scroll', handleScroll)
       if (frame !== null) cancelAnimationFrame(frame)
+    }
+  }, [page])
+
+  useEffect(() => {
+    if (page !== 'about' && page !== 'project') return undefined
+    const root = siteScrollRef.current
+    const scroller = root?.querySelector('.portfolio-story__panels')
+    const media = scroller ? [...scroller.querySelectorAll('[data-breathing-media]')] : []
+    if (!scroller || !media.length) return undefined
+
+    const mediaQuery = window.matchMedia('(min-width: 901px) and (prefers-reduced-motion: no-preference)')
+    let frame = null
+    const clearMediaState = () => {
+      media.forEach((element) => {
+        element.style.removeProperty('--breathing-media-static-inset')
+        element.style.removeProperty('--breathing-media-video-inset')
+      })
+    }
+    const updateMediaState = () => {
+      frame = null
+      if (!mediaQuery.matches) {
+        clearMediaState()
+        return
+      }
+
+      const bounds = scroller.getBoundingClientRect()
+      const focusLine = bounds.top + scroller.clientHeight * 0.5
+      const falloff = Math.max(scroller.clientHeight * 0.72, 1)
+      media.forEach((element) => {
+        const elementBounds = element.getBoundingClientRect()
+        const distance = Math.abs(elementBounds.top + elementBounds.height * 0.5 - focusLine)
+        const progress = Math.max(0, 1 - distance / falloff)
+        const open = progress * progress * (3 - 2 * progress)
+        const inset = (1 - open) * (element.dataset.breathingMedia === 'video' ? 2.25 : 4)
+        const property = element.dataset.breathingMedia === 'video'
+          ? '--breathing-media-video-inset'
+          : '--breathing-media-static-inset'
+        element.style.setProperty(property, `${inset.toFixed(3)}%`)
+      })
+    }
+    const scheduleMediaState = () => {
+      if (frame !== null) return
+      frame = requestAnimationFrame(updateMediaState)
+    }
+    const handleMediaPreference = () => {
+      if (mediaQuery.matches) scheduleMediaState()
+      else clearMediaState()
+    }
+
+    scroller.addEventListener('scroll', scheduleMediaState, { passive: true })
+    window.addEventListener('resize', scheduleMediaState)
+    mediaQuery.addEventListener('change', handleMediaPreference)
+    scheduleMediaState()
+    return () => {
+      scroller.removeEventListener('scroll', scheduleMediaState)
+      window.removeEventListener('resize', scheduleMediaState)
+      mediaQuery.removeEventListener('change', handleMediaPreference)
+      if (frame !== null) cancelAnimationFrame(frame)
+      clearMediaState()
     }
   }, [page])
 

@@ -7758,3 +7758,25 @@ html[data-portfolio-route-transition='reveal'] .journey-3d::after {
     transition: none;
   }
 }
+
+/* Breathing Media ------------------------------------------------------------
+   Scroll position is written as a shared custom property on each figure.
+   Keep the existing outer figure reveal untouched; only the media window
+   narrows away from the reading focus. */
+@media (min-width: 901px) and (prefers-reduced-motion: no-preference) {
+  .portfolio-site.is-page-about [data-breathing-media='image'] .portfolio-figure__image,
+  .portfolio-site.is-page-project [data-breathing-media='gallery'] .portfolio-media-v5__frame {
+    /* Gallery frames share their parent figure's single scroll value. */
+    -webkit-clip-path: inset(0 var(--breathing-media-static-inset, 0%) 0);
+    clip-path: inset(0 var(--breathing-media-static-inset, 0%) 0);
+    transition: clip-path 150ms cubic-bezier(.22, .61, .36, 1);
+    will-change: clip-path;
+  }
+
+  .portfolio-site.is-page-project [data-breathing-media='video'] .portfolio-media-v5__frame {
+    -webkit-clip-path: inset(0 var(--breathing-media-video-inset, 0%) 0);
+    clip-path: inset(0 var(--breathing-media-video-inset, 0%) 0);
+    transition: clip-path 150ms cubic-bezier(.22, .61, .36, 1);
+    will-change: clip-path;
+  }
+}
