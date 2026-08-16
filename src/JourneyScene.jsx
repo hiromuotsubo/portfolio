@@ -574,10 +574,25 @@ function createSkyBridgeMaterial() {
     vertexShader: `
       attribute float aJourneyPathProgress;
       attribute float aSize;
+      uniform float uJourneyReveal;
+      uniform float uJourneyOpacity;
       uniform float uJourneyTime;
       varying float vJourneyPathProgress;
+      varying float vJourneyIntensity;
       void main() {
         vJourneyPathProgress = aJourneyPathProgress;
+        float revealed = 1.0 - smoothstep(
+          uJourneyReveal - 0.09,
+          uJourneyReveal + 0.025,
+          aJourneyPathProgress
+        );
+        float twinkle = 0.7 + 0.3 * sin(aJourneyPathProgress * 71.0 - uJourneyTime * 1.2);
+        float taper = smoothstep(0.0, 0.055, aJourneyPathProgress) *
+          (1.0 - smoothstep(0.91, 1.0, aJourneyPathProgress) * 0.32);
+        // Reveal, taper and twinkle are constant for the whole point sprite.
+        // Evaluating them once per star avoids repeating identical work for
+        // every covered pixel without changing the rendered result.
+        vJourneyIntensity = revealed * taper * twinkle * uJourneyOpacity;
         vec3 animatedPosition = position;
         animatedPosition.x += sin(uJourneyTime * 0.34 + aJourneyPathProgress * 19.0) * 0.55;
         vec4 viewPosition = modelViewMatrix * vec4(animatedPosition, 1.0);
@@ -586,23 +601,13 @@ function createSkyBridgeMaterial() {
       }
     `,
     fragmentShader: `
-      uniform float uJourneyReveal;
-      uniform float uJourneyOpacity;
-      uniform float uJourneyTime;
       varying float vJourneyPathProgress;
+      varying float vJourneyIntensity;
       void main() {
         float pointDistance = length(gl_PointCoord - vec2(0.5));
         float softParticle = 1.0 - smoothstep(0.08, 0.5, pointDistance);
         float core = 1.0 - smoothstep(0.0, 0.13, pointDistance);
-        float revealed = 1.0 - smoothstep(
-          uJourneyReveal - 0.09,
-          uJourneyReveal + 0.025,
-          vJourneyPathProgress
-        );
-        float twinkle = 0.7 + 0.3 * sin(vJourneyPathProgress * 71.0 - uJourneyTime * 1.2);
-        float taper = smoothstep(0.0, 0.055, vJourneyPathProgress) *
-          (1.0 - smoothstep(0.91, 1.0, vJourneyPathProgress) * 0.32);
-        float alpha = (softParticle * 0.72 + core * 0.42) * revealed * taper * twinkle * uJourneyOpacity;
+        float alpha = (softParticle * 0.72 + core * 0.42) * vJourneyIntensity;
         vec3 color = mix(
           vec3(0.26, 0.72, 1.0),
           vec3(0.82, 0.92, 1.0),
@@ -634,33 +639,32 @@ function createStarFieldMaterial(milkyWay = false) {
       attribute float aSize;
       attribute float aJourneyRevealSeed;
       uniform float uJourneySize;
-      varying float vJourneyStarSeed;
-      varying float vJourneyRevealSeed;
+      uniform float uJourneyOpacity;
+      uniform float uJourneyTime;
+      varying float vJourneyIntensity;
       void main() {
-        vJourneyStarSeed = aSize;
-        vJourneyRevealSeed = aJourneyRevealSeed;
+        float twinkle = 0.88 + 0.12 * sin(uJourneyTime * 0.72 + aSize * 8.7);
+        float populationReveal = smoothstep(
+          aJourneyRevealSeed,
+          min(1.0, aJourneyRevealSeed + 0.075),
+          uJourneyOpacity
+        );
+        // A point sprite has one source vertex, so these values are identical
+        // across all of its fragments. Keep the exact visual equation while
+        // paying for it once per star rather than once per pixel.
+        vJourneyIntensity = uJourneyOpacity * populationReveal * twinkle;
         gl_PointSize = uJourneySize * (0.72 + aSize * 0.68);
         gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
       }
     `,
     fragmentShader: `
-      uniform float uJourneyOpacity;
-      uniform float uJourneyTime;
       uniform vec3 uJourneyColor;
-      varying float vJourneyStarSeed;
-      varying float vJourneyRevealSeed;
+      varying float vJourneyIntensity;
       void main() {
         float distanceFromCenter = length(gl_PointCoord - vec2(0.5));
         float softStar = 1.0 - smoothstep(0.12, 0.5, distanceFromCenter);
         float core = 1.0 - smoothstep(0.0, 0.16, distanceFromCenter);
-        float twinkle = 0.88 + 0.12 * sin(uJourneyTime * 0.72 + vJourneyStarSeed * 8.7);
-        float populationReveal = smoothstep(
-          vJourneyRevealSeed,
-          min(1.0, vJourneyRevealSeed + 0.075),
-          uJourneyOpacity
-        );
-        float alpha = (softStar * 0.68 + core * 0.42) *
-          uJourneyOpacity * populationReveal * twinkle;
+        float alpha = (softStar * 0.68 + core * 0.42) * vJourneyIntensity;
         if (alpha < 0.008) discard;
         gl_FragColor = vec4(uJourneyColor * (0.92 + core * 0.48), alpha);
       }
