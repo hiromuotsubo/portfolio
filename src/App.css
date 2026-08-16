@@ -7685,6 +7685,9 @@ html[data-portfolio-route-transition='reveal'] .journey-3d::after {
 .portfolio-site.is-page-about #motivation .portfolio-panel__copy h3 {
   width: max-content;
   max-width: 100%;
+  /* Descenders such as the g in “feelings” extend beneath the line box. */
+  -webkit-clip-path: none;
+  clip-path: none;
 }
 
 .portfolio-site.is-page-about .portfolio-panel__copy p,
