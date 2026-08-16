@@ -2863,12 +2863,31 @@ vec3 journeyNightWater = mix(vec3(0.008, 0.075, 0.16), vec3(0.025, 0.28, 0.38), 
 diffuseColor.rgb = mix(diffuseColor.rgb, journeyNightWater, uJourneyNight * 0.42);
 diffuseColor.rgb += vec3(0.62, 0.82, 0.94) * journeyWaterSparkle * (0.055 + uJourneyNight * 0.34) * (0.18 + journeyWaterFresnel);
 float journeyConnectionHead = smoothstep(0.0, 1.0, uJourneySkyConnect);
+// The river continues beyond the visible meadow. Let its last stretch break up
+// into the dark valley rather than allowing the animated connection to meet the
+// procedural mesh cap. The world-space variation keeps this from reading as a
+// straight, shortened river line.
+float journeyTerminalNoise = journeyWaterNoise(
+  vJourneyWaterPosition.xz * vec2(0.15, 0.09) + vec2(41.0, -23.0)
+);
+float journeyTerminalDrift = 0.5 + 0.5 * sin(
+  vJourneyWaterPosition.x * 0.32 + vJourneyWaterPosition.z * 0.16 +
+  sin(vJourneyWaterPosition.z * 0.055) * 2.2
+);
+float journeyTerminalDissolve = 1.0 - smoothstep(
+  0.80 + (journeyTerminalNoise - 0.5) * 0.09,
+  0.985 + (journeyTerminalDrift - 0.5) * 0.018,
+  journeyRiverPath
+);
+float journeyTerminalFade = pow(clamp(journeyTerminalDissolve, 0.0, 1.0), 0.74);
 float journeyConnectionPulse = exp(-pow((journeyRiverPath - journeyConnectionHead) * 7.2, 2.0));
 float journeyConnectionWake = 1.0 - smoothstep(journeyConnectionHead - 0.17, journeyConnectionHead + 0.035, journeyRiverPath);
-float journeyMysticCurrent = journeyRiverMask * (0.44 + journeyRiverCurrent * 0.34 + journeyFineCurrent * 0.42);
+journeyConnectionPulse *= journeyTerminalFade;
+journeyConnectionWake *= journeyTerminalFade;
+float journeyMysticCurrent = journeyRiverMask * (0.44 + journeyRiverCurrent * 0.34 + journeyFineCurrent * 0.42) * journeyTerminalFade;
 float journeyLuminousThread = journeyRiverMask *
   (0.26 + journeyFineCurrent * 0.74) *
-  (0.48 + journeyWaterCrossRipple * 0.52);
+  (0.48 + journeyWaterCrossRipple * 0.52) * journeyTerminalFade;
 vec3 journeyRiverLight = mix(vec3(0.08, 0.58, 0.62), vec3(0.22, 0.52, 1.0), uJourneyNight);
 diffuseColor.rgb += journeyRiverLight * journeyMysticCurrent * (0.34 + uJourneyNight * 0.78);
 diffuseColor.rgb += vec3(0.08, 0.76, 0.98) * journeyLuminousThread * (0.34 + uJourneyNight * 1.16);
@@ -2913,7 +2932,7 @@ gl_FragColor.rgb = mix(gl_FragColor.rgb, diffuseColor.rgb, journeyPigmentStrengt
 gl_FragColor.rgb += vec3(0.16, 0.72, 0.68) * journeyFineCurrent * (1.0 - uJourneyNight) * 0.045;`,
       )
   }
-  material.customProgramCacheKey = () => 'journey-water-reflection-v31-shared-flow-field'
+  material.customProgramCacheKey = () => 'journey-water-reflection-v32-terminal-dissolve'
 }
 
 function createClearRiverMaterial() {
@@ -2957,7 +2976,7 @@ function createRiverGlowMaterial() {
     uniforms,
     transparent: true,
     depthWrite: false,
-    depthTest: false,
+    depthTest: true,
     blending: THREE.AdditiveBlending,
     toneMapped: false,
     side: THREE.DoubleSide,
@@ -3006,16 +3025,34 @@ function createRiverGlowMaterial() {
         float connectionPulse = exp(-pow((path - connectionHead) * 8.4, 2.0));
         float wake = 1.0 - smoothstep(connectionHead - 0.2, connectionHead + 0.03, path);
 
+        // Fade the final segment through an irregular, landscape-like veil.
+        // vJourneyUv.y is repeated for the water texture, so convert it back
+        // to the curve's 0..1 path instead of deriving it from world Z.
+        float terminalPath = clamp(vJourneyUv.y / 7.4, 0.0, 1.0);
+        float terminalCell = journeyGlowHash(floor(plane * vec2(0.16, 0.10) + vec2(31.0, -17.0)));
+        float terminalDrift = 0.5 + 0.5 * sin(
+          plane.x * 0.32 + plane.y * 0.16 + sin(plane.y * 0.055) * 2.2
+        );
+        float terminalNoise = mix(terminalCell, terminalDrift, 0.58);
+        float terminalDissolve = 1.0 - smoothstep(
+          0.80 + (terminalNoise - 0.5) * 0.09,
+          0.985 + (terminalDrift - 0.5) * 0.018,
+          terminalPath
+        );
+        float terminalFade = pow(clamp(terminalDissolve, 0.0, 1.0), 0.74);
+
         float edgeFade = pow(max(0.0, sin(vJourneyUv.x * 3.14159265)), 0.82);
         float alpha = reveal * activation * edgeFade * (0.028 + strand * 0.56 + sparkle * 0.42);
         alpha += connectionPulse * uJourneySkyConnect * edgeFade * 0.78;
         alpha += wake * uJourneySkyConnect * edgeFade * (0.085 + strand * 0.38);
+        alpha *= terminalFade;
         vec3 cyan = vec3(0.07, 0.72, 0.92);
         vec3 celestial = vec3(0.34, 0.72, 1.0);
         vec3 color = mix(cyan, celestial, uJourneySkyConnect * 0.72 + path * 0.12);
         color *= 0.88 + strand * 2.15 + sparkle * 2.72;
         color += wake * uJourneySkyConnect * vec3(0.06, 0.34, 0.54) * 0.52;
         color += connectionPulse * vec3(0.38, 0.92, 1.0) * 3.2;
+        color *= mix(0.32, 1.0, terminalFade);
         gl_FragColor = vec4(color, clamp(alpha, 0.0, 1.0));
       }
     `,
