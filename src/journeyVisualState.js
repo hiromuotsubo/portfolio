@@ -7,8 +7,8 @@ export const JOURNEY_VISUAL_TIMING = Object.freeze({
   nightStart: 48,
   nightEnd: 72,
   starsStart: 58,
-  starsEnd: 78,
-  nightObservationEnd: 86,
+  starsEnd: 76,
+  nightObservationEnd: 76,
 })
 
 const clamp01 = (value) => Math.min(1, Math.max(0, value))

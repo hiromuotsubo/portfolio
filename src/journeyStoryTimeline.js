@@ -34,26 +34,26 @@ export const JOURNEY_CAVE_SEQUENCE = Object.freeze({
 // second river HOLD during the same Journey.
 export const JOURNEY_NIGHT_SEQUENCE = Object.freeze({
   fullNight: JOURNEY_VISUAL_TIMING.nightObservationEnd,
-  riverGate: 88,
+  riverGate: 78,
   riverHoldDuration: 3300,
-  connectionReverseFadeStart: 78,
+  connectionReverseFadeStart: 72,
   fixedVistaCameraProgress: 20,
   closeUpCameraStartProgress: 55,
   closeUpCameraProgress: 70,
   finalCameraProgress: 86,
-  postHoldTravelStart: 89.1,
-  postHoldLookUpStart: 89.35,
-  postHoldWidenStart: 91.4,
-  postHoldLiftEnd: 95.4,
-  postHoldWidenEnd: 96.2,
-  figureGatherStart: 94,
-  figureGatherEnd: 96,
-  figureSilhouetteStart: 94.55,
-  figureSilhouetteEnd: 96,
-  finalWideStart: 96,
-  finalWideEnd: 98.15,
-  figureReleaseStart: 98.2,
-  figureReleaseEnd: 100,
+  postHoldTravelStart: 78,
+  postHoldLookUpStart: 82.5,
+  postHoldWidenStart: 86,
+  postHoldLiftEnd: 86,
+  postHoldWidenEnd: 88,
+  figureGatherStart: 91.5,
+  figureGatherEnd: 94,
+  figureSilhouetteStart: 92.1875,
+  figureSilhouetteEnd: 94,
+  finalWideStart: 88,
+  finalWideEnd: 93,
+  figureReleaseStart: 98,
+  figureReleaseEnd: 99.4,
 })
 
 // Camera and weather intentionally use different clocks after the valley has
@@ -75,10 +75,10 @@ export const getJourneyCameraProgress = (progress) => {
     ) * smootherstep(sequence.fullNight, sequence.riverGate, progress)
   }
   if (progress <= sequence.postHoldTravelStart) return sequence.closeUpCameraProgress
-  if (progress <= sequence.postHoldLiftEnd) {
+  if (progress <= sequence.postHoldLookUpStart) {
     return sequence.closeUpCameraProgress + (
       sequence.finalCameraProgress - sequence.closeUpCameraProgress
-    ) * smootherstep(sequence.postHoldTravelStart, sequence.postHoldLiftEnd, progress)
+    ) * smootherstep(sequence.postHoldTravelStart, sequence.postHoldLookUpStart, progress)
   }
   return sequence.finalCameraProgress
 }

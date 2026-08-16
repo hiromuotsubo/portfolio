@@ -222,11 +222,11 @@ const EXPERIENCE_PACE = [
   { start: 13.5, end: 20, minSeconds: 2.5 }, // Continue from the same view after HOLD.
   { start: 20, end: 30, minSeconds: 4 }, // Let the clear blue valley breathe at one fixed viewpoint.
   { start: 30, end: 58, minSeconds: 10 }, // Day drifts gradually into evening without camera travel.
-  { start: 58, end: 86, minSeconds: 10 }, // Evening settles continuously into full night.
-  { start: 86, end: 88, minSeconds: 5.6 }, // Let full night breathe before the river close-up settles.
-  { start: 88, end: 94, minSeconds: 8 }, // After HOLD, look upward first, then open the night view.
-  { start: 94, end: 96, minSeconds: 2.8 }, // Let the seated figure gather at the settled view.
-  { start: 96, end: 100, minSeconds: 5.2 }, // Widen once more as the figure returns to the sky.
+  { start: 58, end: 76, minSeconds: 6.4 }, // Evening settles continuously into full night.
+  { start: 76, end: 78, minSeconds: 5.6 }, // Let full night breathe before the river close-up settles.
+  { start: 78, end: 91.5, minSeconds: 8 }, // After HOLD, look upward first, then open the night view.
+  { start: 91.5, end: 94, minSeconds: 2.8 }, // Let the seated figure gather at the settled view.
+  { start: 94, end: 100, minSeconds: 5.2 }, // Widen once more as the figure returns to the sky.
 ]
 
 const getMaximumProgressRate = (progress) => {
@@ -245,9 +245,9 @@ const GATES = {
   },
   river: {
     at: JOURNEY_NIGHT_SEQUENCE.riverGate,
-    // The visible close-up has settled by p87.45; the existing gate still
-    // resolves at p88, preserving its exact camera endpoint and HOLD timing.
-    armAt: 87.45,
+    // The visible close-up has settled by p77.45; the existing gate still
+    // resolves at p78, preserving its exact camera endpoint and HOLD timing.
+    armAt: 77.45,
     end: JOURNEY_NIGHT_SEQUENCE.riverGate,
     duration: JOURNEY_NIGHT_SEQUENCE.riverHoldDuration,
     label: 'HOLD',
