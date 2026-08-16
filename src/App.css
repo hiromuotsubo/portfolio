@@ -7683,6 +7683,19 @@ html[data-portfolio-route-transition='reveal'] .journey-3d::after {
   text-wrap: pretty;
 }
 
+/* About and Project imagery sits directly on the paper field without a green
+   frame. The profile credits close with the same hairline used between every
+   metadata row. */
+.portfolio-site.is-page-about .portfolio-figure__image,
+.portfolio-site.is-page-project .portfolio-figure__image,
+.portfolio-site.is-page-project .portfolio-media-v5__frame {
+  border: 0;
+}
+
+.portfolio-site.is-page-about .portfolio-profile-facts > div:last-child {
+  border-bottom: 1px solid rgba(105, 167, 133, 0.42);
+}
+
 .portfolio-media-v5__item > span,
 .portfolio-media-v5 figcaption,
 .portfolio-figure figcaption,
