@@ -1120,9 +1120,7 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
     const clearChapterStack = () => {
       panels.forEach((panel) => {
         panel.removeAttribute('data-chapter-handoff')
-        panel.removeAttribute('data-chapter-handoff-outgoing')
         panel.style.removeProperty('--chapter-stack-shift')
-        panel.style.removeProperty('--chapter-stack-hold')
       })
     }
     const updateChapterStack = () => {
@@ -1136,14 +1134,13 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
       const handoffLift = Math.min(scroller.clientHeight * 0.08, 88)
       const handoffHold = Math.min(scroller.clientHeight * 0.15, 150)
       const entryDistance = Math.min(scroller.clientHeight * 0.06, 66)
-      const releaseDistance = Math.min(scroller.clientHeight * 0.12, 132)
+      const releaseDistance = Math.min(scroller.clientHeight * 0.15, 150)
       const entryStart = viewportHeight + entryDistance
       const entryEnd = viewportHeight
       const holdEnd = viewportHeight - handoffHold
       const exitEnd = holdEnd - releaseDistance
       panels.forEach((panel, index) => {
         if (index === 0) return
-        const previousPanel = panels[index - 1]
         const targetTop = panel.offsetTop - scroller.scrollTop
         const entryProgress = Math.max(0, Math.min(1,
           (entryStart - targetTop) / (entryStart - entryEnd),
@@ -1154,27 +1151,14 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
         const entryEase = entryProgress * entryProgress * (3 - 2 * entryProgress)
         const exitEase = exitProgress * exitProgress * (3 - 2 * exitProgress)
         const handoffStrength = entryEase * (1 - exitEase)
-        const zoneDistance = Math.max(0, viewportHeight - targetTop)
-        const holdProgress = Math.max(0, Math.min(1, zoneDistance / handoffHold))
-        const releaseProgress = Math.max(0, Math.min(1,
-          (zoneDistance - handoffHold) / releaseDistance,
-        ))
-        const releaseEase = releaseProgress * releaseProgress * (3 - 2 * releaseProgress)
-        const holdShift = handoffHold * holdProgress * (1 - releaseEase)
         if (handoffStrength <= 0.001) {
           panel.removeAttribute('data-chapter-handoff')
           panel.style.removeProperty('--chapter-stack-shift')
-        } else {
-          panel.style.setProperty('--chapter-stack-shift', `${(-handoffLift * handoffStrength).toFixed(2)}px`)
-          panel.dataset.chapterHandoff = 'true'
+          return
         }
-        if (holdShift <= 0.001) {
-          previousPanel.removeAttribute('data-chapter-handoff-outgoing')
-          previousPanel.style.removeProperty('--chapter-stack-hold')
-        } else {
-          previousPanel.style.setProperty('--chapter-stack-hold', `${holdShift.toFixed(2)}px`)
-          previousPanel.dataset.chapterHandoffOutgoing = 'true'
-        }
+
+        panel.style.setProperty('--chapter-stack-shift', `${(-handoffLift * handoffStrength).toFixed(2)}px`)
+        panel.dataset.chapterHandoff = 'true'
       })
     }
     const scheduleChapterStack = () => {
