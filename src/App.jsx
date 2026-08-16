@@ -811,6 +811,72 @@ const PROJECT_ITEMS = [
   ['emotion', 'Emotion'],
 ]
 
+const ABOUT_PINNED_VISUALS = {
+  profile: [
+    { src: '/portfolio/about-portrait.webp', alt: 'Hiromu checking his camera', label: 'PHOTOGRAPHING' },
+  ],
+  research: [
+    { src: '/portfolio/about-perspective.webp', alt: 'Two people walking beneath a vast mountain and summer sky', label: 'HUMAN SCALE IN LANDSCAPE' },
+  ],
+  approach: [
+    { src: '/portfolio/about-stillness.webp', alt: 'Mist floating above a still lake and quiet boats', label: 'MIST OVER STILL WATER' },
+  ],
+  motivation: [
+    { src: '/portfolio/about-origin.webp', alt: 'Kamikochi mountains and the Azusa River seen from Kappa Bridge', label: 'KAMIKOCHI' },
+  ],
+}
+
+const PROJECT_PINNED_VISUALS = {
+  origin: [
+    { src: '/portfolio/project-v5/field-reference.jpg', alt: 'The real Kamikochi valley and Azusa River that inspired Journey', label: 'FIELD / KAMIKOCHI' },
+    { src: '/portfolio/project-v5/blender-massing.jpg', alt: 'The Journey valley terrain being shaped as a neutral Blender model', label: 'MASSING / BLENDER' },
+    { src: '/portfolio/project-v5/day-clear.jpg', alt: 'The finished Journey valley in clear daylight', label: 'EXPERIENCE / WEBGL' },
+  ],
+  contrast: [
+    {
+      type: 'video',
+      src: '/portfolio/project-v5/cave-to-fog.mp4',
+      poster: '/portfolio/project-v5/cave-to-fog-poster.jpg',
+      alt: 'The camera moving through the dark Journey cave toward the fog-covered open valley',
+      label: 'CAVE → OPEN AIR',
+    },
+  ],
+  terrain: [
+    { src: '/portfolio/project-v5/day-clear.jpg', alt: 'The Journey valley in soft clear daylight', label: 'DAY' },
+    { src: '/portfolio/project-v5/dusk.jpg', alt: 'The same Journey valley in muted dusk light', label: 'DUSK' },
+    { src: '/portfolio/project-v5/night.jpg', alt: 'The same Journey valley beneath the night sky', label: 'NIGHT' },
+  ],
+  interaction: [
+    {
+      type: 'video',
+      src: '/portfolio/project-v5/hold-fog-reveal.mp4',
+      poster: '/portfolio/project-v5/hold-fog-reveal-poster.jpg',
+      alt: 'The fog gradually clearing as the visitor holds the Journey interaction',
+      label: 'HOLD / FOG REVEAL',
+    },
+  ],
+  emotion: [
+    { src: '/portfolio/project-night-clean.png', alt: 'A quiet Journey night scene beneath the Milky Way', label: 'SOUND / TIME' },
+    { src: '/portfolio/project-v5/emotion-final.jpg', alt: 'A small seated figure beneath the Journey mountains and immense star-filled night sky', label: 'FINAL NIGHT / HUMAN SCALE' },
+  ],
+}
+
+const PINNED_VISUAL_DESKTOP_QUERY = '(min-width: 1160px)'
+
+function usePinnedVisualDesktop() {
+  const [isDesktop, setIsDesktop] = useState(() => window.matchMedia(PINNED_VISUAL_DESKTOP_QUERY).matches)
+
+  useEffect(() => {
+    const query = window.matchMedia(PINNED_VISUAL_DESKTOP_QUERY)
+    const update = () => setIsDesktop(query.matches)
+    update()
+    query.addEventListener('change', update)
+    return () => query.removeEventListener('change', update)
+  }, [])
+
+  return isDesktop
+}
+
 function PortfolioImage({ src, alt, caption, className = '' }) {
   return (
     <figure className={`portfolio-figure ${className}`}>
@@ -822,7 +888,7 @@ function PortfolioImage({ src, alt, caption, className = '' }) {
   )
 }
 
-function PortfolioVideo({ src, poster, alt }) {
+function PortfolioVideo({ src, poster, alt, controlled = false }) {
   const videoRef = useRef(null)
 
   useEffect(() => {
@@ -830,7 +896,7 @@ function PortfolioVideo({ src, poster, alt }) {
     if (!video) return undefined
 
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    if (reducedMotion || !('IntersectionObserver' in window)) return undefined
+    if (controlled || reducedMotion || !('IntersectionObserver' in window)) return undefined
 
     const observer = new IntersectionObserver(([entry]) => {
       if (entry.isIntersecting && entry.intersectionRatio >= 0.28) {
@@ -845,7 +911,7 @@ function PortfolioVideo({ src, poster, alt }) {
       observer.disconnect()
       video.pause()
     }
-  }, [])
+  }, [controlled])
 
   return (
     <video
@@ -857,6 +923,7 @@ function PortfolioVideo({ src, poster, alt }) {
       loop
       playsInline
       preload="metadata"
+      data-pinned-stage-video={controlled ? 'true' : undefined}
     />
   )
 }
@@ -883,6 +950,48 @@ function PortfolioMediaFigure({ items, caption, className = '' }) {
   )
 }
 
+function PinnedStageVisual({ chapter, visual, index, count }) {
+  return (
+    <figure
+      className={`pinned-visual-stage__visual ${visual.type === 'video' ? 'is-video' : ''}`}
+      data-pinned-stage-visual
+      data-stage-panel={chapter}
+      data-stage-index={index}
+      data-stage-count={count}
+      aria-hidden="true"
+    >
+      <div className="pinned-visual-stage__frame">
+        {visual.type === 'video' ? (
+          <PortfolioVideo src={visual.src} poster={visual.poster} alt={visual.alt} controlled />
+        ) : (
+          <img src={visual.src} alt="" loading="eager" decoding="async" />
+        )}
+      </div>
+      <figcaption>{visual.label}</figcaption>
+    </figure>
+  )
+}
+
+function PinnedVisualStage({ page, visuals }) {
+  return (
+    <aside className={`pinned-visual-stage is-${page}`} aria-label={`${page === 'about' ? 'About' : 'Project'} visual stage`}>
+      <div className="pinned-visual-stage__canvas">
+        {Object.entries(visuals).flatMap(([chapter, items]) => (
+          items.map((visual, index) => (
+            <PinnedStageVisual
+              key={`${chapter}-${visual.src}`}
+              chapter={chapter}
+              visual={visual}
+              index={index}
+              count={items.length}
+            />
+          ))
+        ))}
+      </div>
+    </aside>
+  )
+}
+
 function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }) {
   const siteScrollRef = useRef(null)
   const previousPageRef = useRef(page)
@@ -893,9 +1002,9 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
   const navDecodeTimersRef = useRef({})
   const transitionSequenceRef = useRef(0)
   const [activePanel, setActivePanel] = useState('profile')
+  const pinnedVisualDesktop = usePinnedVisualDesktop()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [homeAssetsReady, setHomeAssetsReady] = useState(false)
-  const [panelMotion, setPanelMotion] = useState({})
   const [mistTransition, setMistTransition] = useState({
     phase: 'idle',
     x: '50vw',
@@ -1109,136 +1218,133 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
   }, [page])
 
   useEffect(() => {
-    if (page !== 'about' && page !== 'project') return undefined
+    if (!pinnedVisualDesktop || (page !== 'about' && page !== 'project')) return undefined
     const root = siteScrollRef.current
     const scroller = root?.querySelector('.portfolio-story__panels')
+    const stage = root?.querySelector('.pinned-visual-stage')
     const panels = scroller ? [...scroller.querySelectorAll('[data-story-panel]')] : []
-    if (!scroller || panels.length < 2) return undefined
+    const stageVisuals = stage ? [...stage.querySelectorAll('[data-pinned-stage-visual]')] : []
+    if (!scroller || !stage || !panels.length || !stageVisuals.length) return undefined
 
-    const motionQuery = window.matchMedia('(min-width: 901px) and (prefers-reduced-motion: no-preference)')
+    const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const panelIndex = new Map(panels.map((panel, index) => [panel.dataset.storyPanel, index]))
     let frame = null
-    const clearChapterStack = () => {
-      panels.forEach((panel) => {
-        panel.removeAttribute('data-chapter-handoff')
-        panel.style.removeProperty('--chapter-stack-shift')
-      })
-    }
-    const updateChapterStack = () => {
-      frame = null
-      if (!motionQuery.matches) {
-        clearChapterStack()
-        return
+
+    const clamp = (value) => Math.max(0, Math.min(1, value))
+    const smoothstep = (value) => value * value * (3 - 2 * value)
+    const getStepWeights = (count, progress, reducedMotion) => {
+      if (count <= 1) return [1]
+      const anchors = count === 2 ? [0.2, 0.8] : [0.2, 0.5, 0.8]
+      if (reducedMotion) {
+        const nearest = anchors.reduce((closest, anchor, index) => (
+          Math.abs(progress - anchor) < Math.abs(progress - anchors[closest]) ? index : closest
+        ), 0)
+        return anchors.map((_, index) => (index === nearest ? 1 : 0))
       }
 
-      const viewportHeight = scroller.clientHeight
-      const handoffLift = Math.min(scroller.clientHeight * 0.08, 88)
-      const handoffHold = Math.min(scroller.clientHeight * 0.15, 150)
-      const entryDistance = Math.min(scroller.clientHeight * 0.06, 66)
-      const releaseDistance = Math.min(scroller.clientHeight * 0.15, 150)
-      const entryStart = viewportHeight + entryDistance
-      const entryEnd = viewportHeight
-      const holdEnd = viewportHeight - handoffHold
-      const exitEnd = holdEnd - releaseDistance
-      panels.forEach((panel, index) => {
-        if (index === 0) return
-        const targetTop = panel.offsetTop - scroller.scrollTop
-        const entryProgress = Math.max(0, Math.min(1,
-          (entryStart - targetTop) / (entryStart - entryEnd),
-        ))
-        const exitProgress = Math.max(0, Math.min(1,
-          (holdEnd - targetTop) / (holdEnd - exitEnd),
-        ))
-        const entryEase = entryProgress * entryProgress * (3 - 2 * entryProgress)
-        const exitEase = exitProgress * exitProgress * (3 - 2 * exitProgress)
-        const handoffStrength = entryEase * (1 - exitEase)
-        if (handoffStrength <= 0.001) {
-          panel.removeAttribute('data-chapter-handoff')
-          panel.style.removeProperty('--chapter-stack-shift')
+      for (let index = 1; index < anchors.length; index += 1) {
+        const midpoint = (anchors[index - 1] + anchors[index]) / 2
+        const range = Math.min(0.22, (anchors[index] - anchors[index - 1]) * 0.68)
+        if (progress <= midpoint + range / 2) {
+          const blend = smoothstep(clamp((progress - (midpoint - range / 2)) / range))
+          return anchors.map((_, stepIndex) => {
+            if (stepIndex === index - 1) return 1 - blend
+            if (stepIndex === index) return blend
+            return 0
+          })
+        }
+      }
+      return anchors.map((_, index) => (index === anchors.length - 1 ? 1 : 0))
+    }
+
+    const updateStage = () => {
+      frame = null
+      const reducedMotion = reducedMotionQuery.matches
+      const scrollerBounds = scroller.getBoundingClientRect()
+      const focusLine = scrollerBounds.top + scroller.clientHeight * 0.38
+      const panelBounds = panels.map((panel) => panel.getBoundingClientRect())
+      const chapterWeights = panels.map(() => 0)
+      let chapterIndex = 0
+      let chapterBlend = 0
+
+      if (reducedMotion) {
+        for (let index = 1; index < panelBounds.length; index += 1) {
+          if (focusLine >= panelBounds[index].top) chapterIndex = index
+          else break
+        }
+        chapterWeights[chapterIndex] = 1
+      } else {
+        const transitionRange = Math.min(scroller.clientHeight * 0.14, 144)
+        for (let index = 1; index < panelBounds.length; index += 1) {
+          const nextTop = panelBounds[index].top
+          if (focusLine < nextTop + transitionRange) {
+            chapterIndex = index - 1
+            chapterBlend = smoothstep(clamp((focusLine - (nextTop - transitionRange)) / (transitionRange * 2)))
+            break
+          }
+          chapterIndex = index
+        }
+        chapterWeights[chapterIndex] = 1 - chapterBlend
+        if (chapterIndex < panels.length - 1) chapterWeights[chapterIndex + 1] = chapterBlend
+      }
+
+      stageVisuals.forEach((visual) => {
+        const visualPanelIndex = panelIndex.get(visual.dataset.stagePanel)
+        const stepIndex = Number(visual.dataset.stageIndex)
+        const stepCount = Number(visual.dataset.stageCount)
+        const panelBoundsForVisual = panelBounds[visualPanelIndex]
+        const localProgress = clamp(
+          (focusLine - panelBoundsForVisual.top) / Math.max(panelBoundsForVisual.height, 1),
+        )
+        const stepWeight = getStepWeights(stepCount, localProgress, reducedMotion)[stepIndex]
+        const opacity = chapterWeights[visualPanelIndex] * stepWeight
+        visual.style.setProperty('--pinned-visual-opacity', opacity.toFixed(3))
+
+        const video = visual.querySelector('video[data-pinned-stage-video]')
+        if (!video) return
+        if (reducedMotion) {
+          if (!video.paused) video.pause()
           return
         }
-
-        panel.style.setProperty('--chapter-stack-shift', `${(-handoffLift * handoffStrength).toFixed(2)}px`)
-        panel.dataset.chapterHandoff = 'true'
+        if (opacity >= 0.46 && video.paused) video.play().catch(() => {})
+        if (opacity <= 0.12 && !video.paused) video.pause()
       })
     }
-    const scheduleChapterStack = () => {
+
+    const scheduleStage = () => {
       if (frame !== null) return
-      frame = requestAnimationFrame(updateChapterStack)
+      frame = requestAnimationFrame(updateStage)
     }
-    const handleMotionPreference = () => {
-      if (motionQuery.matches) scheduleChapterStack()
-      else clearChapterStack()
-    }
+    const resizeObserver = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(scheduleStage)
 
-    scroller.addEventListener('scroll', scheduleChapterStack, { passive: true })
-    window.addEventListener('resize', scheduleChapterStack)
-    motionQuery.addEventListener('change', handleMotionPreference)
-    scheduleChapterStack()
+    scroller.addEventListener('scroll', scheduleStage, { passive: true })
+    window.addEventListener('resize', scheduleStage)
+    reducedMotionQuery.addEventListener('change', scheduleStage)
+    resizeObserver?.observe(scroller)
+    scheduleStage()
     return () => {
-      scroller.removeEventListener('scroll', scheduleChapterStack)
-      window.removeEventListener('resize', scheduleChapterStack)
-      motionQuery.removeEventListener('change', handleMotionPreference)
+      scroller.removeEventListener('scroll', scheduleStage)
+      window.removeEventListener('resize', scheduleStage)
+      reducedMotionQuery.removeEventListener('change', scheduleStage)
+      resizeObserver?.disconnect()
       if (frame !== null) cancelAnimationFrame(frame)
-      clearChapterStack()
-    }
-  }, [page])
-
-  useEffect(() => {
-    if (page !== 'about' && page !== 'project') return undefined
-    const root = siteScrollRef.current
-    const scroller = root?.querySelector('.portfolio-story__panels')
-    const panels = scroller?.querySelectorAll('[data-story-panel]')
-    if (!scroller || !panels?.length) return undefined
-
-    setPanelMotion({})
-    if (!('IntersectionObserver' in window)) {
-      setPanelMotion(Object.fromEntries(
-        [...panels].map((panel) => [panel.dataset.storyPanel, 'visible']),
-      ))
-      return undefined
-    }
-
-    const observer = new IntersectionObserver((entries) => {
-      setPanelMotion((current) => {
-        const next = { ...current }
-        let changed = false
-        entries.forEach((entry) => {
-          const id = entry.target.dataset.storyPanel
-          if (!id) return
-          const rootTop = entry.rootBounds?.top ?? 0
-          const state = entry.intersectionRatio >= 0.12
-            ? 'visible'
-            : entry.boundingClientRect.top < rootTop
-              ? 'before'
-              : 'after'
-          if (next[id] !== state) {
-            next[id] = state
-            changed = true
-          }
-        })
-        return changed ? next : current
+      stageVisuals.forEach((visual) => {
+        visual.style.removeProperty('--pinned-visual-opacity')
+        visual.querySelector('video[data-pinned-stage-video]')?.pause()
       })
-    }, {
-      root: scroller,
-      rootMargin: '-7% 0px -7% 0px',
-      threshold: [0, 0.12, 0.2],
-    })
-
-    panels.forEach((panel) => observer.observe(panel))
-    return () => observer.disconnect()
-  }, [page])
+    }
+  }, [page, pinnedVisualDesktop])
 
   const panelClassName = (id, extra = '') => {
     return [
       'portfolio-panel',
       id === activePanel ? 'is-active' : '',
-      `is-${panelMotion[id] ?? 'after'}`,
       extra,
     ].filter(Boolean).join(' ')
   }
 
   const renderAbout = () => (
-    <section className="portfolio-story portfolio-page" aria-labelledby="about-title">
+    <section className="portfolio-story portfolio-page is-pinned-visual-chapters" aria-labelledby="about-title">
       <aside className="portfolio-story__rail">
         <span className="portfolio-kicker">ABOUT</span>
         <h2 id="about-title" tabIndex={-1}>Hiromu Otsubo</h2>
@@ -1252,8 +1358,10 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
         <p className="portfolio-story__hint"><span aria-hidden="true">↓</span> SCROLL TO EXPLORE</p>
       </aside>
       <div className="portfolio-story__panels">
+        <div className="pinned-visual-chapters__layout">
+          <div className="pinned-visual-chapters__narrative">
         <article id="profile" className={panelClassName('profile')} data-story-panel="profile">
-          <PortfolioImage src="/portfolio/about-portrait.webp" alt="Hiromu checking his camera" caption="Photographing" className="is-about-photo" />
+          {!pinnedVisualDesktop ? <PortfolioImage src="/portfolio/about-portrait.webp" alt="Hiromu checking his camera" caption="Photographing" className="is-about-photo" /> : null}
           <div className="portfolio-panel__copy">
             <span className="portfolio-kicker">PROFILE</span>
             <h3>Experiences shape emotion.</h3>
@@ -1268,7 +1376,7 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
         </article>
 
         <article id="research" className={panelClassName('research')} data-story-panel="research">
-          <PortfolioImage src="/portfolio/about-perspective.webp" alt="Two people walking beneath a vast mountain and summer sky" caption="Human scale in landscape." className="is-about-photo" />
+          {!pinnedVisualDesktop ? <PortfolioImage src="/portfolio/about-perspective.webp" alt="Two people walking beneath a vast mountain and summer sky" caption="Human scale in landscape." className="is-about-photo" /> : null}
           <div className="portfolio-panel__copy">
             <span className="portfolio-kicker">RESEARCH</span>
             <h3>Human scale amplifies vastness.</h3>
@@ -1279,7 +1387,7 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
         </article>
 
         <article id="approach" className={panelClassName('approach')} data-story-panel="approach">
-          <PortfolioImage src="/portfolio/about-stillness.webp" alt="Mist floating above a still lake and quiet boats" caption="MIST OVER STILL WATER" className="is-about-photo" />
+          {!pinnedVisualDesktop ? <PortfolioImage src="/portfolio/about-stillness.webp" alt="Mist floating above a still lake and quiet boats" caption="MIST OVER STILL WATER" className="is-about-photo" /> : null}
           <div className="portfolio-panel__copy">
             <span className="portfolio-kicker">APPROACH</span>
             <h3>People need time to feel.</h3>
@@ -1288,7 +1396,7 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
         </article>
 
         <article id="motivation" className={panelClassName('motivation')} data-story-panel="motivation">
-          <PortfolioImage src="/portfolio/about-origin.webp" alt="Kamikochi mountains and the Azusa River seen from Kappa Bridge" caption="KAMIKOCHI" className="is-about-photo" />
+          {!pinnedVisualDesktop ? <PortfolioImage src="/portfolio/about-origin.webp" alt="Kamikochi mountains and the Azusa River seen from Kappa Bridge" caption="KAMIKOCHI" className="is-about-photo" /> : null}
           <div className="portfolio-panel__copy">
             <span className="portfolio-kicker">MOTIVATION</span>
             <h3>
@@ -1302,12 +1410,15 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
           <span>END OF ABOUT</span>
           <button type="button" onClick={scrollStoryToTop}>BACK TO TOP <i aria-hidden="true">↑</i></button>
         </footer>
+          </div>
+          {pinnedVisualDesktop ? <PinnedVisualStage page="about" visuals={ABOUT_PINNED_VISUALS} /> : null}
+        </div>
       </div>
     </section>
   )
 
   const renderProject = () => (
-    <section className="portfolio-story portfolio-page is-project" aria-labelledby="project-title">
+    <section className="portfolio-story portfolio-page is-project is-pinned-visual-chapters" aria-labelledby="project-title">
       <aside className="portfolio-story__rail">
         <span className="portfolio-kicker">PROJECT</span>
         <h2 id="project-title" tabIndex={-1}>Journey</h2>
@@ -1321,8 +1432,10 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
         <p className="portfolio-story__hint"><span aria-hidden="true">↓</span> SCROLL TO EXPLORE</p>
       </aside>
       <div className="portfolio-story__panels">
+        <div className="pinned-visual-chapters__layout">
+          <div className="pinned-visual-chapters__narrative">
         <article id="origin" className={panelClassName('origin')} data-story-panel="origin">
-          <PortfolioMediaFigure
+          {!pinnedVisualDesktop ? <PortfolioMediaFigure
             items={[
               { src: '/portfolio/project-v5/field-reference.jpg', alt: 'The real Kamikochi valley and Azusa River that inspired Journey', label: 'FIELD / KAMIKOCHI' },
               { src: '/portfolio/project-v5/blender-massing.jpg', alt: 'The Journey valley terrain being shaped as a neutral Blender model', label: 'MASSING / BLENDER' },
@@ -1330,11 +1443,11 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
             ]}
             caption="REALITY / FORM / MEMORY"
             className="is-origin-triptych"
-          />
+          /> : null}
           <div className="portfolio-panel__copy"><span className="portfolio-kicker">INSPIRATION</span><h3>A photograph captured the view, not the feeling.</h3><p>Six weeks in Kamikochi taught me that photographs can preserve a view, but not the feeling of being there.<br />Journey begins from that gap.<br />Rather than reproducing the landscape exactly, it rebuilds the experience through space, interaction and time.</p></div>
         </article>
         <article id="contrast" className={panelClassName('contrast')} data-story-panel="contrast">
-          <PortfolioMediaFigure
+          {!pinnedVisualDesktop ? <PortfolioMediaFigure
             items={[
               {
                 type: 'video',
@@ -1346,11 +1459,11 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
             ]}
             caption="CONTRACTION / RELEASE"
             className="is-space-cinema"
-          />
+          /> : null}
           <div className="portfolio-panel__copy"><span className="portfolio-kicker">SPACE</span><h3>Emotion begins with space.</h3><p>The cave narrows the view.<br />Darkness holds the landscape back.<br />Emerging into the valley makes its scale feel greater by contrast.</p></div>
         </article>
         <article id="terrain" className={panelClassName('terrain')} data-story-panel="terrain">
-          <PortfolioMediaFigure
+          {!pinnedVisualDesktop ? <PortfolioMediaFigure
             items={[
               { src: '/portfolio/project-v5/day-clear.jpg', alt: 'The Journey valley in soft clear daylight', label: 'DAY' },
               { src: '/portfolio/project-v5/dusk.jpg', alt: 'The same Journey valley in muted dusk light', label: 'DUSK' },
@@ -1358,11 +1471,11 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
             ]}
             caption="ONE VALLEY / CHANGING LIGHT"
             className="is-atmosphere-triptych"
-          />
+          /> : null}
           <div className="portfolio-panel__copy"><span className="portfolio-kicker">ATMOSPHERE</span><h3>Light lets the landscape breathe.</h3><p>Day fades into dusk.<br />Dusk deepens into night.<br />Light, mist and color slowly transform the same valley over time.</p></div>
         </article>
         <article id="interaction" className={panelClassName('interaction')} data-story-panel="interaction">
-          <PortfolioMediaFigure
+          {!pinnedVisualDesktop ? <PortfolioMediaFigure
             items={[
               {
                 type: 'video',
@@ -1374,17 +1487,17 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
             ]}
             caption="THE LANDSCAPE RESPONDS"
             className="is-interaction-cinema"
-          />
+          /> : null}
           <div className="portfolio-panel__copy"><span className="portfolio-kicker">INTERACTION</span><h3>The landscape responds when you slow down.</h3><p>Scroll moves you forward.<br />HOLD lets the moment linger.<br />Move the cursor to stir the wind, and the grass moves with it.</p></div>
         </article>
         <article id="emotion" className={panelClassName('emotion', 'is-emotion-panel')} data-story-panel="emotion">
-          <PortfolioMediaFigure
+          {!pinnedVisualDesktop ? <PortfolioMediaFigure
             items={[
               { src: '/portfolio/project-v5/emotion-final.jpg', alt: 'A small seated figure beneath the Journey mountains and immense star-filled night sky', label: 'FINAL NIGHT / HUMAN SCALE' },
             ]}
             caption="A QUIET SENSE OF SCALE"
             className="is-emotion-hero"
-          />
+          /> : null}
           <div className="portfolio-panel__copy">
             <span className="portfolio-kicker">EMOTION</span>
             <h3>
@@ -1399,6 +1512,9 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
           <span>END OF PROJECT</span>
           <button type="button" onClick={scrollStoryToTop}>BACK TO TOP <i aria-hidden="true">↑</i></button>
         </footer>
+          </div>
+          {pinnedVisualDesktop ? <PinnedVisualStage page="project" visuals={PROJECT_PINNED_VISUALS} /> : null}
+        </div>
       </div>
     </section>
   )
