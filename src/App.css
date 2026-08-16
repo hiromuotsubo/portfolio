@@ -7760,13 +7760,13 @@ html[data-portfolio-route-transition='reveal'] .journey-3d::after {
 }
 
 /* Chapter Stack Lite ---------------------------------------------------------
-   The incoming chapter settles over the outgoing one, then eases into its
-   natural reading position after it takes focus. Layout height stays natural. */
+   A short boundary zone holds the outgoing chapter while the incoming surface
+   passes over it. Layout height remains the source of truth for reading. */
 @media (min-width: 901px) and (prefers-reduced-motion: no-preference) {
   .portfolio-site.is-page-about .portfolio-panel[data-chapter-handoff],
   .portfolio-site.is-page-project .portfolio-panel[data-chapter-handoff] {
     position: relative;
-    z-index: 1;
+    z-index: 3;
     transform: translate3d(0, var(--chapter-stack-shift, 0px), 0);
     will-change: transform;
   }
@@ -7777,6 +7777,13 @@ html[data-portfolio-route-transition='reveal'] .journey-3d::after {
 
   .portfolio-site.is-page-project .portfolio-panel[data-chapter-handoff] {
     background: var(--paper);
+  }
+
+  .portfolio-site.is-page-about .portfolio-panel[data-chapter-handoff-outgoing] .portfolio-panel__copy,
+  .portfolio-site.is-page-project .portfolio-panel[data-chapter-handoff-outgoing] .portfolio-panel__copy {
+    position: relative;
+    transform: translate3d(0, var(--chapter-stack-hold, 0px), 0);
+    will-change: transform;
   }
 }
 
