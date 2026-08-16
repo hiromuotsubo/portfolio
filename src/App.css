@@ -7760,22 +7760,22 @@ html[data-portfolio-route-transition='reveal'] .journey-3d::after {
 }
 
 /* Chapter Stack Lite ---------------------------------------------------------
-   The right-column chapter wrapper shifts only around a handoff boundary.
-   Its natural layout height remains the source of truth for normal reading. */
+   The incoming chapter settles over the outgoing one, then eases into its
+   natural reading position after it takes focus. Layout height stays natural. */
 @media (min-width: 901px) and (prefers-reduced-motion: no-preference) {
-  .portfolio-site.is-page-about .portfolio-panel.is-chapter-handoff,
-  .portfolio-site.is-page-project .portfolio-panel.is-chapter-handoff {
+  .portfolio-site.is-page-about .portfolio-panel[data-chapter-handoff],
+  .portfolio-site.is-page-project .portfolio-panel[data-chapter-handoff] {
     position: relative;
     z-index: 1;
     transform: translate3d(0, var(--chapter-stack-shift, 0px), 0);
     will-change: transform;
   }
 
-  .portfolio-site.is-page-about .portfolio-panel.is-chapter-handoff {
+  .portfolio-site.is-page-about .portfolio-panel[data-chapter-handoff] {
     background: var(--paper);
   }
 
-  .portfolio-site.is-page-project .portfolio-panel.is-chapter-handoff {
+  .portfolio-site.is-page-project .portfolio-panel[data-chapter-handoff] {
     background: var(--paper);
   }
 }

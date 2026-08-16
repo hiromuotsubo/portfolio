@@ -957,10 +957,7 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
 
     window.clearTimeout(navDecodeTimersRef.current[label])
     const characters = [...label]
-    const positions = label.length > 5 ? [1, label.length - 2] : [1]
-    positions.forEach((position, index) => {
-      characters[position] = index === 0 ? '.' : '/'
-    })
+    characters[Math.min(3, characters.length - 1)] = '_'
     const decodedLabel = characters.join('')
     setNavDecode((current) => ({ ...current, [label]: decodedLabel }))
     navDecodeTimersRef.current[label] = window.setTimeout(() => {
@@ -1122,7 +1119,7 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
     let frame = null
     const clearChapterStack = () => {
       panels.forEach((panel) => {
-        panel.classList.remove('is-chapter-handoff')
+        panel.removeAttribute('data-chapter-handoff')
         panel.style.removeProperty('--chapter-stack-shift')
       })
     }
@@ -1133,27 +1130,33 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
         return
       }
 
-      const bounds = scroller.getBoundingClientRect()
-      const handoffRange = Math.max(scroller.clientHeight * 0.22, 1)
+      const viewportHeight = scroller.clientHeight
       const handoffLift = Math.min(scroller.clientHeight * 0.08, 88)
+      const entryStart = viewportHeight + handoffLift
+      const entryEnd = viewportHeight
+      const takeoverStart = viewportHeight * 0.38 + handoffLift
+      const takeoverEnd = viewportHeight * 0.18
       panels.forEach((panel, index) => {
         if (index === 0) return
         const visualTarget = panel.querySelector('.portfolio-figure')
-        const previousShift = Number.parseFloat(panel.style.getPropertyValue('--chapter-stack-shift')) || 0
-        const targetTop = (visualTarget?.getBoundingClientRect().top ?? panel.getBoundingClientRect().top) - previousShift
-        const progress = Math.max(0, Math.min(1,
-          (bounds.bottom + handoffRange - targetTop) / (handoffRange * 2),
+        const targetTop = panel.offsetTop - scroller.scrollTop + (visualTarget?.offsetTop ?? 0)
+        const entryProgress = Math.max(0, Math.min(1,
+          (entryStart - targetTop) / (entryStart - entryEnd),
         ))
-        if (progress <= 0 || progress >= 1) {
-          panel.classList.remove('is-chapter-handoff')
+        const takeoverProgress = Math.max(0, Math.min(1,
+          (takeoverStart - targetTop) / (takeoverStart - takeoverEnd),
+        ))
+        const entryEase = entryProgress * entryProgress * (3 - 2 * entryProgress)
+        const takeoverEase = takeoverProgress * takeoverProgress * (3 - 2 * takeoverProgress)
+        const handoffStrength = entryEase * (1 - takeoverEase)
+        if (handoffStrength <= 0.001) {
+          panel.removeAttribute('data-chapter-handoff')
           panel.style.removeProperty('--chapter-stack-shift')
           return
         }
 
-        const easedProgress = progress * progress * (3 - 2 * progress)
-        const handoffStrength = 4 * easedProgress * (1 - easedProgress)
         panel.style.setProperty('--chapter-stack-shift', `${(-handoffLift * handoffStrength).toFixed(2)}px`)
-        panel.classList.add('is-chapter-handoff')
+        panel.dataset.chapterHandoff = 'true'
       })
     }
     const scheduleChapterStack = () => {
