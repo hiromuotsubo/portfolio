@@ -245,6 +245,9 @@ const GATES = {
   },
   river: {
     at: JOURNEY_NIGHT_SEQUENCE.riverGate,
+    // The visible close-up has settled by p87.45; the existing gate still
+    // resolves at p88, preserving its exact camera endpoint and HOLD timing.
+    armAt: 87.45,
     end: JOURNEY_NIGHT_SEQUENCE.riverGate,
     duration: JOURNEY_NIGHT_SEQUENCE.riverHoldDuration,
     label: 'HOLD',
@@ -1924,7 +1927,7 @@ function LegacyApp() {
         direction > 0 &&
         !riverCompletedRef.current &&
         targetRef.current < GATES.river.at &&
-        next >= GATES.river.at
+        next >= GATES.river.armAt
       ) {
         next = GATES.river.at
         pendingGateRef.current = 'river'
@@ -1980,9 +1983,12 @@ function LegacyApp() {
       }
 
       const pendingGate = pendingGateRef.current
+      const pendingGateReadyAt = pendingGate
+        ? (GATES[pendingGate].armAt ?? GATES[pendingGate].at - 0.012)
+        : null
       if (
         pendingGate &&
-        next >= GATES[pendingGate].at - 0.012
+        next >= pendingGateReadyAt
       ) {
         next = GATES[pendingGate].at
         progressVelocityRef.current = 0

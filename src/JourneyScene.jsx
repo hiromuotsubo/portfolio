@@ -7373,6 +7373,13 @@ export default function JourneyScene({
     }
 
     const valleyFogArrival = getJourneyFogArrival(progress)
+    // The distant mountains start resolving through the portal before the
+    // Fog/HOLD gate. Give that same reveal an exterior fog density so the
+    // opening never exposes an unfogged terrain frame.
+    const exteriorFogArrival = Math.max(
+      valleyFogArrival,
+      getJourneyValleyFarPresence(progress),
+    )
     const holdFogRemaining = 1 - clamp01(fogClearProgress)
     const holdClear = clamp01(fogClearProgress)
     const valleyMist = valleyFogArrival * holdFogRemaining
@@ -7453,7 +7460,7 @@ export default function JourneyScene({
     const preHoldFog = THREE.MathUtils.lerp(
       caveAirFog,
       exteriorFogDensity,
-      valleyFogArrival,
+      exteriorFogArrival,
     )
     const entranceFog = THREE.MathUtils.lerp(
       preHoldFog,
