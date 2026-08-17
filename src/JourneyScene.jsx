@@ -969,6 +969,57 @@ function createCloudTexture(seed) {
   return texture
 }
 
+function createCirrusTexture(seed) {
+  const canvas = document.createElement('canvas')
+  canvas.width = 640
+  canvas.height = 144
+  const context = canvas.getContext('2d')
+  context.clearRect(0, 0, canvas.width, canvas.height)
+  context.save()
+  context.filter = 'blur(5px)'
+  context.lineCap = 'round'
+
+  for (let index = 0; index < 9; index += 1) {
+    const y = 22 + seededRandom(seed + index * 31) * 96
+    const start = -54 + seededRandom(seed + index * 43) * 96
+    const end = 492 + seededRandom(seed + index * 59) * 156
+    const bend = (seededRandom(seed + index * 71) - 0.5) * 24
+    context.beginPath()
+    context.moveTo(start, y)
+    context.bezierCurveTo(
+      canvas.width * 0.28,
+      y + bend,
+      canvas.width * 0.66,
+      y - bend * 0.72,
+      end,
+      y + bend * 0.3,
+    )
+    context.strokeStyle = `rgba(242, 247, 246, ${0.1 + seededRandom(seed + index * 83) * 0.09})`
+    context.lineWidth = 3.2 + seededRandom(seed + index * 97) * 3.4
+    context.stroke()
+  }
+  context.restore()
+
+  context.globalCompositeOperation = 'destination-in'
+  const horizontalMask = context.createLinearGradient(0, 0, canvas.width, 0)
+  horizontalMask.addColorStop(0, 'rgba(255,255,255,0)')
+  horizontalMask.addColorStop(0.12, 'rgba(255,255,255,0.76)')
+  horizontalMask.addColorStop(0.5, 'rgba(255,255,255,1)')
+  horizontalMask.addColorStop(0.88, 'rgba(255,255,255,0.72)')
+  horizontalMask.addColorStop(1, 'rgba(255,255,255,0)')
+  context.fillStyle = horizontalMask
+  context.fillRect(0, 0, canvas.width, canvas.height)
+  context.globalCompositeOperation = 'source-over'
+
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.colorSpace = THREE.SRGBColorSpace
+  texture.generateMipmaps = false
+  texture.minFilter = THREE.LinearFilter
+  texture.magFilter = THREE.LinearFilter
+  texture.needsUpdate = true
+  return texture
+}
+
 function createGroundFogTexture(seed) {
   const canvas = document.createElement('canvas')
   canvas.width = 1024
@@ -3570,76 +3621,92 @@ function SkyBridge({ meshRef }) {
 }
 
 function DriftingClouds({ groupRef, materialRefs }) {
-  const cloudTexture = useTexture('/journey/textures/phase3/alpine-cloud-additive.webp')
-  cloudTexture.colorSpace = THREE.SRGBColorSpace
+  const textures = useMemo(() => ({
+    ridge: createCloudTexture(68102),
+    valley: createCloudTexture(68431),
+    cirrus: createCirrusTexture(68767),
+  }), [])
+  useEffect(() => () => Object.values(textures).forEach((texture) => texture.dispose()), [textures])
 
-  const clouds = useMemo(() => {
-    const clusters = [
-      // High cloud groups sit behind the massif and frame the upper-right opening.
-      { position: [-104, 204, -248], scale: [142, 42], opacity: 0.26, speed: 1.22, tone: 0.02, depthTest: false },
-      { position: [100, 218, -338], scale: [164, 48], opacity: 0.24, speed: 0.86, tone: 0, depthTest: false },
-      { position: [12, 188, -454], scale: [176, 48], opacity: 0.15, speed: 0.64, tone: 0.06, depthTest: false },
-      // Mountain-attached cloud has a shorter parallax baseline and more contrast.
-      { position: [-74, 66, -238], scale: [72, 21], opacity: 0.16, speed: 1.36, tone: 0.14, depthTest: true },
-      { position: [78, 75, -304], scale: [86, 24], opacity: 0.14, speed: 1.02, tone: 0.12, depthTest: true },
-    ]
-    // The source texture already contains a soft multi-lobe cloud. One broad
-    // card per cluster preserves that shape without submitting fifteen
-    // overlapping transparent meshes every frame.
-    const lobeOffsets = [
-      { x: 0.04, y: 0.01, z: 0, scale: 1, yaw: -0.018, opacity: 0.72 },
-    ]
-    return clusters.flatMap((cluster, clusterIndex) => lobeOffsets.map((lobe, lobeIndex) => ({
-      position: [
-        cluster.position[0] + cluster.scale[0] * lobe.x,
-        cluster.position[1] + cluster.scale[1] * lobe.y,
-        cluster.position[2] + lobe.z,
-      ],
-      scale: [cluster.scale[0] * lobe.scale, cluster.scale[1] * lobe.scale, 1],
-      opacity: cluster.opacity * lobe.opacity,
-      speed: cluster.speed * (0.88 + lobeIndex * 0.09),
-      tone: cluster.tone + lobeIndex * 0.025,
-      depthTest: cluster.depthTest,
-      yaw: lobe.yaw + clusterIndex * 0.012,
-    })))
-  }, [])
+  const clouds = useMemo(() => [
+    // Very little cloud sits on the left crest: it only rounds the hardest
+    // silhouette rather than turning the mountain into a weather effect.
+    {
+      key: 'left-ridge', texture: 'ridge', position: [-142, 148, -218], scale: [82, 22, 1],
+      dayOpacity: 0.095, nightOpacity: 0.004, sunsetWarmth: 0.24, nightTone: 0.72,
+      drift: [0.72, 0.22, 0.014, 0.4], depthTest: false, renderOrder: 2,
+    },
+    // Two offset wisps keep the right summit irregular, with a slightly
+    // stronger foreground lobe and a quieter halo behind the ridge.
+    {
+      key: 'right-ridge-main', texture: 'ridge', position: [143, 202, -269], scale: [108, 26, 1],
+      dayOpacity: 0.145, nightOpacity: 0.022, sunsetWarmth: 0.34, nightTone: 0.78,
+      drift: [0.88, 0.26, 0.011, 1.45], depthTest: false, renderOrder: 2,
+    },
+    {
+      key: 'right-ridge-rear', texture: 'ridge', position: [105, 188, -312], scale: [84, 20, 1],
+      dayOpacity: 0.045, nightOpacity: 0.01, sunsetWarmth: 0.28, nightTone: 0.84,
+      drift: [0.56, 0.18, 0.017, 2.2], depthTest: true, renderOrder: 1,
+    },
+    // This sits behind the saddle. Its faded, irregular alpha produces depth
+    // without recreating the old view-facing fog-plane artefact.
+    {
+      key: 'far-valley', texture: 'valley', position: [-8, 112, -282], scale: [118, 26, 1],
+      dayOpacity: 0.052, nightOpacity: 0.02, sunsetWarmth: 0.18, nightTone: 0.86,
+      drift: [0.44, 0.16, 0.009, 2.95], depthTest: false, renderOrder: 1,
+    },
+    // Fine cirrus lives high behind the valley. It is deliberately separate
+    // from the ridge wisps so it can fade away before the night sky arrives.
+    {
+      key: 'cirrus-left', texture: 'cirrus', position: [-176, 268, -339], scale: [236, 30, 1],
+      dayOpacity: 0.55, nightOpacity: 0.001, sunsetWarmth: 0.16, nightTone: 0.65,
+      drift: [0.38, 0.1, 0.006, 0.95], depthTest: false, renderOrder: -2,
+    },
+    {
+      key: 'cirrus-right', texture: 'cirrus', position: [120, 259, -372], scale: [254, 28, 1],
+      dayOpacity: 0.46, nightOpacity: 0.001, sunsetWarmth: 0.14, nightTone: 0.64,
+      drift: [0.3, 0.08, 0.007, 3.35], depthTest: false, renderOrder: -2,
+    },
+  ], [])
 
   return (
-    <group ref={groupRef}>
+    <group ref={groupRef} userData={{ journeySkipPlanarReflection: true }}>
       {clouds.map((cloud, index) => (
-        <mesh
-          key={`${cloud.position.join('-')}-${index}`}
+        <sprite
+          key={cloud.key}
           position={cloud.position}
-          rotation={[0, cloud.yaw, 0]}
           scale={cloud.scale}
-          renderOrder={2}
+          renderOrder={cloud.renderOrder}
           frustumCulled={false}
           userData={{
             baseX: cloud.position[0],
             baseY: cloud.position[1],
-            opacity: cloud.opacity,
-            speed: cloud.speed,
-            tone: cloud.tone,
+            dayOpacity: cloud.dayOpacity,
+            nightOpacity: cloud.nightOpacity,
+            sunsetWarmth: cloud.sunsetWarmth,
+            nightTone: cloud.nightTone,
+            drift: cloud.drift,
           }}
         >
-          <planeGeometry args={[1, 1]} />
-          <meshBasicMaterial
+          <spriteMaterial
             ref={(material) => {
               materialRefs.current[index] = material
             }}
-            map={cloudTexture}
-            alphaMap={cloudTexture}
-            color="#f4f5ef"
+            map={textures[cloud.texture]}
+            color="#dce6e4"
             transparent
             opacity={0}
-            alphaTest={0.018}
+            alphaTest={0.003}
             depthWrite={false}
             depthTest={cloud.depthTest}
+            // These cards live well beyond the global FogExp2 falloff. Let
+            // their own feathered alpha describe the atmosphere instead of
+            // letting the scene fog erase them into a flat horizon colour.
+            fog={false}
             blending={THREE.NormalBlending}
-            side={THREE.FrontSide}
             toneMapped={false}
           />
-        </mesh>
+        </sprite>
       ))}
     </group>
   )
@@ -7340,34 +7407,43 @@ export default function JourneyScene({
     }
 
     if (cloudGroupRef.current) {
-      const openSky = getJourneyValleyFarPresence(progress)
-      const cloudNightFade = 1 - smoothstep(0.12, 0.92, night)
-      const cloudsVisible = openSky * cloudNightFade > 0.002
+      // Keep the cave and Fog/HOLD handoff untouched. These subtle layers
+      // resolve only once the existing open-valley vista is already settling.
+      const atmosphereReveal = smootherstep(
+        LOOKDEV_V2_COMPOSITION.vistaStart,
+        LOOKDEV_V2_COMPOSITION.vistaFull,
+        progress,
+      )
+      const cloudsVisible = atmosphereReveal > 0.002
       cloudGroupRef.current.visible = cloudsVisible
       if (cloudsVisible) {
-        const cloudColor = frameColors.cloud
-          .copy(frameColors.cloudBase)
-          .lerp(frameColors.cloudSunset, sunset * 0.74)
         cloudGroupRef.current.children.forEach((cloud, index) => {
           const material = cloudMaterialRefs.current[index]
+          const [driftX, driftY, driftSpeed, phase] = cloud.userData.drift ?? [0, 0, 0, 0]
+          const dayOpacity = cloud.userData.dayOpacity ?? 0
+          const nightOpacity = cloud.userData.nightOpacity ?? 0
+          const sunsetWarmth = cloud.userData.sunsetWarmth ?? 0
+          const nightTone = cloud.userData.nightTone ?? 0
+          const pulse = 0.93 + Math.sin(state.clock.elapsedTime * 0.032 + phase) * 0.07
           if (material) {
-            material.opacity =
-              openSky * cloudNightFade * (cloud.userData.opacity ?? 0.5) * 0.78
-            material.color.copy(cloudColor).lerp(
-              frameColors.cloudTone,
-              cloud.userData.tone ?? 0,
-            )
+            material.opacity = atmosphereReveal * THREE.MathUtils.lerp(
+              dayOpacity,
+              nightOpacity,
+              night,
+            ) * pulse
+            material.color
+              .copy(frameColors.cloudBase)
+              .lerp(frameColors.cloud.set('#d7e1df'), 0.55)
+              .lerp(frameColors.cloudSunset, sunset * sunsetWarmth * (1 - night * 0.78))
+              .lerp(frameColors.cloudTone, night * nightTone)
           }
           cloud.position.x =
             cloud.userData.baseX +
-            Math.sin(state.clock.elapsedTime * 0.055 + index * 1.9) *
-              cloud.userData.speed *
-              (4.2 + travelWindRef.current * 12)
+            Math.sin(state.clock.elapsedTime * driftSpeed + phase) * driftX
           cloud.position.y =
-            cloud.userData.baseY +
-            Math.sin(state.clock.elapsedTime * 0.12 + index) *
-              travelWindRef.current *
-              0.34
+            cloud.userData.baseY + Math.sin(
+              state.clock.elapsedTime * driftSpeed * 0.71 + index * 1.17 + phase,
+            ) * driftY
         })
       }
     }
