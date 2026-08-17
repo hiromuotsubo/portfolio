@@ -999,6 +999,14 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
   const transitioningRef = useRef(false)
   const homeMotionFrameRef = useRef(null)
   const homeMotionTargetRef = useRef(null)
+  const homeMotionCurrentRef = useRef({
+    x: 0,
+    y: 0,
+    density: 0,
+    refractionX: 12,
+    refractionY: 50,
+    refractionStrength: 0,
+  })
   const navDecodeTimersRef = useRef({})
   const transitionSequenceRef = useRef(0)
   const [activePanel, setActivePanel] = useState('profile')
@@ -1130,41 +1138,127 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
     }
   }, [])
 
+  const updateHomeAtmosphere = useCallback(() => {
+    const target = homeMotionTargetRef.current
+    const current = homeMotionCurrentRef.current
+    if (!target?.element?.isConnected) {
+      homeMotionFrameRef.current = null
+      return
+    }
+
+    const damping = 0.08
+    current.x += (target.x - current.x) * damping
+    current.y += (target.y - current.y) * damping
+    current.density += (target.density - current.density) * damping
+    current.refractionX += (target.refractionX - current.refractionX) * damping
+    current.refractionY += (target.refractionY - current.refractionY) * damping
+    current.refractionStrength += (
+      target.refractionStrength - current.refractionStrength
+    ) * damping
+
+    target.element.style.setProperty('--home-atmosphere-x', `${current.x}px`)
+    target.element.style.setProperty('--home-atmosphere-y', `${current.y}px`)
+    target.element.style.setProperty('--home-atmosphere-density', current.density.toFixed(3))
+    target.element.style.setProperty('--home-atmosphere-bloom-x', `${current.x * -0.38}px`)
+    target.element.style.setProperty('--home-atmosphere-bloom-y', `${current.y * -0.55}px`)
+    target.element.style.setProperty('--home-refraction-x', `${current.refractionX}%`)
+    target.element.style.setProperty('--home-refraction-y', `${current.refractionY}%`)
+    target.element.style.setProperty(
+      '--home-refraction-strength',
+      current.refractionStrength.toFixed(3),
+    )
+
+    const isSettled = (
+      Math.abs(target.x - current.x) < 0.03
+      && Math.abs(target.y - current.y) < 0.03
+      && Math.abs(target.density - current.density) < 0.001
+      && Math.abs(target.refractionX - current.refractionX) < 0.03
+      && Math.abs(target.refractionY - current.refractionY) < 0.03
+      && Math.abs(target.refractionStrength - current.refractionStrength) < 0.001
+    )
+    if (isSettled) {
+      current.x = target.x
+      current.y = target.y
+      current.density = target.density
+      current.refractionX = target.refractionX
+      current.refractionY = target.refractionY
+      current.refractionStrength = target.refractionStrength
+      target.element.style.setProperty('--home-atmosphere-x', `${target.x}px`)
+      target.element.style.setProperty('--home-atmosphere-y', `${target.y}px`)
+      target.element.style.setProperty('--home-atmosphere-density', target.density.toFixed(3))
+      target.element.style.setProperty('--home-atmosphere-bloom-x', `${target.x * -0.38}px`)
+      target.element.style.setProperty('--home-atmosphere-bloom-y', `${target.y * -0.55}px`)
+      target.element.style.setProperty('--home-refraction-x', `${target.refractionX}%`)
+      target.element.style.setProperty('--home-refraction-y', `${target.refractionY}%`)
+      target.element.style.setProperty(
+        '--home-refraction-strength',
+        target.refractionStrength.toFixed(3),
+      )
+      homeMotionFrameRef.current = null
+      return
+    }
+
+    homeMotionFrameRef.current = window.requestAnimationFrame(updateHomeAtmosphere)
+  }, [])
+
+  const queueHomeAtmosphere = useCallback(() => {
+    if (homeMotionFrameRef.current !== null) return
+    homeMotionFrameRef.current = window.requestAnimationFrame(updateHomeAtmosphere)
+  }, [updateHomeAtmosphere])
+
   const moveHomeAtmosphere = useCallback((event) => {
     if (
       window.matchMedia('(prefers-reduced-motion: reduce)').matches ||
-      window.matchMedia('(pointer: coarse)').matches
+      !window.matchMedia('(min-width: 1160px) and (hover: hover) and (pointer: fine)').matches
     ) return
 
     const bounds = event.currentTarget.getBoundingClientRect()
+    const pointerX = (event.clientX - bounds.left) / bounds.width
+    const pointerY = (event.clientY - bounds.top) / bounds.height
+    const boundaryProximity = Math.max(0, 1 - Math.abs(pointerX - 0.465) / 0.44)
+    const refractionProximity = Math.max(0, 1 - Math.abs(pointerX - 0.465) / 0.3)
+    const refractionX = Math.min(94, Math.max(4, ((pointerX - 0.39) / 0.61) * 100))
     homeMotionTargetRef.current = {
       element: event.currentTarget,
-      x: (event.clientX - bounds.left) / bounds.width - 0.5,
-      y: (event.clientY - bounds.top) / bounds.height - 0.5,
+      x: (pointerX - 0.5) * 36,
+      y: (pointerY - 0.5) * 10,
+      density: boundaryProximity * 0.1,
+      refractionX,
+      refractionY: Math.min(88, Math.max(12, pointerY * 100)),
+      refractionStrength: refractionProximity * 0.9,
     }
-    if (homeMotionFrameRef.current !== null) return
-
-    homeMotionFrameRef.current = window.requestAnimationFrame(() => {
-      const target = homeMotionTargetRef.current
-      homeMotionFrameRef.current = null
-      if (!target?.element?.isConnected) return
-      target.element.style.setProperty('--home-reality-x', `${target.x * -7}px`)
-      target.element.style.setProperty('--home-memory-x', `${target.x * 9}px`)
-      target.element.style.setProperty('--home-atmosphere-x', `${target.x * 15}px`)
-      target.element.style.setProperty('--home-atmosphere-y', `${target.y * 5}px`)
-      target.element.style.setProperty('--home-copy-x', `${target.x * 3}px`)
-    })
-  }, [])
+    queueHomeAtmosphere()
+  }, [queueHomeAtmosphere])
 
   const settleHomeAtmosphere = useCallback((event) => {
-    event.currentTarget.style.setProperty('--home-reality-x', '0px')
-    event.currentTarget.style.setProperty('--home-memory-x', '0px')
-    event.currentTarget.style.setProperty('--home-atmosphere-x', '0px')
-    event.currentTarget.style.setProperty('--home-atmosphere-y', '0px')
-    event.currentTarget.style.setProperty('--home-copy-x', '0px')
-  }, [])
+    homeMotionTargetRef.current = {
+      element: event.currentTarget,
+      x: 0,
+      y: 0,
+      density: 0,
+      refractionX: homeMotionCurrentRef.current.refractionX,
+      refractionY: homeMotionCurrentRef.current.refractionY,
+      refractionStrength: 0,
+    }
+    queueHomeAtmosphere()
+  }, [queueHomeAtmosphere])
 
   useEffect(() => {
+    if (page !== 'home') {
+      if (homeMotionFrameRef.current !== null) {
+        window.cancelAnimationFrame(homeMotionFrameRef.current)
+        homeMotionFrameRef.current = null
+      }
+      homeMotionTargetRef.current = null
+      homeMotionCurrentRef.current = {
+        x: 0,
+        y: 0,
+        density: 0,
+        refractionX: 12,
+        refractionY: 50,
+        refractionStrength: 0,
+      }
+    }
     setActivePanel(page === 'project' ? 'origin' : 'profile')
     onScrolledChange(page !== 'home')
     if (page === 'about' || page === 'project') {
@@ -1614,21 +1708,32 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
                     draggable="false"
                   />
                 </div>
+                <div className="portfolio-home__refraction" aria-hidden="true">
+                  <img
+                    src="/portfolio/project-interaction-meadow-v4.jpg"
+                    alt=""
+                    decoding="async"
+                    draggable="false"
+                  />
+                </div>
                 <div className="portfolio-home__threshold" aria-hidden="true" />
+                <figcaption>
+                  <span>FIELD REFERENCE / KAMIKOCHI</span>
+                  <span>RECONSTRUCTED / WEBGL / 2026</span>
+                </figcaption>
               </figure>
 
               <div className="portfolio-home__copy">
                 <h1 id="portfolio-home-title" tabIndex={-1}>Journey</h1>
-                <p>An interactive landscape inspired by Kamikochi.</p>
+                <p>A memory of Kamikochi, rebuilt as an interactive landscape.</p>
                 <button type="button" onClick={onReplay}><span>EXPERIENCE JOURNEY</span><NavigationArrow /></button>
               </div>
             </div>
 
             <dl className="portfolio-home__meta">
-              <div><dt>ROLE</dt><dd>ART DIRECTION / 3D / DEVELOPMENT</dd></div>
-              <div><dt>EXPERIENCE</dt><dd>SCROLL / HOLD / SPATIAL AUDIO</dd></div>
-              <div><dt>BUILT WITH</dt><dd>BLENDER / REACT / THREE.JS</dd></div>
-              <div><dt>YEAR</dt><dd>2026</dd></div>
+              <div><dt>ROLE</dt><dd><span>ART DIRECTION /</span><span>3D / DEVELOPMENT</span></dd></div>
+              <div><dt>INTERACTION</dt><dd><span>SCROLL / HOLD /</span><span>SPATIAL AUDIO</span></dd></div>
+              <div><dt>BUILT WITH</dt><dd><span>BLENDER / REACT /</span><span>THREE.JS</span></dd></div>
             </dl>
           </section>
         ) : null}
