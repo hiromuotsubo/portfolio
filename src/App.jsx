@@ -1139,7 +1139,7 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
       return
     }
 
-    const damping = 0.1
+    const damping = 0.08
     current.x += (target.x - current.x) * damping
     current.y += (target.y - current.y) * damping
     current.density += (target.density - current.density) * damping
@@ -1147,6 +1147,8 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
     target.element.style.setProperty('--home-atmosphere-x', `${current.x}px`)
     target.element.style.setProperty('--home-atmosphere-y', `${current.y}px`)
     target.element.style.setProperty('--home-atmosphere-density', current.density.toFixed(3))
+    target.element.style.setProperty('--home-atmosphere-bloom-x', `${current.x * -0.38}px`)
+    target.element.style.setProperty('--home-atmosphere-bloom-y', `${current.y * -0.55}px`)
 
     const isSettled = (
       Math.abs(target.x - current.x) < 0.03
@@ -1160,6 +1162,8 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
       target.element.style.setProperty('--home-atmosphere-x', `${target.x}px`)
       target.element.style.setProperty('--home-atmosphere-y', `${target.y}px`)
       target.element.style.setProperty('--home-atmosphere-density', target.density.toFixed(3))
+      target.element.style.setProperty('--home-atmosphere-bloom-x', `${target.x * -0.38}px`)
+      target.element.style.setProperty('--home-atmosphere-bloom-y', `${target.y * -0.55}px`)
       homeMotionFrameRef.current = null
       return
     }
@@ -1184,9 +1188,9 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
     const boundaryProximity = Math.max(0, 1 - Math.abs(pointerX - 0.465) / 0.44)
     homeMotionTargetRef.current = {
       element: event.currentTarget,
-      x: (pointerX - 0.5) * 24,
-      y: (pointerY - 0.5) * 6,
-      density: boundaryProximity * 0.032,
+      x: (pointerX - 0.5) * 36,
+      y: (pointerY - 0.5) * 10,
+      density: boundaryProximity * 0.1,
     }
     queueHomeAtmosphere()
   }, [queueHomeAtmosphere])
