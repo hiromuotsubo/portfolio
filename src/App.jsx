@@ -829,7 +829,7 @@ const ABOUT_PINNED_VISUALS = {
 const PROJECT_PINNED_VISUALS = {
   origin: [
     { src: '/portfolio/project-pinned/origin-field.jpg', alt: 'The real Kamikochi valley and Azusa River that inspired Journey', label: 'FIELD / KAMIKOCHI' },
-    { src: '/portfolio/project-pinned/origin-blender.jpg', alt: 'The Journey valley terrain being shaped as a Blender model', label: 'MASSING / BLENDER', fit: 'contain' },
+    { src: '/portfolio/project-pinned/origin-blender-clean.png', alt: 'The Journey valley terrain being shaped as a Blender model', label: 'MASSING / BLENDER' },
     { src: '/portfolio/project-pinned/terrain-day.jpg', alt: 'The finished Journey valley in clear daylight', label: 'EXPERIENCE / WEBGL' },
   ],
   contrast: [
