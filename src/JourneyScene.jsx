@@ -62,7 +62,8 @@ const LOOKDEV_V2_COMPOSITION = {
   // same composition instead of revealing a second, wider camera setup.
   revealStart: 14.8,
   vistaStart: 14.8,
-  vistaFull: 20,
+  vistaFull: 24,
+  atmosphereFull: 20,
   vistaFadeStart: 56,
   vistaFadeEnd: 68,
   // The source clip opens on a close valley floor. A more deliberate pullback
@@ -954,77 +955,6 @@ function createCloudTexture(seed) {
   verticalMask.addColorStop(0, 'rgba(255,255,255,0)')
   verticalMask.addColorStop(0.24, 'rgba(255,255,255,1)')
   verticalMask.addColorStop(0.76, 'rgba(255,255,255,1)')
-  verticalMask.addColorStop(1, 'rgba(255,255,255,0)')
-  context.fillStyle = verticalMask
-  context.fillRect(0, 0, canvas.width, canvas.height)
-  context.globalCompositeOperation = 'source-over'
-
-  const texture = new THREE.CanvasTexture(canvas)
-  texture.colorSpace = THREE.SRGBColorSpace
-  texture.premultiplyAlpha = false
-  texture.generateMipmaps = false
-  texture.minFilter = THREE.LinearFilter
-  texture.magFilter = THREE.LinearFilter
-  texture.needsUpdate = true
-  return texture
-}
-
-function createRidgeCloudTexture(seed, reverse = false) {
-  const canvas = document.createElement('canvas')
-  canvas.width = 1024
-  canvas.height = 320
-  const context = canvas.getContext('2d')
-  context.clearRect(0, 0, canvas.width, canvas.height)
-  context.save()
-  context.filter = 'blur(7px)'
-
-  const puffCount = 24
-  for (let index = 0; index < puffCount; index += 1) {
-    const rawT = index / (puffCount - 1)
-    const t = reverse ? 1 - rawT : rawT
-    const x = 58 + rawT * 908 + (seededRandom(seed + index * 37) - 0.5) * 28
-    const ridgeArc = Math.sin(Math.PI * t)
-    const y = 176 - ridgeArc * 52 + (seededRandom(seed + index * 43) - 0.5) * 34
-    const radiusX = 44 + seededRandom(seed + index * 53) * 76
-    const radiusY = 18 + seededRandom(seed + index * 61) * 31
-    const alpha = 0.3 + seededRandom(seed + index * 71) * 0.2
-    context.beginPath()
-    context.ellipse(x, y, radiusX, radiusY, 0, 0, Math.PI * 2)
-    context.fillStyle = `rgba(240, 246, 244, ${alpha})`
-    context.fill()
-  }
-
-  context.filter = 'blur(3px)'
-  for (let index = 0; index < 14; index += 1) {
-    const rawT = index / 13
-    const t = reverse ? 1 - rawT : rawT
-    const x = 70 + rawT * 884 + (seededRandom(seed + index * 113) - 0.5) * 42
-    const y = 164 - Math.sin(Math.PI * t) * 48 +
-      (seededRandom(seed + index * 127) - 0.5) * 24
-    const radiusX = 20 + seededRandom(seed + index * 131) * 34
-    const radiusY = 9 + seededRandom(seed + index * 137) * 15
-    context.beginPath()
-    context.ellipse(x, y, radiusX, radiusY, 0, 0, Math.PI * 2)
-    context.fillStyle = `rgba(244, 248, 246, ${0.1 + seededRandom(seed + index * 139) * 0.09})`
-    context.fill()
-  }
-
-  context.restore()
-
-  context.globalCompositeOperation = 'destination-in'
-  const horizontalMask = context.createLinearGradient(0, 0, canvas.width, 0)
-  horizontalMask.addColorStop(0, 'rgba(255,255,255,0)')
-  horizontalMask.addColorStop(0.09, 'rgba(255,255,255,0.88)')
-  horizontalMask.addColorStop(0.5, 'rgba(255,255,255,1)')
-  horizontalMask.addColorStop(0.91, 'rgba(255,255,255,0.84)')
-  horizontalMask.addColorStop(1, 'rgba(255,255,255,0)')
-  context.fillStyle = horizontalMask
-  context.fillRect(0, 0, canvas.width, canvas.height)
-
-  const verticalMask = context.createLinearGradient(0, 0, 0, canvas.height)
-  verticalMask.addColorStop(0, 'rgba(255,255,255,0)')
-  verticalMask.addColorStop(0.19, 'rgba(255,255,255,0.9)')
-  verticalMask.addColorStop(0.66, 'rgba(255,255,255,1)')
   verticalMask.addColorStop(1, 'rgba(255,255,255,0)')
   context.fillStyle = verticalMask
   context.fillRect(0, 0, canvas.width, canvas.height)
@@ -3739,8 +3669,6 @@ function DriftingClouds({ groupRef, materialRefs }) {
   const textures = useMemo(() => ({
     ridgePhotoLeft: createPhotographicCloudTexture(ridgeSourceTexture),
     ridgePhotoRight: createPhotographicCloudTexture(ridgeSourceTexture, true),
-    ridgeLeft: createRidgeCloudTexture(68171),
-    ridgeRight: createRidgeCloudTexture(68239, true),
     valley: createCloudTexture(68431),
     cirrus: createCirrusTexture(68767),
   }), [ridgeSourceTexture])
@@ -3748,8 +3676,6 @@ function DriftingClouds({ groupRef, materialRefs }) {
     () => () => {
       textures.ridgePhotoLeft.dispose()
       textures.ridgePhotoRight.dispose()
-      textures.ridgeLeft.dispose()
-      textures.ridgeRight.dispose()
       textures.valley.dispose()
       textures.cirrus.dispose()
     },
@@ -3762,25 +3688,25 @@ function DriftingClouds({ groupRef, materialRefs }) {
     {
       key: 'left-ridge-base', type: 'sprite', texture: 'ridgePhotoLeft',
       position: [-136, 143, -218], scale: [220, 86, 1],
-      dayOpacity: 0.31, nightOpacity: 0.004, nightTone: 0.72,
+      dayOpacity: 0.38, nightOpacity: 0.004, nightTone: 0.72,
       drift: [0.64, 0.2, 0.012, 0.4], depthTest: false, renderOrder: 2,
     },
     {
-      key: 'left-ridge-wisp', type: 'sprite', texture: 'ridgeLeft',
-      position: [-109, 136, -226], scale: [142, 36, 1],
-      dayOpacity: 0.17, nightOpacity: 0.002, nightTone: 0.7,
+      key: 'left-ridge-wisp', type: 'sprite', texture: 'ridgePhotoRight',
+      position: [-105, 133, -226], scale: [158, 38, 1],
+      dayOpacity: 0.13, nightOpacity: 0.002, nightTone: 0.7,
       drift: [0.46, 0.14, 0.01, 1.24], depthTest: false, renderOrder: 3,
     },
     {
       key: 'right-ridge-base', type: 'sprite', texture: 'ridgePhotoRight',
       position: [210, 194, -269], scale: [320, 96, 1],
-      dayOpacity: 0.33, nightOpacity: 0.022, nightTone: 0.78,
+      dayOpacity: 0.43, nightOpacity: 0.022, nightTone: 0.78,
       drift: [0.8, 0.24, 0.01, 2.1], depthTest: false, renderOrder: 2,
     },
     {
-      key: 'right-ridge-wisp', type: 'sprite', texture: 'ridgeRight',
-      position: [184, 160, -280], scale: [218, 48, 1],
-      dayOpacity: 0.27, nightOpacity: 0.01, nightTone: 0.82,
+      key: 'right-ridge-wisp', type: 'sprite', texture: 'ridgePhotoLeft',
+      position: [184, 160, -280], scale: [224, 50, 1],
+      dayOpacity: 0.18, nightOpacity: 0.01, nightTone: 0.82,
       drift: [0.54, 0.16, 0.009, 3.25], depthTest: false, renderOrder: 3,
     },
     // This far layer sits below the saddle, opening a milky distance cue
@@ -6764,7 +6690,7 @@ export default function JourneyScene({
       skySunSunset: new THREE.Color('#ffb077'),
       skySunNight: new THREE.Color('#7896c8'),
       cloudBase: new THREE.Color('#d2dedf'),
-      cloudSunset: new THREE.Color('#c27b88'),
+      cloudSunset: new THREE.Color('#d18d88'),
       cloudTone: new THREE.Color('#53677f'),
       valleyFogBase: new THREE.Color('#cddbd3'),
       valleyFogSunset: new THREE.Color('#e7b3a2'),
@@ -7111,13 +7037,13 @@ export default function JourneyScene({
 
       const openVista = smoothstep(
         LOOKDEV_V2_COMPOSITION.revealStart,
-        CAVE_CAMERA_RELEASE_END,
-        cameraProgress,
+        LOOKDEV_V2_COMPOSITION.vistaFull,
+        progress,
       )
       const vistaComposition = smoothstep(
         LOOKDEV_V2_COMPOSITION.vistaStart,
         LOOKDEV_V2_COMPOSITION.vistaFull,
-        cameraProgress,
+        progress,
       ) * (1 - smoothstep(
         LOOKDEV_V2_COMPOSITION.vistaFadeStart,
         LOOKDEV_V2_COMPOSITION.vistaFadeEnd,
@@ -7583,7 +7509,7 @@ export default function JourneyScene({
       // resolve only once the existing open-valley vista is already settling.
       const atmosphereReveal = smootherstep(
         LOOKDEV_V2_COMPOSITION.vistaStart,
-        LOOKDEV_V2_COMPOSITION.vistaFull,
+        LOOKDEV_V2_COMPOSITION.atmosphereFull,
         progress,
       )
       const cloudsVisible = atmosphereReveal > 0.002
@@ -7597,7 +7523,9 @@ export default function JourneyScene({
           const nightTone = cloud.userData.nightTone ?? 0
           const pulse = 0.93 + Math.sin(state.clock.elapsedTime * 0.032 + phase) * 0.07
           if (material) {
-            const sunsetOpacity = 1 - sunset * (1 - night) * 0.24
+            // Sunset changes the cloud hue with the sky; retain enough density
+            // for the ridge veil to stay legible without reverting to white.
+            const sunsetOpacity = 1 - sunset * (1 - night) * 0.08
             material.opacity = atmosphereReveal * THREE.MathUtils.lerp(
               dayOpacity,
               nightOpacity,

@@ -1,5 +1,6 @@
 import { Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
+import { useProgress } from '@react-three/drei'
 import * as THREE from 'three'
 import JourneyScene from './JourneyScene.jsx'
 
@@ -465,6 +466,7 @@ export default function JourneyCanvas({
   onAssetsProgress,
   onListenerPose,
 }) {
+  const resourceLoad = useProgress()
   const [qualityTier] = useState(getInitialQuality)
   const [diagnostics] = useState(getPerformanceDiagnostics)
   const [performanceProbeEnabled] = useState(
@@ -478,6 +480,17 @@ export default function JourneyCanvas({
       shadows: baseQuality.shadows && !diagnostics.disabled.shadows,
     })
   }, [diagnostics, qualityTier])
+
+  useEffect(() => {
+    // Network decoding owns the first 55%. The remaining range is reported by
+    // JourneyVisualReadyBridge only when shader compilation, the hidden warm
+    // render, texture upload and renderer quiescence actually complete.
+    const resourceProgress = THREE.MathUtils.clamp(resourceLoad.progress, 0, 100)
+    onAssetsProgress?.({
+      active: true,
+      progress: resourceProgress * 0.55,
+    })
+  }, [onAssetsProgress, resourceLoad.progress])
 
   return (
     <Canvas

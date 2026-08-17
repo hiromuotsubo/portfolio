@@ -669,18 +669,16 @@ function ExperienceLoader({
     : 0
   const scenePrepared = !assetsActive && safeAssetProgress >= 100
   const ready = scenePrepared && audioPrepared
-  const loaderPhase = scenePrepared
+  const displayedProgress = ready ? 100 : Math.min(safeAssetProgress, 99)
+  const loaderLabel = scenePrepared
     ? audioPrepared
-      ? { number: 4, label: 'JOURNEY READY' }
-      : { number: 4, label: 'PREPARING SOUND' }
+      ? 'JOURNEY READY'
+      : 'PREPARING SOUND'
     : safeAssetProgress >= 90
-      ? { number: 4, label: 'FINALIZING THE WORLD' }
-      : safeAssetProgress >= 78
-        ? { number: 3, label: 'COMPILING LIGHT & MATERIAL' }
-        : safeAssetProgress >= 60
-          ? { number: 2, label: 'UPLOADING THE LANDSCAPE' }
-          : { number: 1, label: 'LOADING THE LANDSCAPE' }
-  const displayedProgress = loaderPhase.number / 4 * 100
+      ? 'FINALIZING THE WORLD'
+      : safeAssetProgress >= 60
+        ? 'COMPILING LIGHT & MATERIAL'
+        : 'LOADING THE LANDSCAPE'
 
   useEffect(() => {
     if (ready) {
@@ -719,16 +717,17 @@ function ExperienceLoader({
         <div
           className="experience-loader__count"
           role="progressbar"
-          aria-label={loaderPhase.label}
-          aria-valuemin="1"
-          aria-valuemax="4"
-          aria-valuenow={loaderPhase.number}
+          aria-label={loaderLabel}
+          aria-valuemin="0"
+          aria-valuemax="100"
+          aria-valuenow={Math.round(displayedProgress)}
+          aria-valuetext={`${Math.round(displayedProgress)} percent — ${loaderLabel}`}
         >
           <span>
-            {loaderPhase.number.toString().padStart(2, '0')}
-            <small>/04</small>
+            {Math.round(displayedProgress)}
+            <small>%</small>
           </span>
-          <small className="experience-loader__phase">{loaderPhase.label}</small>
+          <small className="experience-loader__phase">{loaderLabel}</small>
           <i aria-hidden="true"><b style={{ width: `${displayedProgress}%` }} /></i>
         </div>
         <div className="experience-loader__action">
@@ -1926,11 +1925,15 @@ function LegacyApp() {
     const safeProgress = Number.isFinite(nextProgress)
       ? clamp(nextProgress, 0, 100)
       : 0
-    setJourneyAssets((current) =>
-      current.active === Boolean(active) && Math.abs(current.progress - safeProgress) < 0.05
+    setJourneyAssets((current) => {
+      if (current.progress >= 100) return current
+      const monotonicProgress = Math.max(current.progress, safeProgress)
+      const nextActive = monotonicProgress >= 100 ? false : Boolean(active)
+      return current.active === nextActive &&
+        Math.abs(current.progress - monotonicProgress) < 0.05
         ? current
-        : { active: Boolean(active), progress: safeProgress },
-    )
+        : { active: nextActive, progress: monotonicProgress }
+    })
   }, [])
 
   useEffect(() => {
