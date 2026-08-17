@@ -1000,12 +1000,9 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
   const homeMotionFrameRef = useRef(null)
   const homeMotionTargetRef = useRef(null)
   const homeMotionCurrentRef = useRef({
-    x: 0,
-    y: 0,
-    density: 0,
-    refractionX: 12,
-    refractionY: 50,
-    refractionStrength: 0,
+    mistX: 50,
+    mistY: 50,
+    clarity: 0,
   })
   const navDecodeTimersRef = useRef({})
   const transitionSequenceRef = useRef(0)
@@ -1147,52 +1144,39 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
     }
 
     const damping = 0.08
-    current.x += (target.x - current.x) * damping
-    current.y += (target.y - current.y) * damping
-    current.density += (target.density - current.density) * damping
-    current.refractionX += (target.refractionX - current.refractionX) * damping
-    current.refractionY += (target.refractionY - current.refractionY) * damping
-    current.refractionStrength += (
-      target.refractionStrength - current.refractionStrength
-    ) * damping
+    current.mistX += (target.mistX - current.mistX) * damping
+    current.mistY += (target.mistY - current.mistY) * damping
+    current.clarity += (target.clarity - current.clarity) * damping
 
-    target.element.style.setProperty('--home-atmosphere-x', `${current.x}px`)
-    target.element.style.setProperty('--home-atmosphere-y', `${current.y}px`)
-    target.element.style.setProperty('--home-atmosphere-density', current.density.toFixed(3))
-    target.element.style.setProperty('--home-atmosphere-bloom-x', `${current.x * -0.38}px`)
-    target.element.style.setProperty('--home-atmosphere-bloom-y', `${current.y * -0.55}px`)
-    target.element.style.setProperty('--home-refraction-x', `${current.refractionX}%`)
-    target.element.style.setProperty('--home-refraction-y', `${current.refractionY}%`)
+    target.element.style.setProperty('--home-mist-x', `${current.mistX}%`)
+    target.element.style.setProperty('--home-mist-y', `${current.mistY}%`)
     target.element.style.setProperty(
-      '--home-refraction-strength',
-      current.refractionStrength.toFixed(3),
+      '--home-mist-center-alpha',
+      (1 - current.clarity).toFixed(3),
+    )
+    target.element.style.setProperty(
+      '--home-mist-mid-alpha',
+      (1 - current.clarity * 0.52).toFixed(3),
     )
 
     const isSettled = (
-      Math.abs(target.x - current.x) < 0.03
-      && Math.abs(target.y - current.y) < 0.03
-      && Math.abs(target.density - current.density) < 0.001
-      && Math.abs(target.refractionX - current.refractionX) < 0.03
-      && Math.abs(target.refractionY - current.refractionY) < 0.03
-      && Math.abs(target.refractionStrength - current.refractionStrength) < 0.001
+      Math.abs(target.mistX - current.mistX) < 0.03
+      && Math.abs(target.mistY - current.mistY) < 0.03
+      && Math.abs(target.clarity - current.clarity) < 0.001
     )
     if (isSettled) {
-      current.x = target.x
-      current.y = target.y
-      current.density = target.density
-      current.refractionX = target.refractionX
-      current.refractionY = target.refractionY
-      current.refractionStrength = target.refractionStrength
-      target.element.style.setProperty('--home-atmosphere-x', `${target.x}px`)
-      target.element.style.setProperty('--home-atmosphere-y', `${target.y}px`)
-      target.element.style.setProperty('--home-atmosphere-density', target.density.toFixed(3))
-      target.element.style.setProperty('--home-atmosphere-bloom-x', `${target.x * -0.38}px`)
-      target.element.style.setProperty('--home-atmosphere-bloom-y', `${target.y * -0.55}px`)
-      target.element.style.setProperty('--home-refraction-x', `${target.refractionX}%`)
-      target.element.style.setProperty('--home-refraction-y', `${target.refractionY}%`)
+      current.mistX = target.mistX
+      current.mistY = target.mistY
+      current.clarity = target.clarity
+      target.element.style.setProperty('--home-mist-x', `${target.mistX}%`)
+      target.element.style.setProperty('--home-mist-y', `${target.mistY}%`)
       target.element.style.setProperty(
-        '--home-refraction-strength',
-        target.refractionStrength.toFixed(3),
+        '--home-mist-center-alpha',
+        (1 - target.clarity).toFixed(3),
+      )
+      target.element.style.setProperty(
+        '--home-mist-mid-alpha',
+        (1 - target.clarity * 0.52).toFixed(3),
       )
       homeMotionFrameRef.current = null
       return
@@ -1215,17 +1199,12 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
     const bounds = event.currentTarget.getBoundingClientRect()
     const pointerX = (event.clientX - bounds.left) / bounds.width
     const pointerY = (event.clientY - bounds.top) / bounds.height
-    const boundaryProximity = Math.max(0, 1 - Math.abs(pointerX - 0.465) / 0.44)
-    const refractionProximity = Math.max(0, 1 - Math.abs(pointerX - 0.465) / 0.3)
-    const refractionX = Math.min(94, Math.max(4, ((pointerX - 0.39) / 0.61) * 100))
+    const boundaryProximity = Math.max(0, 1 - Math.abs(pointerX - 0.46) / 0.18)
     homeMotionTargetRef.current = {
       element: event.currentTarget,
-      x: (pointerX - 0.5) * 36,
-      y: (pointerY - 0.5) * 10,
-      density: boundaryProximity * 0.1,
-      refractionX,
-      refractionY: Math.min(88, Math.max(12, pointerY * 100)),
-      refractionStrength: refractionProximity * 0.9,
+      mistX: Math.min(92, Math.max(8, ((pointerX - 0.36) / 0.2) * 100)),
+      mistY: Math.min(88, Math.max(12, pointerY * 100)),
+      clarity: boundaryProximity * 0.72,
     }
     queueHomeAtmosphere()
   }, [queueHomeAtmosphere])
@@ -1233,12 +1212,9 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
   const settleHomeAtmosphere = useCallback((event) => {
     homeMotionTargetRef.current = {
       element: event.currentTarget,
-      x: 0,
-      y: 0,
-      density: 0,
-      refractionX: homeMotionCurrentRef.current.refractionX,
-      refractionY: homeMotionCurrentRef.current.refractionY,
-      refractionStrength: 0,
+      mistX: homeMotionCurrentRef.current.mistX,
+      mistY: homeMotionCurrentRef.current.mistY,
+      clarity: 0,
     }
     queueHomeAtmosphere()
   }, [queueHomeAtmosphere])
@@ -1251,12 +1227,9 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
       }
       homeMotionTargetRef.current = null
       homeMotionCurrentRef.current = {
-        x: 0,
-        y: 0,
-        density: 0,
-        refractionX: 12,
-        refractionY: 50,
-        refractionStrength: 0,
+        mistX: 50,
+        mistY: 50,
+        clarity: 0,
       }
     }
     setActivePanel(page === 'project' ? 'origin' : 'profile')
@@ -1705,14 +1678,6 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
                     alt=""
                     decoding="async"
                     fetchPriority="high"
-                    draggable="false"
-                  />
-                </div>
-                <div className="portfolio-home__refraction" aria-hidden="true">
-                  <img
-                    src="/portfolio/project-interaction-meadow-v4.jpg"
-                    alt=""
-                    decoding="async"
                     draggable="false"
                   />
                 </div>
