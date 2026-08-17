@@ -979,7 +979,7 @@ function createCirrusTexture(seed) {
   context.filter = 'blur(5px)'
   context.lineCap = 'round'
 
-  for (let index = 0; index < 9; index += 1) {
+  for (let index = 0; index < 11; index += 1) {
     const y = 22 + seededRandom(seed + index * 31) * 96
     const start = -54 + seededRandom(seed + index * 43) * 96
     const end = 492 + seededRandom(seed + index * 59) * 156
@@ -994,8 +994,8 @@ function createCirrusTexture(seed) {
       end,
       y + bend * 0.3,
     )
-    context.strokeStyle = `rgba(242, 247, 246, ${0.1 + seededRandom(seed + index * 83) * 0.09})`
-    context.lineWidth = 3.2 + seededRandom(seed + index * 97) * 3.4
+    context.strokeStyle = `rgba(242, 247, 246, ${0.12 + seededRandom(seed + index * 83) * 0.1})`
+    context.lineWidth = 4 + seededRandom(seed + index * 97) * 3.5
     context.stroke()
   }
   context.restore()
@@ -3621,93 +3621,150 @@ function SkyBridge({ meshRef }) {
 }
 
 function DriftingClouds({ groupRef, materialRefs }) {
+  const ridgeTexture = useTexture('/journey/textures/phase3/alpine-cloud-additive.webp')
+  ridgeTexture.colorSpace = THREE.SRGBColorSpace
+  ridgeTexture.generateMipmaps = false
+  ridgeTexture.minFilter = THREE.LinearFilter
+  ridgeTexture.magFilter = THREE.LinearFilter
   const textures = useMemo(() => ({
-    ridge: createCloudTexture(68102),
+    ridge: ridgeTexture,
     valley: createCloudTexture(68431),
     cirrus: createCirrusTexture(68767),
-  }), [])
-  useEffect(() => () => Object.values(textures).forEach((texture) => texture.dispose()), [textures])
+  }), [ridgeTexture])
+  useEffect(
+    () => () => {
+      textures.valley.dispose()
+      textures.cirrus.dispose()
+    },
+    [textures],
+  )
 
   const clouds = useMemo(() => [
-    // Very little cloud sits on the left crest: it only rounds the hardest
-    // silhouette rather than turning the mountain into a weather effect.
+    // Two shallow world-space layers let the clouds sit on the ridges rather
+    // than reading as isolated camera-facing puffs.
     {
-      key: 'left-ridge', texture: 'ridge', position: [-142, 148, -218], scale: [82, 22, 1],
-      dayOpacity: 0.095, nightOpacity: 0.004, sunsetWarmth: 0.24, nightTone: 0.72,
-      drift: [0.72, 0.22, 0.014, 0.4], depthTest: false, renderOrder: 2,
-    },
-    // Two offset wisps keep the right summit irregular, with a slightly
-    // stronger foreground lobe and a quieter halo behind the ridge.
-    {
-      key: 'right-ridge-main', texture: 'ridge', position: [143, 202, -269], scale: [108, 26, 1],
-      dayOpacity: 0.145, nightOpacity: 0.022, sunsetWarmth: 0.34, nightTone: 0.78,
-      drift: [0.88, 0.26, 0.011, 1.45], depthTest: false, renderOrder: 2,
+      key: 'left-ridge-base', type: 'mesh', texture: 'ridge', alphaMap: 'ridge',
+      position: [-136, 157, -218], scale: [150, 50, 1], yaw: -0.04,
+      dayOpacity: 0.44, nightOpacity: 0.004, sunsetWarmth: 0.24, nightTone: 0.72,
+      drift: [0.64, 0.2, 0.012, 0.4], depthTest: false, renderOrder: 2,
     },
     {
-      key: 'right-ridge-rear', texture: 'ridge', position: [105, 188, -312], scale: [84, 20, 1],
-      dayOpacity: 0.045, nightOpacity: 0.01, sunsetWarmth: 0.28, nightTone: 0.84,
-      drift: [0.56, 0.18, 0.017, 2.2], depthTest: true, renderOrder: 1,
+      key: 'left-ridge-wisp', type: 'mesh', texture: 'valley',
+      position: [-114, 150, -226], scale: [130, 26, 1], yaw: -0.02,
+      dayOpacity: 0.25, nightOpacity: 0.002, sunsetWarmth: 0.16, nightTone: 0.7,
+      drift: [0.46, 0.14, 0.01, 1.24], depthTest: false, renderOrder: 3,
     },
-    // This sits behind the saddle. Its faded, irregular alpha produces depth
-    // without recreating the old view-facing fog-plane artefact.
     {
-      key: 'far-valley', texture: 'valley', position: [-8, 112, -282], scale: [118, 26, 1],
-      dayOpacity: 0.052, nightOpacity: 0.02, sunsetWarmth: 0.18, nightTone: 0.86,
-      drift: [0.44, 0.16, 0.009, 2.95], depthTest: false, renderOrder: 1,
+      key: 'right-ridge-base', type: 'mesh', texture: 'ridge', alphaMap: 'ridge',
+      position: [143, 210, -269], scale: [176, 54, 1], yaw: 0.035,
+      dayOpacity: 0.65, nightOpacity: 0.022, sunsetWarmth: 0.34, nightTone: 0.78,
+      drift: [0.8, 0.24, 0.01, 2.1], depthTest: false, renderOrder: 2,
+    },
+    {
+      key: 'right-ridge-wisp', type: 'mesh', texture: 'valley',
+      position: [118, 197, -280], scale: [154, 30, 1], yaw: 0.02,
+      dayOpacity: 0.35, nightOpacity: 0.01, sunsetWarmth: 0.24, nightTone: 0.82,
+      drift: [0.54, 0.16, 0.009, 3.25], depthTest: false, renderOrder: 3,
+    },
+    // This far layer sits below the saddle, opening a milky distance cue
+    // without reintroducing a horizontal fog-bank treatment.
+    {
+      key: 'far-valley', type: 'mesh', texture: 'valley',
+      position: [-9, 104, -255], scale: [160, 42, 1], yaw: 0,
+      dayOpacity: 0.24, nightOpacity: 0.025, sunsetWarmth: 0.18, nightTone: 0.86,
+      drift: [0.36, 0.12, 0.008, 4.2], depthTest: false, renderOrder: 1,
+    },
+    {
+      key: 'far-valley-rear', type: 'mesh', texture: 'valley',
+      position: [22, 118, -300], scale: [105, 28, 1], yaw: 0.018,
+      dayOpacity: 0.13, nightOpacity: 0.016, sunsetWarmth: 0.14, nightTone: 0.88,
+      drift: [0.24, 0.08, 0.007, 5.05], depthTest: false, renderOrder: 0,
     },
     // Fine cirrus lives high behind the valley. It is deliberately separate
     // from the ridge wisps so it can fade away before the night sky arrives.
     {
-      key: 'cirrus-left', texture: 'cirrus', position: [-176, 268, -339], scale: [236, 30, 1],
-      dayOpacity: 0.55, nightOpacity: 0.001, sunsetWarmth: 0.16, nightTone: 0.65,
+      key: 'cirrus-left', type: 'sprite', texture: 'cirrus', position: [-176, 232, -339], scale: [282, 30, 1],
+      dayOpacity: 0.56, nightOpacity: 0.001, sunsetWarmth: 0.16, nightTone: 0.65,
       drift: [0.38, 0.1, 0.006, 0.95], depthTest: false, renderOrder: -2,
     },
     {
-      key: 'cirrus-right', texture: 'cirrus', position: [120, 259, -372], scale: [254, 28, 1],
-      dayOpacity: 0.46, nightOpacity: 0.001, sunsetWarmth: 0.14, nightTone: 0.64,
+      key: 'cirrus-right', type: 'sprite', texture: 'cirrus', position: [120, 226, -372], scale: [300, 28, 1],
+      dayOpacity: 0.48, nightOpacity: 0.001, sunsetWarmth: 0.14, nightTone: 0.64,
       drift: [0.3, 0.08, 0.007, 3.35], depthTest: false, renderOrder: -2,
     },
   ], [])
 
   return (
     <group ref={groupRef} userData={{ journeySkipPlanarReflection: true }}>
-      {clouds.map((cloud, index) => (
-        <sprite
-          key={cloud.key}
-          position={cloud.position}
-          scale={cloud.scale}
-          renderOrder={cloud.renderOrder}
-          frustumCulled={false}
-          userData={{
-            baseX: cloud.position[0],
-            baseY: cloud.position[1],
-            dayOpacity: cloud.dayOpacity,
-            nightOpacity: cloud.nightOpacity,
-            sunsetWarmth: cloud.sunsetWarmth,
-            nightTone: cloud.nightTone,
-            drift: cloud.drift,
-          }}
-        >
-          <spriteMaterial
-            ref={(material) => {
-              materialRefs.current[index] = material
-            }}
-            map={textures[cloud.texture]}
-            color="#dce6e4"
-            transparent
-            opacity={0}
-            alphaTest={0.003}
-            depthWrite={false}
-            depthTest={cloud.depthTest}
-            // These cards live well beyond the global FogExp2 falloff. Let
-            // their own feathered alpha describe the atmosphere instead of
-            // letting the scene fog erase them into a flat horizon colour.
-            fog={false}
-            blending={THREE.NormalBlending}
-            toneMapped={false}
-          />
-        </sprite>
-      ))}
+      {clouds.map((cloud, index) => {
+        const userData = {
+          baseX: cloud.position[0],
+          baseY: cloud.position[1],
+          dayOpacity: cloud.dayOpacity,
+          nightOpacity: cloud.nightOpacity,
+          sunsetWarmth: cloud.sunsetWarmth,
+          nightTone: cloud.nightTone,
+          drift: cloud.drift,
+        }
+        if (cloud.type === 'mesh') {
+          return (
+            <mesh
+              key={cloud.key}
+              position={cloud.position}
+              rotation={[0, cloud.yaw ?? 0, 0]}
+              scale={cloud.scale}
+              renderOrder={cloud.renderOrder}
+              frustumCulled={false}
+              userData={userData}
+            >
+              <planeGeometry args={[1, 1]} />
+              <meshBasicMaterial
+                ref={(material) => {
+                  materialRefs.current[index] = material
+                }}
+                map={textures[cloud.texture]}
+                alphaMap={cloud.alphaMap ? textures[cloud.alphaMap] : undefined}
+                color="#dce6e4"
+                transparent
+                opacity={0}
+                alphaTest={0.003}
+                depthWrite={false}
+                depthTest={cloud.depthTest}
+                fog={false}
+                blending={THREE.NormalBlending}
+                side={THREE.FrontSide}
+                toneMapped={false}
+              />
+            </mesh>
+          )
+        }
+        return (
+          <sprite
+            key={cloud.key}
+            position={cloud.position}
+            scale={cloud.scale}
+            renderOrder={cloud.renderOrder}
+            frustumCulled={false}
+            userData={userData}
+          >
+            <spriteMaterial
+              ref={(material) => {
+                materialRefs.current[index] = material
+              }}
+              map={textures[cloud.texture]}
+              color="#dce6e4"
+              transparent
+              opacity={0}
+              alphaTest={0.003}
+              depthWrite={false}
+              depthTest={cloud.depthTest}
+              fog={false}
+              blending={THREE.NormalBlending}
+              toneMapped={false}
+            />
+          </sprite>
+        )
+      })}
     </group>
   )
 }
