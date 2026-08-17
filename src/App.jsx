@@ -1003,6 +1003,8 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
     mistX: 50,
     mistY: 50,
     clarity: 0,
+    detailX: 46,
+    detailY: 50,
   })
   const navDecodeTimersRef = useRef({})
   const transitionSequenceRef = useRef(0)
@@ -1147,6 +1149,8 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
     current.mistX += (target.mistX - current.mistX) * damping
     current.mistY += (target.mistY - current.mistY) * damping
     current.clarity += (target.clarity - current.clarity) * damping
+    current.detailX += (target.detailX - current.detailX) * damping
+    current.detailY += (target.detailY - current.detailY) * damping
 
     target.element.style.setProperty('--home-mist-x', `${current.mistX}%`)
     target.element.style.setProperty('--home-mist-y', `${current.mistY}%`)
@@ -1158,16 +1162,23 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
       '--home-mist-mid-alpha',
       (1 - current.clarity * 0.52).toFixed(3),
     )
+    target.element.style.setProperty('--home-detail-strength', current.clarity.toFixed(3))
+    target.element.style.setProperty('--home-detail-x', `${current.detailX}%`)
+    target.element.style.setProperty('--home-detail-y', `${current.detailY}%`)
 
     const isSettled = (
       Math.abs(target.mistX - current.mistX) < 0.03
       && Math.abs(target.mistY - current.mistY) < 0.03
       && Math.abs(target.clarity - current.clarity) < 0.001
+      && Math.abs(target.detailX - current.detailX) < 0.03
+      && Math.abs(target.detailY - current.detailY) < 0.03
     )
     if (isSettled) {
       current.mistX = target.mistX
       current.mistY = target.mistY
       current.clarity = target.clarity
+      current.detailX = target.detailX
+      current.detailY = target.detailY
       target.element.style.setProperty('--home-mist-x', `${target.mistX}%`)
       target.element.style.setProperty('--home-mist-y', `${target.mistY}%`)
       target.element.style.setProperty(
@@ -1178,6 +1189,9 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
         '--home-mist-mid-alpha',
         (1 - target.clarity * 0.52).toFixed(3),
       )
+      target.element.style.setProperty('--home-detail-strength', target.clarity.toFixed(3))
+      target.element.style.setProperty('--home-detail-x', `${target.detailX}%`)
+      target.element.style.setProperty('--home-detail-y', `${target.detailY}%`)
       homeMotionFrameRef.current = null
       return
     }
@@ -1204,7 +1218,9 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
       element: event.currentTarget,
       mistX: Math.min(92, Math.max(8, ((pointerX - 0.36) / 0.2) * 100)),
       mistY: Math.min(88, Math.max(12, pointerY * 100)),
-      clarity: boundaryProximity * 0.72,
+      clarity: boundaryProximity * 0.9,
+      detailX: Math.min(94, Math.max(6, pointerX * 100)),
+      detailY: Math.min(88, Math.max(12, pointerY * 100)),
     }
     queueHomeAtmosphere()
   }, [queueHomeAtmosphere])
@@ -1215,6 +1231,8 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
       mistX: homeMotionCurrentRef.current.mistX,
       mistY: homeMotionCurrentRef.current.mistY,
       clarity: 0,
+      detailX: homeMotionCurrentRef.current.detailX,
+      detailY: homeMotionCurrentRef.current.detailY,
     }
     queueHomeAtmosphere()
   }, [queueHomeAtmosphere])
@@ -1230,6 +1248,8 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
         mistX: 50,
         mistY: 50,
         clarity: 0,
+        detailX: 46,
+        detailY: 50,
       }
     }
     setActivePanel(page === 'project' ? 'origin' : 'profile')
@@ -1682,6 +1702,14 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
                   />
                 </div>
                 <div className="portfolio-home__threshold" aria-hidden="true" />
+                <div className="portfolio-home__clarity" aria-hidden="true">
+                  <div className="portfolio-home__clarity-reality">
+                    <img src="/portfolio/home-kamikochi.webp" alt="" decoding="async" draggable="false" />
+                  </div>
+                  <div className="portfolio-home__clarity-memory">
+                    <img src="/portfolio/project-interaction-meadow-v4.jpg" alt="" decoding="async" draggable="false" />
+                  </div>
+                </div>
                 <figcaption>
                   <span>FIELD REFERENCE / KAMIKOCHI</span>
                   <span>RECONSTRUCTED / WEBGL / 2026</span>

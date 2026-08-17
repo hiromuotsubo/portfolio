@@ -7241,6 +7241,9 @@ html[data-portfolio-route-transition='reveal'] .journey-3d::after {
   --home-mist-y: 50%;
   --home-mist-center-alpha: 1;
   --home-mist-mid-alpha: 1;
+  --home-detail-strength: 0;
+  --home-detail-x: 46%;
+  --home-detail-y: 50%;
   position: relative;
   display: grid;
   grid-template-rows: minmax(0, 1fr) auto;
@@ -7385,6 +7388,71 @@ html[data-portfolio-route-transition='reveal'] .journey-3d::after {
     radial-gradient(ellipse 38% 19% at 38% 76%, rgba(239, 242, 233, .28), transparent 84%);
   opacity: .16;
   pointer-events: none;
+}
+
+.portfolio-home__clarity {
+  position: absolute;
+  z-index: 3;
+  inset: 0;
+  overflow: hidden;
+  opacity: var(--home-detail-strength);
+  -webkit-mask-image: radial-gradient(
+    ellipse 13% 30% at var(--home-detail-x) var(--home-detail-y),
+    #000 0%,
+    rgba(0, 0, 0, .94) 28%,
+    rgba(0, 0, 0, .5) 62%,
+    transparent 92%
+  );
+  mask-image: radial-gradient(
+    ellipse 13% 30% at var(--home-detail-x) var(--home-detail-y),
+    #000 0%,
+    rgba(0, 0, 0, .94) 28%,
+    rgba(0, 0, 0, .5) 62%,
+    transparent 92%
+  );
+  pointer-events: none;
+  will-change: opacity, mask-image;
+}
+
+.portfolio-home__clarity-reality,
+.portfolio-home__clarity-memory {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  overflow: hidden;
+}
+
+.portfolio-home__clarity-reality {
+  left: 0;
+  width: calc(var(--home-seam) + (var(--home-overlap) / 2));
+  -webkit-mask-image: linear-gradient(to right, #000 0%, #000 76%, rgba(0, 0, 0, .88) 84%, rgba(0, 0, 0, .55) 92%, transparent 100%);
+  mask-image: linear-gradient(to right, #000 0%, #000 76%, rgba(0, 0, 0, .88) 84%, rgba(0, 0, 0, .55) 92%, transparent 100%);
+}
+
+.portfolio-home__clarity-memory {
+  right: 0;
+  left: calc(var(--home-seam) - (var(--home-overlap) / 2));
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, rgba(0, 0, 0, .38) 8%, rgba(0, 0, 0, .72) 20%, #000 38%, #000 100%);
+  mask-image: linear-gradient(to right, transparent 0%, rgba(0, 0, 0, .38) 8%, rgba(0, 0, 0, .72) 20%, #000 38%, #000 100%);
+}
+
+.portfolio-home__clarity img {
+  width: calc(100% + 20px);
+  height: 100%;
+  max-width: none;
+  margin-left: -10px;
+  object-fit: cover;
+  user-select: none;
+}
+
+.portfolio-home__clarity-reality img {
+  object-position: 53% 52%;
+  filter: saturate(1.3) contrast(1.25) brightness(.95);
+}
+
+.portfolio-home__clarity-memory img {
+  object-position: 55% 55%;
+  filter: saturate(1.45) contrast(1.35) brightness(.86);
 }
 
 .portfolio-home__landscape figcaption {
@@ -7597,6 +7665,9 @@ html[data-portfolio-route-transition='reveal'] .journey-3d::after {
     --home-mist-y: 50% !important;
     --home-mist-center-alpha: 1 !important;
     --home-mist-mid-alpha: 1 !important;
+    --home-detail-strength: 0 !important;
+    --home-detail-x: 46% !important;
+    --home-detail-y: 50% !important;
   }
 }
 
