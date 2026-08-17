@@ -969,6 +969,77 @@ function createCloudTexture(seed) {
   return texture
 }
 
+function createRidgeCloudTexture(seed, reverse = false) {
+  const canvas = document.createElement('canvas')
+  canvas.width = 1024
+  canvas.height = 320
+  const context = canvas.getContext('2d')
+  context.clearRect(0, 0, canvas.width, canvas.height)
+  context.save()
+  context.filter = 'blur(7px)'
+
+  const puffCount = 24
+  for (let index = 0; index < puffCount; index += 1) {
+    const rawT = index / (puffCount - 1)
+    const t = reverse ? 1 - rawT : rawT
+    const x = 58 + rawT * 908 + (seededRandom(seed + index * 37) - 0.5) * 28
+    const ridgeArc = Math.sin(Math.PI * t)
+    const y = 176 - ridgeArc * 52 + (seededRandom(seed + index * 43) - 0.5) * 34
+    const radiusX = 44 + seededRandom(seed + index * 53) * 76
+    const radiusY = 18 + seededRandom(seed + index * 61) * 31
+    const alpha = 0.3 + seededRandom(seed + index * 71) * 0.2
+    context.beginPath()
+    context.ellipse(x, y, radiusX, radiusY, 0, 0, Math.PI * 2)
+    context.fillStyle = `rgba(240, 246, 244, ${alpha})`
+    context.fill()
+  }
+
+  context.filter = 'blur(3px)'
+  for (let index = 0; index < 14; index += 1) {
+    const rawT = index / 13
+    const t = reverse ? 1 - rawT : rawT
+    const x = 70 + rawT * 884 + (seededRandom(seed + index * 113) - 0.5) * 42
+    const y = 164 - Math.sin(Math.PI * t) * 48 +
+      (seededRandom(seed + index * 127) - 0.5) * 24
+    const radiusX = 20 + seededRandom(seed + index * 131) * 34
+    const radiusY = 9 + seededRandom(seed + index * 137) * 15
+    context.beginPath()
+    context.ellipse(x, y, radiusX, radiusY, 0, 0, Math.PI * 2)
+    context.fillStyle = `rgba(244, 248, 246, ${0.1 + seededRandom(seed + index * 139) * 0.09})`
+    context.fill()
+  }
+
+  context.restore()
+
+  context.globalCompositeOperation = 'destination-in'
+  const horizontalMask = context.createLinearGradient(0, 0, canvas.width, 0)
+  horizontalMask.addColorStop(0, 'rgba(255,255,255,0)')
+  horizontalMask.addColorStop(0.09, 'rgba(255,255,255,0.88)')
+  horizontalMask.addColorStop(0.5, 'rgba(255,255,255,1)')
+  horizontalMask.addColorStop(0.91, 'rgba(255,255,255,0.84)')
+  horizontalMask.addColorStop(1, 'rgba(255,255,255,0)')
+  context.fillStyle = horizontalMask
+  context.fillRect(0, 0, canvas.width, canvas.height)
+
+  const verticalMask = context.createLinearGradient(0, 0, 0, canvas.height)
+  verticalMask.addColorStop(0, 'rgba(255,255,255,0)')
+  verticalMask.addColorStop(0.19, 'rgba(255,255,255,0.9)')
+  verticalMask.addColorStop(0.66, 'rgba(255,255,255,1)')
+  verticalMask.addColorStop(1, 'rgba(255,255,255,0)')
+  context.fillStyle = verticalMask
+  context.fillRect(0, 0, canvas.width, canvas.height)
+  context.globalCompositeOperation = 'source-over'
+
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.colorSpace = THREE.SRGBColorSpace
+  texture.premultiplyAlpha = false
+  texture.generateMipmaps = false
+  texture.minFilter = THREE.LinearFilter
+  texture.magFilter = THREE.LinearFilter
+  texture.needsUpdate = true
+  return texture
+}
+
 function createCirrusTexture(seed) {
   const canvas = document.createElement('canvas')
   canvas.width = 640
@@ -976,14 +1047,14 @@ function createCirrusTexture(seed) {
   const context = canvas.getContext('2d')
   context.clearRect(0, 0, canvas.width, canvas.height)
   context.save()
-  context.filter = 'blur(5px)'
+  context.filter = 'blur(2px)'
   context.lineCap = 'round'
 
-  for (let index = 0; index < 11; index += 1) {
-    const y = 22 + seededRandom(seed + index * 31) * 96
+  for (let index = 0; index < 5; index += 1) {
+    const y = 28 + seededRandom(seed + index * 31) * 82
     const start = -54 + seededRandom(seed + index * 43) * 96
     const end = 492 + seededRandom(seed + index * 59) * 156
-    const bend = (seededRandom(seed + index * 71) - 0.5) * 24
+    const bend = (seededRandom(seed + index * 71) - 0.5) * 42
     context.beginPath()
     context.moveTo(start, y)
     context.bezierCurveTo(
@@ -994,8 +1065,8 @@ function createCirrusTexture(seed) {
       end,
       y + bend * 0.3,
     )
-    context.strokeStyle = `rgba(242, 247, 246, ${0.12 + seededRandom(seed + index * 83) * 0.1})`
-    context.lineWidth = 4 + seededRandom(seed + index * 97) * 3.5
+    context.strokeStyle = `rgba(242, 247, 246, ${0.16 + seededRandom(seed + index * 83) * 0.09})`
+    context.lineWidth = 2.2 + seededRandom(seed + index * 97) * 2.1
     context.stroke()
   }
   context.restore()
@@ -3621,18 +3692,16 @@ function SkyBridge({ meshRef }) {
 }
 
 function DriftingClouds({ groupRef, materialRefs }) {
-  const ridgeTexture = useTexture('/journey/textures/phase3/alpine-cloud-additive.webp')
-  ridgeTexture.colorSpace = THREE.SRGBColorSpace
-  ridgeTexture.generateMipmaps = false
-  ridgeTexture.minFilter = THREE.LinearFilter
-  ridgeTexture.magFilter = THREE.LinearFilter
   const textures = useMemo(() => ({
-    ridge: ridgeTexture,
+    ridgeLeft: createRidgeCloudTexture(68171),
+    ridgeRight: createRidgeCloudTexture(68239, true),
     valley: createCloudTexture(68431),
     cirrus: createCirrusTexture(68767),
-  }), [ridgeTexture])
+  }), [])
   useEffect(
     () => () => {
+      textures.ridgeLeft.dispose()
+      textures.ridgeRight.dispose()
       textures.valley.dispose()
       textures.cirrus.dispose()
     },
@@ -3640,56 +3709,56 @@ function DriftingClouds({ groupRef, materialRefs }) {
   )
 
   const clouds = useMemo(() => [
-    // Two shallow world-space layers let the clouds sit on the ridges rather
-    // than reading as isolated camera-facing puffs.
+    // Paired ridge layers overlap the summit silhouettes so the mountain edge
+    // dissolves into the air instead of reading as a hard model boundary.
     {
-      key: 'left-ridge-base', type: 'mesh', texture: 'ridge', alphaMap: 'ridge',
-      position: [-136, 157, -218], scale: [150, 50, 1], yaw: -0.04,
-      dayOpacity: 0.44, nightOpacity: 0.004, sunsetWarmth: 0.24, nightTone: 0.72,
+      key: 'left-ridge-base', type: 'sprite', texture: 'ridgeLeft',
+      position: [-136, 138, -218], scale: [202, 80, 1],
+      dayOpacity: 0.96, nightOpacity: 0.004, sunsetWarmth: 0.24, nightTone: 0.72,
       drift: [0.64, 0.2, 0.012, 0.4], depthTest: false, renderOrder: 2,
     },
     {
-      key: 'left-ridge-wisp', type: 'mesh', texture: 'valley',
-      position: [-114, 150, -226], scale: [130, 26, 1], yaw: -0.02,
-      dayOpacity: 0.25, nightOpacity: 0.002, sunsetWarmth: 0.16, nightTone: 0.7,
+      key: 'left-ridge-wisp', type: 'sprite', texture: 'ridgeLeft',
+      position: [-109, 136, -226], scale: [142, 36, 1],
+      dayOpacity: 0.24, nightOpacity: 0.002, sunsetWarmth: 0.16, nightTone: 0.7,
       drift: [0.46, 0.14, 0.01, 1.24], depthTest: false, renderOrder: 3,
     },
     {
-      key: 'right-ridge-base', type: 'mesh', texture: 'ridge', alphaMap: 'ridge',
-      position: [143, 210, -269], scale: [176, 54, 1], yaw: 0.035,
-      dayOpacity: 0.65, nightOpacity: 0.022, sunsetWarmth: 0.34, nightTone: 0.78,
+      key: 'right-ridge-base', type: 'sprite', texture: 'ridgeRight',
+      position: [143, 184, -269], scale: [224, 82, 1],
+      dayOpacity: 0.92, nightOpacity: 0.022, sunsetWarmth: 0.34, nightTone: 0.78,
       drift: [0.8, 0.24, 0.01, 2.1], depthTest: false, renderOrder: 2,
     },
     {
-      key: 'right-ridge-wisp', type: 'mesh', texture: 'valley',
-      position: [118, 197, -280], scale: [154, 30, 1], yaw: 0.02,
-      dayOpacity: 0.35, nightOpacity: 0.01, sunsetWarmth: 0.24, nightTone: 0.82,
+      key: 'right-ridge-wisp', type: 'sprite', texture: 'ridgeRight',
+      position: [126, 160, -280], scale: [184, 48, 1],
+      dayOpacity: 0.42, nightOpacity: 0.01, sunsetWarmth: 0.24, nightTone: 0.82,
       drift: [0.54, 0.16, 0.009, 3.25], depthTest: false, renderOrder: 3,
     },
     // This far layer sits below the saddle, opening a milky distance cue
     // without reintroducing a horizontal fog-bank treatment.
     {
       key: 'far-valley', type: 'mesh', texture: 'valley',
-      position: [-9, 104, -255], scale: [160, 42, 1], yaw: 0,
-      dayOpacity: 0.24, nightOpacity: 0.025, sunsetWarmth: 0.18, nightTone: 0.86,
+      position: [-9, 104, -255], scale: [170, 46, 1], yaw: 0,
+      dayOpacity: 0.65, nightOpacity: 0.025, sunsetWarmth: 0.18, nightTone: 0.86,
       drift: [0.36, 0.12, 0.008, 4.2], depthTest: false, renderOrder: 1,
     },
     {
       key: 'far-valley-rear', type: 'mesh', texture: 'valley',
       position: [22, 118, -300], scale: [105, 28, 1], yaw: 0.018,
-      dayOpacity: 0.13, nightOpacity: 0.016, sunsetWarmth: 0.14, nightTone: 0.88,
+      dayOpacity: 0.32, nightOpacity: 0.016, sunsetWarmth: 0.14, nightTone: 0.88,
       drift: [0.24, 0.08, 0.007, 5.05], depthTest: false, renderOrder: 0,
     },
     // Fine cirrus lives high behind the valley. It is deliberately separate
     // from the ridge wisps so it can fade away before the night sky arrives.
     {
-      key: 'cirrus-left', type: 'sprite', texture: 'cirrus', position: [-176, 232, -339], scale: [282, 30, 1],
-      dayOpacity: 0.56, nightOpacity: 0.001, sunsetWarmth: 0.16, nightTone: 0.65,
+      key: 'cirrus-left', type: 'sprite', texture: 'cirrus', position: [-176, 270, -339], scale: [282, 30, 1],
+      dayOpacity: 0.2, nightOpacity: 0.001, sunsetWarmth: 0.16, nightTone: 0.65,
       drift: [0.38, 0.1, 0.006, 0.95], depthTest: false, renderOrder: -2,
     },
     {
-      key: 'cirrus-right', type: 'sprite', texture: 'cirrus', position: [120, 226, -372], scale: [300, 28, 1],
-      dayOpacity: 0.48, nightOpacity: 0.001, sunsetWarmth: 0.14, nightTone: 0.64,
+      key: 'cirrus-right', type: 'sprite', texture: 'cirrus', position: [120, 270, -372], scale: [300, 28, 1],
+      dayOpacity: 0.16, nightOpacity: 0.001, sunsetWarmth: 0.14, nightTone: 0.64,
       drift: [0.3, 0.08, 0.007, 3.35], depthTest: false, renderOrder: -2,
     },
   ], [])
@@ -7483,14 +7552,15 @@ export default function JourneyScene({
           const nightTone = cloud.userData.nightTone ?? 0
           const pulse = 0.93 + Math.sin(state.clock.elapsedTime * 0.032 + phase) * 0.07
           if (material) {
+            const sunsetOpacity = 1 - sunset * (1 - night) * 0.24
             material.opacity = atmosphereReveal * THREE.MathUtils.lerp(
               dayOpacity,
               nightOpacity,
               night,
-            ) * pulse
+            ) * sunsetOpacity * pulse
             material.color
               .copy(frameColors.cloudBase)
-              .lerp(frameColors.cloud.set('#d7e1df'), 0.55)
+              .lerp(frameColors.cloud.set('#c8d4d3'), 0.48)
               .lerp(frameColors.cloudSunset, sunset * sunsetWarmth * (1 - night * 0.78))
               .lerp(frameColors.cloudTone, night * nightTone)
           }
