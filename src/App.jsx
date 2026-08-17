@@ -856,7 +856,6 @@ const PROJECT_PINNED_VISUALS = {
     },
   ],
   emotion: [
-    { src: '/portfolio/project-night-clean.png', alt: 'A quiet Journey night scene beneath the Milky Way', label: 'SOUND / TIME' },
     { src: '/portfolio/project-v5/emotion-final.jpg', alt: 'A small seated figure beneath the Journey mountains and immense star-filled night sky', label: 'FINAL NIGHT / HUMAN SCALE' },
   ],
 }
