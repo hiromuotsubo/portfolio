@@ -7240,6 +7240,9 @@ html[data-portfolio-route-transition='reveal'] .journey-3d::after {
   --home-atmosphere-density: 0;
   --home-atmosphere-bloom-x: 0px;
   --home-atmosphere-bloom-y: 0px;
+  --home-refraction-x: 12%;
+  --home-refraction-y: 50%;
+  --home-refraction-strength: 0;
   position: relative;
   display: grid;
   grid-template-rows: minmax(0, 1fr) auto;
@@ -7290,10 +7293,75 @@ html[data-portfolio-route-transition='reveal'] .journey-3d::after {
 }
 
 .portfolio-home__memory {
+  z-index: 1;
   right: 0;
   left: 39%;
   -webkit-mask-image: linear-gradient(to right, transparent 0%, rgba(0, 0, 0, .22) 7%, #000 15%, #000 100%);
   mask-image: linear-gradient(to right, transparent 0%, rgba(0, 0, 0, .22) 7%, #000 15%, #000 100%);
+}
+
+.portfolio-home__refraction {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 39%;
+  overflow: hidden;
+  opacity: var(--home-refraction-strength);
+  pointer-events: none;
+  -webkit-mask-image:
+    radial-gradient(
+      ellipse 34% 48% at var(--home-refraction-x) var(--home-refraction-y),
+      #000 0%,
+      rgba(0, 0, 0, .9) 30%,
+      rgba(0, 0, 0, .38) 58%,
+      transparent 84%
+    ),
+    radial-gradient(
+      ellipse 17% 28% at calc(var(--home-refraction-x) + 8%) calc(var(--home-refraction-y) - 9%),
+      rgba(0, 0, 0, .58),
+      transparent 82%
+    );
+  mask-image:
+    radial-gradient(
+      ellipse 34% 48% at var(--home-refraction-x) var(--home-refraction-y),
+      #000 0%,
+      rgba(0, 0, 0, .9) 30%,
+      rgba(0, 0, 0, .38) 58%,
+      transparent 84%
+    ),
+    radial-gradient(
+      ellipse 17% 28% at calc(var(--home-refraction-x) + 8%) calc(var(--home-refraction-y) - 9%),
+      rgba(0, 0, 0, .58),
+      transparent 82%
+    );
+  will-change: opacity, mask-image;
+}
+
+.portfolio-home__refraction img {
+  width: calc(100% + 20px);
+  height: 100%;
+  max-width: none;
+  margin-left: -10px;
+  object-fit: cover;
+  object-position: 55% 55%;
+  filter: saturate(1.72) contrast(1.28) brightness(.92);
+  user-select: none;
+}
+
+.portfolio-home__refraction::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-radial-gradient(
+      ellipse 96% 47% at 52% 106%,
+      rgba(25, 63, 45, .16) 0 1px,
+      transparent 1px 12px
+    );
+  mix-blend-mode: multiply;
+  opacity: .58;
 }
 
 .portfolio-home__reality img,
@@ -7320,7 +7388,7 @@ html[data-portfolio-route-transition='reveal'] .journey-3d::after {
 
 .portfolio-home__threshold {
   position: absolute;
-  z-index: 2;
+  z-index: 3;
   top: -5%;
   bottom: -5%;
   left: 40%;
@@ -7560,6 +7628,12 @@ html[data-portfolio-route-transition='reveal'] .journey-3d::after {
   animation: home-v2-mist-in 400ms ease-out 150ms both;
 }
 
+@media (min-width: 1160px) and (prefers-reduced-motion: no-preference) {
+  .portfolio-site.is-home-assets-ready .portfolio-home__refraction {
+    animation: home-v2-refraction-arrival 1500ms cubic-bezier(.22, .68, .2, 1) 460ms;
+  }
+}
+
 .portfolio-site.is-home-assets-ready .portfolio-home__landscape figcaption {
   animation: home-v2-fade-in 380ms ease-out 180ms both;
 }
@@ -7587,6 +7661,9 @@ html[data-portfolio-route-transition='reveal'] .journey-3d::after {
     --home-atmosphere-density: 0 !important;
     --home-atmosphere-bloom-x: 0px !important;
     --home-atmosphere-bloom-y: 0px !important;
+    --home-refraction-x: 12% !important;
+    --home-refraction-y: 50% !important;
+    --home-refraction-strength: 0 !important;
   }
 }
 
@@ -7598,6 +7675,12 @@ html[data-portfolio-route-transition='reveal'] .journey-3d::after {
 @keyframes home-v2-mist-in {
   from { opacity: 0; }
   to { opacity: .72; }
+}
+
+@keyframes home-v2-refraction-arrival {
+  0%, 100% { opacity: 0; }
+  36% { opacity: .58; }
+  68% { opacity: .28; }
 }
 
 @keyframes home-v2-copy-in {
