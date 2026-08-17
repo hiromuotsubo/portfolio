@@ -7814,13 +7814,13 @@ html[data-portfolio-route-transition='reveal'] .journey-3d::after {
 
   .pinned-visual-chapters__layout {
     display: grid;
-    grid-template-columns: minmax(270px, 0.72fr) minmax(420px, 1.28fr);
+    grid-template-columns: minmax(360px, .9fr) minmax(400px, 1.1fr);
     align-items: start;
-    column-gap: clamp(42px, 5.2vw, 92px);
-    width: min(100%, 1260px);
+    column-gap: clamp(32px, 3vw, 64px);
+    width: min(100%, 1320px);
     min-height: 100%;
     margin: 0 auto;
-    padding: clamp(66px, 9vh, 112px) clamp(42px, 5.2vw, 92px) clamp(120px, 16vh, 190px);
+    padding: clamp(66px, 9vh, 112px) clamp(32px, 3vw, 72px) clamp(120px, 16vh, 190px);
   }
 
   .pinned-visual-chapters__narrative {
@@ -7862,6 +7862,7 @@ html[data-portfolio-route-transition='reveal'] .journey-3d::after {
   .portfolio-site.is-page-project .portfolio-story.is-pinned-visual-chapters .portfolio-panel__copy {
     width: min(100%, 510px) !important;
     max-width: none !important;
+    min-width: 0;
     min-height: 0 !important;
     margin: 0 !important;
     padding: 0 !important;
@@ -7876,10 +7877,16 @@ html[data-portfolio-route-transition='reveal'] .journey-3d::after {
   .portfolio-site.is-page-about .portfolio-story.is-pinned-visual-chapters .portfolio-panel__copy h3,
   .portfolio-site.is-page-project .portfolio-story.is-pinned-visual-chapters .portfolio-panel__copy h3 {
     width: 100%;
-    max-width: 12ch;
+    max-width: min(100%, 15ch);
     margin: clamp(18px, 2.5vh, 28px) 0 clamp(28px, 4vh, 44px);
-    font-size: clamp(42px, 3.65vw, 66px);
+    font-size: clamp(42px, 3.65vw, 60px);
     line-height: 1;
+    text-wrap: balance;
+  }
+
+  .portfolio-site.is-page-about .portfolio-story.is-pinned-visual-chapters #motivation .portfolio-panel__copy h3 {
+    width: 100%;
+    max-width: 100%;
   }
 
   .portfolio-site.is-page-about .portfolio-story.is-pinned-visual-chapters .portfolio-panel__copy p,
@@ -7916,8 +7923,7 @@ html[data-portfolio-route-transition='reveal'] .journey-3d::after {
   .pinned-visual-stage__canvas {
     position: relative;
     width: 100%;
-    aspect-ratio: 16 / 11;
-    padding-bottom: 30px;
+    aspect-ratio: 16 / 10;
   }
 
   .pinned-visual-stage__visual {
@@ -7925,7 +7931,6 @@ html[data-portfolio-route-transition='reveal'] .journey-3d::after {
     inset: 0;
     display: block;
     margin: 0;
-    padding-bottom: 30px;
     opacity: var(--pinned-visual-opacity, 0);
     pointer-events: none;
     will-change: opacity;
@@ -7948,6 +7953,11 @@ html[data-portfolio-route-transition='reveal'] .journey-3d::after {
     width: 100%;
     height: 100%;
     object-fit: cover;
+  }
+
+  .pinned-visual-stage__visual[data-stage-fit='contain'] .pinned-visual-stage__frame img,
+  .pinned-visual-stage__visual[data-stage-fit='contain'] .pinned-visual-stage__frame video {
+    object-fit: contain;
   }
 
   .pinned-visual-stage.is-project .pinned-visual-stage__frame img {

@@ -828,9 +828,9 @@ const ABOUT_PINNED_VISUALS = {
 
 const PROJECT_PINNED_VISUALS = {
   origin: [
-    { src: '/portfolio/project-v5/field-reference.jpg', alt: 'The real Kamikochi valley and Azusa River that inspired Journey', label: 'FIELD / KAMIKOCHI' },
-    { src: '/portfolio/project-v5/blender-massing.jpg', alt: 'The Journey valley terrain being shaped as a neutral Blender model', label: 'MASSING / BLENDER' },
-    { src: '/portfolio/project-v5/day-clear.jpg', alt: 'The finished Journey valley in clear daylight', label: 'EXPERIENCE / WEBGL' },
+    { src: '/portfolio/project-pinned/origin-field.jpg', alt: 'The real Kamikochi valley and Azusa River that inspired Journey', label: 'FIELD / KAMIKOCHI' },
+    { src: '/portfolio/project-pinned/origin-blender.jpg', alt: 'The Journey valley terrain being shaped as a Blender model', label: 'MASSING / BLENDER', fit: 'contain' },
+    { src: '/portfolio/project-pinned/terrain-day.jpg', alt: 'The finished Journey valley in clear daylight', label: 'EXPERIENCE / WEBGL' },
   ],
   contrast: [
     {
@@ -842,9 +842,9 @@ const PROJECT_PINNED_VISUALS = {
     },
   ],
   terrain: [
-    { src: '/portfolio/project-v5/day-clear.jpg', alt: 'The Journey valley in soft clear daylight', label: 'DAY' },
-    { src: '/portfolio/project-v5/dusk.jpg', alt: 'The same Journey valley in muted dusk light', label: 'DUSK' },
-    { src: '/portfolio/project-v5/night.jpg', alt: 'The same Journey valley beneath the night sky', label: 'NIGHT' },
+    { src: '/portfolio/project-pinned/terrain-day.jpg', alt: 'The Journey valley in soft clear daylight', label: 'DAY' },
+    { src: '/portfolio/project-pinned/terrain-dusk.jpg', alt: 'The same Journey valley in muted dusk light', label: 'DUSK' },
+    { src: '/portfolio/project-pinned/terrain-night.jpg', alt: 'The same Journey valley beneath the night sky', label: 'NIGHT' },
   ],
   interaction: [
     {
@@ -958,6 +958,7 @@ function PinnedStageVisual({ chapter, visual, index, count }) {
       data-stage-panel={chapter}
       data-stage-index={index}
       data-stage-count={count}
+      data-stage-fit={visual.fit || 'cover'}
       aria-hidden="true"
     >
       <div className="pinned-visual-stage__frame">
