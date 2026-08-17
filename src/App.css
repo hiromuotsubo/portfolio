@@ -7406,14 +7406,15 @@ html[data-portfolio-route-transition='reveal'] .journey-3d::after {
   content: '';
   position: absolute;
   z-index: 0;
-  top: clamp(-48px, -3.5vw, -24px);
-  right: -8%;
-  left: -11%;
-  height: clamp(150px, 14vw, 210px);
+  top: clamp(-52px, -3.8vw, -30px);
+  right: clamp(-92px, -6.5vw, -48px);
+  bottom: clamp(-74px, -7vh, -50px);
+  left: clamp(-104px, -7.5vw, -56px);
   background:
-    radial-gradient(ellipse 48% 62% at 43% 46%, rgba(242, 245, 237, .22), rgba(242, 245, 237, .1) 52%, transparent 84%),
-    radial-gradient(ellipse 36% 58% at 77% 48%, rgba(240, 244, 235, .16), transparent 83%);
-  filter: blur(18px);
+    radial-gradient(ellipse 54% 56% at 48% 40%, rgba(246, 246, 238, .26), rgba(244, 244, 235, .14) 46%, rgba(240, 243, 234, .05) 68%, transparent 88%),
+    radial-gradient(ellipse 38% 48% at 78% 58%, rgba(244, 245, 237, .15), transparent 84%),
+    radial-gradient(ellipse 36% 42% at 22% 60%, rgba(240, 243, 234, .11), transparent 84%);
+  filter: blur(20px);
   pointer-events: none;
 }
 
@@ -7422,7 +7423,7 @@ html[data-portfolio-route-transition='reveal'] .journey-3d::after {
   z-index: 1;
   max-width: none;
   margin: 0 0 clamp(28px, 3.8vh, 44px);
-  color: #2b5741;
+  color: #234a37;
   font-family: var(--font-display);
   font-size: clamp(96px, 12.8vw, 204px);
   font-weight: 400;
@@ -7440,14 +7441,14 @@ html[data-portfolio-route-transition='reveal'] .journey-3d::after {
   z-index: 1;
   max-width: 35ch;
   margin: 0 0 clamp(24px, 3.3vh, 38px);
-  color: #244f3a;
+  color: #214b37;
   font-family: var(--font-ui);
   font-size: clamp(14px, 1.08vw, 17px);
   font-weight: 600;
   line-height: 1.55;
   letter-spacing: .005em;
   text-wrap: pretty;
-  text-shadow: 0 1px 15px rgba(247, 245, 238, .96), 0 0 30px rgba(247, 245, 238, .72);
+  text-shadow: none;
   white-space: normal;
   opacity: 0;
 }
