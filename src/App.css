@@ -7237,6 +7237,7 @@ html[data-portfolio-route-transition='reveal'] .journey-3d::after {
 .portfolio-site.is-page-home .portfolio-home {
   --home-atmosphere-x: 0px;
   --home-atmosphere-y: 0px;
+  --home-atmosphere-density: 0;
   position: relative;
   display: grid;
   grid-template-rows: minmax(0, 1fr) auto;
@@ -7344,7 +7345,7 @@ html[data-portfolio-route-transition='reveal'] .journey-3d::after {
   filter: blur(15px);
   pointer-events: none;
   transform: translate3d(var(--home-atmosphere-x), var(--home-atmosphere-y), 0);
-  transition: transform 1250ms cubic-bezier(.2, .72, .2, 1);
+  will-change: transform;
 }
 
 .portfolio-home__threshold::before {
@@ -7355,6 +7356,18 @@ html[data-portfolio-route-transition='reveal'] .journey-3d::after {
     radial-gradient(ellipse 36% 22% at 43% 30%, rgba(251, 249, 243, .34), transparent 76%),
     radial-gradient(ellipse 42% 25% at 57% 48%, rgba(248, 247, 240, .26), transparent 78%),
     radial-gradient(ellipse 48% 21% at 47% 68%, rgba(238, 241, 232, .22), transparent 80%);
+}
+
+.portfolio-home__threshold::after {
+  content: '';
+  position: absolute;
+  inset: 10% 6%;
+  background:
+    radial-gradient(ellipse 42% 24% at 46% 34%, rgba(250, 248, 241, .34), transparent 78%),
+    radial-gradient(ellipse 48% 28% at 56% 59%, rgba(245, 245, 237, .28), transparent 82%);
+  opacity: var(--home-atmosphere-density);
+  pointer-events: none;
+  will-change: opacity;
 }
 
 .portfolio-home__landscape figcaption {
@@ -7389,23 +7402,42 @@ html[data-portfolio-route-transition='reveal'] .journey-3d::after {
   animation: none;
 }
 
+.portfolio-site.is-page-home .portfolio-home__copy::before {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  top: clamp(-48px, -3.5vw, -24px);
+  right: -8%;
+  left: -11%;
+  height: clamp(150px, 14vw, 210px);
+  background:
+    radial-gradient(ellipse 48% 62% at 43% 46%, rgba(242, 245, 237, .22), rgba(242, 245, 237, .1) 52%, transparent 84%),
+    radial-gradient(ellipse 36% 58% at 77% 48%, rgba(240, 244, 235, .16), transparent 83%);
+  filter: blur(18px);
+  pointer-events: none;
+}
+
 .portfolio-site.is-page-home .portfolio-home__copy h1 {
+  position: relative;
+  z-index: 1;
   max-width: none;
   margin: 0 0 clamp(28px, 3.8vh, 44px);
-  color: var(--green-ink);
+  color: #2b5741;
   font-family: var(--font-display);
   font-size: clamp(96px, 12.8vw, 204px);
   font-weight: 400;
   line-height: .76;
   letter-spacing: -.052em;
   text-indent: -2.6vw;
-  text-shadow: 0 3px 26px rgba(247, 245, 238, .58);
+  text-shadow: none;
   white-space: nowrap;
   text-wrap: nowrap;
   opacity: 0;
 }
 
 .portfolio-site.is-page-home .portfolio-home__copy > p {
+  position: relative;
+  z-index: 1;
   max-width: 35ch;
   margin: 0 0 clamp(24px, 3.3vh, 38px);
   color: #244f3a;
@@ -7421,6 +7453,8 @@ html[data-portfolio-route-transition='reveal'] .journey-3d::after {
 }
 
 .portfolio-site.is-page-home .portfolio-home__copy > button {
+  position: relative;
+  z-index: 1;
   display: inline-flex;
   align-items: center;
   justify-content: space-between;
@@ -7537,6 +7571,14 @@ html[data-portfolio-route-transition='reveal'] .journey-3d::after {
 
 .portfolio-site.is-home-assets-ready .portfolio-home__meta {
   animation: home-v2-fade-in 240ms ease-out 610ms both;
+}
+
+@media (max-width: 1159px), (prefers-reduced-motion: reduce) {
+  .portfolio-home__diptych {
+    --home-atmosphere-x: 0px !important;
+    --home-atmosphere-y: 0px !important;
+    --home-atmosphere-density: 0 !important;
+  }
 }
 
 @keyframes home-v2-landscape-in {

@@ -999,6 +999,7 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
   const transitioningRef = useRef(false)
   const homeMotionFrameRef = useRef(null)
   const homeMotionTargetRef = useRef(null)
+  const homeMotionCurrentRef = useRef({ x: 0, y: 0, density: 0 })
   const navDecodeTimersRef = useRef({})
   const transitionSequenceRef = useRef(0)
   const [activePanel, setActivePanel] = useState('profile')
@@ -1130,35 +1131,85 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
     }
   }, [])
 
+  const updateHomeAtmosphere = useCallback(() => {
+    const target = homeMotionTargetRef.current
+    const current = homeMotionCurrentRef.current
+    if (!target?.element?.isConnected) {
+      homeMotionFrameRef.current = null
+      return
+    }
+
+    const damping = 0.1
+    current.x += (target.x - current.x) * damping
+    current.y += (target.y - current.y) * damping
+    current.density += (target.density - current.density) * damping
+
+    target.element.style.setProperty('--home-atmosphere-x', `${current.x}px`)
+    target.element.style.setProperty('--home-atmosphere-y', `${current.y}px`)
+    target.element.style.setProperty('--home-atmosphere-density', current.density.toFixed(3))
+
+    const isSettled = (
+      Math.abs(target.x - current.x) < 0.03
+      && Math.abs(target.y - current.y) < 0.03
+      && Math.abs(target.density - current.density) < 0.001
+    )
+    if (isSettled) {
+      current.x = target.x
+      current.y = target.y
+      current.density = target.density
+      target.element.style.setProperty('--home-atmosphere-x', `${target.x}px`)
+      target.element.style.setProperty('--home-atmosphere-y', `${target.y}px`)
+      target.element.style.setProperty('--home-atmosphere-density', target.density.toFixed(3))
+      homeMotionFrameRef.current = null
+      return
+    }
+
+    homeMotionFrameRef.current = window.requestAnimationFrame(updateHomeAtmosphere)
+  }, [])
+
+  const queueHomeAtmosphere = useCallback(() => {
+    if (homeMotionFrameRef.current !== null) return
+    homeMotionFrameRef.current = window.requestAnimationFrame(updateHomeAtmosphere)
+  }, [updateHomeAtmosphere])
+
   const moveHomeAtmosphere = useCallback((event) => {
     if (
       window.matchMedia('(prefers-reduced-motion: reduce)').matches ||
-      window.matchMedia('(pointer: coarse)').matches
+      !window.matchMedia('(min-width: 1160px) and (hover: hover) and (pointer: fine)').matches
     ) return
 
     const bounds = event.currentTarget.getBoundingClientRect()
+    const pointerX = (event.clientX - bounds.left) / bounds.width
+    const pointerY = (event.clientY - bounds.top) / bounds.height
+    const boundaryProximity = Math.max(0, 1 - Math.abs(pointerX - 0.465) / 0.44)
     homeMotionTargetRef.current = {
       element: event.currentTarget,
-      x: (event.clientX - bounds.left) / bounds.width - 0.5,
-      y: (event.clientY - bounds.top) / bounds.height - 0.5,
+      x: (pointerX - 0.5) * 24,
+      y: (pointerY - 0.5) * 6,
+      density: boundaryProximity * 0.032,
     }
-    if (homeMotionFrameRef.current !== null) return
-
-    homeMotionFrameRef.current = window.requestAnimationFrame(() => {
-      const target = homeMotionTargetRef.current
-      homeMotionFrameRef.current = null
-      if (!target?.element?.isConnected) return
-      target.element.style.setProperty('--home-atmosphere-x', `${target.x * 15}px`)
-      target.element.style.setProperty('--home-atmosphere-y', `${target.y * 5}px`)
-    })
-  }, [])
+    queueHomeAtmosphere()
+  }, [queueHomeAtmosphere])
 
   const settleHomeAtmosphere = useCallback((event) => {
-    event.currentTarget.style.setProperty('--home-atmosphere-x', '0px')
-    event.currentTarget.style.setProperty('--home-atmosphere-y', '0px')
-  }, [])
+    homeMotionTargetRef.current = {
+      element: event.currentTarget,
+      x: 0,
+      y: 0,
+      density: 0,
+    }
+    queueHomeAtmosphere()
+  }, [queueHomeAtmosphere])
 
   useEffect(() => {
+    if (page !== 'home') {
+      if (homeMotionFrameRef.current !== null) {
+        window.cancelAnimationFrame(homeMotionFrameRef.current)
+        homeMotionFrameRef.current = null
+      }
+      homeMotionTargetRef.current = null
+      homeMotionCurrentRef.current = { x: 0, y: 0, density: 0 }
+    }
     setActivePanel(page === 'project' ? 'origin' : 'profile')
     onScrolledChange(page !== 'home')
     if (page === 'about' || page === 'project') {
