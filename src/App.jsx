@@ -1148,20 +1148,14 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
       const target = homeMotionTargetRef.current
       homeMotionFrameRef.current = null
       if (!target?.element?.isConnected) return
-      target.element.style.setProperty('--home-reality-x', `${target.x * -7}px`)
-      target.element.style.setProperty('--home-memory-x', `${target.x * 9}px`)
       target.element.style.setProperty('--home-atmosphere-x', `${target.x * 15}px`)
       target.element.style.setProperty('--home-atmosphere-y', `${target.y * 5}px`)
-      target.element.style.setProperty('--home-copy-x', `${target.x * 3}px`)
     })
   }, [])
 
   const settleHomeAtmosphere = useCallback((event) => {
-    event.currentTarget.style.setProperty('--home-reality-x', '0px')
-    event.currentTarget.style.setProperty('--home-memory-x', '0px')
     event.currentTarget.style.setProperty('--home-atmosphere-x', '0px')
     event.currentTarget.style.setProperty('--home-atmosphere-y', '0px')
-    event.currentTarget.style.setProperty('--home-copy-x', '0px')
   }, [])
 
   useEffect(() => {
@@ -1615,20 +1609,23 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
                   />
                 </div>
                 <div className="portfolio-home__threshold" aria-hidden="true" />
+                <figcaption>
+                  <span>FIELD REFERENCE / KAMIKOCHI</span>
+                  <span>RECONSTRUCTED / WEBGL / 2026</span>
+                </figcaption>
               </figure>
 
               <div className="portfolio-home__copy">
                 <h1 id="portfolio-home-title" tabIndex={-1}>Journey</h1>
-                <p>An interactive landscape inspired by Kamikochi.</p>
+                <p>A memory of Kamikochi, rebuilt as an interactive landscape.</p>
                 <button type="button" onClick={onReplay}><span>EXPERIENCE JOURNEY</span><NavigationArrow /></button>
               </div>
             </div>
 
             <dl className="portfolio-home__meta">
-              <div><dt>ROLE</dt><dd>ART DIRECTION / 3D / DEVELOPMENT</dd></div>
-              <div><dt>EXPERIENCE</dt><dd>SCROLL / HOLD / SPATIAL AUDIO</dd></div>
-              <div><dt>BUILT WITH</dt><dd>BLENDER / REACT / THREE.JS</dd></div>
-              <div><dt>YEAR</dt><dd>2026</dd></div>
+              <div><dt>ROLE</dt><dd><span>ART DIRECTION /</span><span>3D / DEVELOPMENT</span></dd></div>
+              <div><dt>INTERACTION</dt><dd><span>SCROLL / HOLD /</span><span>SPATIAL AUDIO</span></dd></div>
+              <div><dt>BUILT WITH</dt><dd><span>BLENDER / REACT /</span><span>THREE.JS</span></dd></div>
             </dl>
           </section>
         ) : null}
