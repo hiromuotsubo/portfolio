@@ -1040,6 +1040,49 @@ function createRidgeCloudTexture(seed, reverse = false) {
   return texture
 }
 
+function createPhotographicCloudTexture(sourceTexture, reverse = false) {
+  const source = sourceTexture.image
+  const width = source?.naturalWidth ?? source?.videoWidth ?? source?.width ?? 1024
+  const height = source?.naturalHeight ?? source?.videoHeight ?? source?.height ?? 684
+  const canvas = document.createElement('canvas')
+  canvas.width = width
+  canvas.height = height
+  const context = canvas.getContext('2d', { willReadFrequently: true })
+
+  context.save()
+  if (reverse) {
+    context.translate(width, 0)
+    context.scale(-1, 1)
+  }
+  context.drawImage(source, 0, 0, width, height)
+  context.restore()
+
+  // The source is an additive cloud photograph on black. Convert luminance
+  // into transparency once at load time so the fine vapour edge survives,
+  // while the rectangular source background disappears completely.
+  const image = context.getImageData(0, 0, width, height)
+  const pixels = image.data
+  for (let index = 0; index < pixels.length; index += 4) {
+    const luminance = Math.max(pixels[index], pixels[index + 1], pixels[index + 2]) / 255
+    const threshold = THREE.MathUtils.clamp((luminance - 0.018) / 0.82, 0, 1)
+    const alpha = threshold * threshold * (3 - 2 * threshold)
+    pixels[index] = 255
+    pixels[index + 1] = 255
+    pixels[index + 2] = 255
+    pixels[index + 3] = Math.round(alpha * 255)
+  }
+  context.putImageData(image, 0, 0)
+
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.colorSpace = THREE.SRGBColorSpace
+  texture.premultiplyAlpha = false
+  texture.generateMipmaps = false
+  texture.minFilter = THREE.LinearFilter
+  texture.magFilter = THREE.LinearFilter
+  texture.needsUpdate = true
+  return texture
+}
+
 function createCirrusTexture(seed) {
   const canvas = document.createElement('canvas')
   canvas.width = 640
@@ -3692,14 +3735,19 @@ function SkyBridge({ meshRef }) {
 }
 
 function DriftingClouds({ groupRef, materialRefs }) {
+  const ridgeSourceTexture = useTexture('/journey/textures/phase3/alpine-cloud-additive.webp')
   const textures = useMemo(() => ({
+    ridgePhotoLeft: createPhotographicCloudTexture(ridgeSourceTexture),
+    ridgePhotoRight: createPhotographicCloudTexture(ridgeSourceTexture, true),
     ridgeLeft: createRidgeCloudTexture(68171),
     ridgeRight: createRidgeCloudTexture(68239, true),
     valley: createCloudTexture(68431),
     cirrus: createCirrusTexture(68767),
-  }), [])
+  }), [ridgeSourceTexture])
   useEffect(
     () => () => {
+      textures.ridgePhotoLeft.dispose()
+      textures.ridgePhotoRight.dispose()
       textures.ridgeLeft.dispose()
       textures.ridgeRight.dispose()
       textures.valley.dispose()
@@ -3712,27 +3760,27 @@ function DriftingClouds({ groupRef, materialRefs }) {
     // Paired ridge layers overlap the summit silhouettes so the mountain edge
     // dissolves into the air instead of reading as a hard model boundary.
     {
-      key: 'left-ridge-base', type: 'sprite', texture: 'ridgeLeft',
-      position: [-136, 138, -218], scale: [202, 80, 1],
-      dayOpacity: 0.96, nightOpacity: 0.004, sunsetWarmth: 0.24, nightTone: 0.72,
+      key: 'left-ridge-base', type: 'sprite', texture: 'ridgePhotoLeft',
+      position: [-136, 143, -218], scale: [220, 86, 1],
+      dayOpacity: 0.31, nightOpacity: 0.004, nightTone: 0.72,
       drift: [0.64, 0.2, 0.012, 0.4], depthTest: false, renderOrder: 2,
     },
     {
       key: 'left-ridge-wisp', type: 'sprite', texture: 'ridgeLeft',
       position: [-109, 136, -226], scale: [142, 36, 1],
-      dayOpacity: 0.24, nightOpacity: 0.002, sunsetWarmth: 0.16, nightTone: 0.7,
+      dayOpacity: 0.17, nightOpacity: 0.002, nightTone: 0.7,
       drift: [0.46, 0.14, 0.01, 1.24], depthTest: false, renderOrder: 3,
     },
     {
-      key: 'right-ridge-base', type: 'sprite', texture: 'ridgeRight',
-      position: [143, 184, -269], scale: [224, 82, 1],
-      dayOpacity: 0.92, nightOpacity: 0.022, sunsetWarmth: 0.34, nightTone: 0.78,
+      key: 'right-ridge-base', type: 'sprite', texture: 'ridgePhotoRight',
+      position: [210, 194, -269], scale: [320, 96, 1],
+      dayOpacity: 0.33, nightOpacity: 0.022, nightTone: 0.78,
       drift: [0.8, 0.24, 0.01, 2.1], depthTest: false, renderOrder: 2,
     },
     {
       key: 'right-ridge-wisp', type: 'sprite', texture: 'ridgeRight',
-      position: [126, 160, -280], scale: [184, 48, 1],
-      dayOpacity: 0.42, nightOpacity: 0.01, sunsetWarmth: 0.24, nightTone: 0.82,
+      position: [184, 160, -280], scale: [218, 48, 1],
+      dayOpacity: 0.27, nightOpacity: 0.01, nightTone: 0.82,
       drift: [0.54, 0.16, 0.009, 3.25], depthTest: false, renderOrder: 3,
     },
     // This far layer sits below the saddle, opening a milky distance cue
@@ -3740,25 +3788,25 @@ function DriftingClouds({ groupRef, materialRefs }) {
     {
       key: 'far-valley', type: 'mesh', texture: 'valley',
       position: [-9, 104, -255], scale: [170, 46, 1], yaw: 0,
-      dayOpacity: 0.65, nightOpacity: 0.025, sunsetWarmth: 0.18, nightTone: 0.86,
+      dayOpacity: 0.65, nightOpacity: 0.025, nightTone: 0.86,
       drift: [0.36, 0.12, 0.008, 4.2], depthTest: false, renderOrder: 1,
     },
     {
       key: 'far-valley-rear', type: 'mesh', texture: 'valley',
       position: [22, 118, -300], scale: [105, 28, 1], yaw: 0.018,
-      dayOpacity: 0.32, nightOpacity: 0.016, sunsetWarmth: 0.14, nightTone: 0.88,
+      dayOpacity: 0.32, nightOpacity: 0.016, nightTone: 0.88,
       drift: [0.24, 0.08, 0.007, 5.05], depthTest: false, renderOrder: 0,
     },
     // Fine cirrus lives high behind the valley. It is deliberately separate
     // from the ridge wisps so it can fade away before the night sky arrives.
     {
       key: 'cirrus-left', type: 'sprite', texture: 'cirrus', position: [-176, 270, -339], scale: [282, 30, 1],
-      dayOpacity: 0.2, nightOpacity: 0.001, sunsetWarmth: 0.16, nightTone: 0.65,
+      dayOpacity: 0.2, nightOpacity: 0.001, nightTone: 0.65,
       drift: [0.38, 0.1, 0.006, 0.95], depthTest: false, renderOrder: -2,
     },
     {
       key: 'cirrus-right', type: 'sprite', texture: 'cirrus', position: [120, 270, -372], scale: [300, 28, 1],
-      dayOpacity: 0.16, nightOpacity: 0.001, sunsetWarmth: 0.14, nightTone: 0.64,
+      dayOpacity: 0.16, nightOpacity: 0.001, nightTone: 0.64,
       drift: [0.3, 0.08, 0.007, 3.35], depthTest: false, renderOrder: -2,
     },
   ], [])
@@ -3771,7 +3819,6 @@ function DriftingClouds({ groupRef, materialRefs }) {
           baseY: cloud.position[1],
           dayOpacity: cloud.dayOpacity,
           nightOpacity: cloud.nightOpacity,
-          sunsetWarmth: cloud.sunsetWarmth,
           nightTone: cloud.nightTone,
           drift: cloud.drift,
         }
@@ -6716,10 +6763,9 @@ export default function JourneyScene({
       skySunDay: new THREE.Color('#fff3c9'),
       skySunSunset: new THREE.Color('#ffb077'),
       skySunNight: new THREE.Color('#7896c8'),
-      cloudBase: new THREE.Color('#f4f5ef'),
-      cloudSunset: new THREE.Color('#ffd0ba'),
-      cloudTone: new THREE.Color('#879da3'),
-      cloud: new THREE.Color(),
+      cloudBase: new THREE.Color('#d2dedf'),
+      cloudSunset: new THREE.Color('#c27b88'),
+      cloudTone: new THREE.Color('#53677f'),
       valleyFogBase: new THREE.Color('#cddbd3'),
       valleyFogSunset: new THREE.Color('#e7b3a2'),
       valleyFogNight: new THREE.Color('#7189ad'),
@@ -7548,7 +7594,6 @@ export default function JourneyScene({
           const [driftX, driftY, driftSpeed, phase] = cloud.userData.drift ?? [0, 0, 0, 0]
           const dayOpacity = cloud.userData.dayOpacity ?? 0
           const nightOpacity = cloud.userData.nightOpacity ?? 0
-          const sunsetWarmth = cloud.userData.sunsetWarmth ?? 0
           const nightTone = cloud.userData.nightTone ?? 0
           const pulse = 0.93 + Math.sin(state.clock.elapsedTime * 0.032 + phase) * 0.07
           if (material) {
@@ -7560,8 +7605,7 @@ export default function JourneyScene({
             ) * sunsetOpacity * pulse
             material.color
               .copy(frameColors.cloudBase)
-              .lerp(frameColors.cloud.set('#c8d4d3'), 0.48)
-              .lerp(frameColors.cloudSunset, sunset * sunsetWarmth * (1 - night * 0.78))
+              .lerp(frameColors.cloudSunset, sunsetColorMix * (1 - night * 0.72))
               .lerp(frameColors.cloudTone, night * nightTone)
           }
           cloud.position.x =
