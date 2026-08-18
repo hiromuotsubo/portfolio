@@ -1017,10 +1017,10 @@ function createOrographicCloudTexture(sourceTexture, seed, reverse = false, slen
     const horizontalEdge = smoothstep(0, 0.105, normalizedX) *
       (1 - smoothstep(0.88, 1, normalizedX))
     const breakup = THREE.MathUtils.clamp(
-      0.67 +
-        Math.sin(normalizedX * 47 + normalizedY * 21 + seed) * 0.16 +
-        Math.sin(normalizedX * 91 - normalizedY * 37 + seed * 0.37) * 0.12,
-      0.34,
+      0.61 +
+        Math.sin(normalizedX * 47 + normalizedY * 21 + seed) * 0.19 +
+        Math.sin(normalizedX * 91 - normalizedY * 37 + seed * 0.37) * 0.15,
+      0.18,
       1,
     )
     let envelope = smoothstep(0, 0.12, normalizedY) *
@@ -1039,17 +1039,17 @@ function createOrographicCloudTexture(sourceTexture, seed, reverse = false, slen
         Math.max(0.08, bandHalfHeight)
       envelope *= 1 - smoothstep(0.46, 1, bandDistance)
     }
-    const density = Math.pow(photographicDensity, slender ? 0.98 : 0.78) *
-      envelope * horizontalEdge * breakup
-    const alpha = smoothstep(0.02, slender ? 0.62 : 0.72, density)
+    const density = Math.pow(photographicDensity, slender ? 1.02 : 0.84) *
+      envelope * horizontalEdge * Math.pow(breakup, 1.08)
+    const alpha = smoothstep(0.028, slender ? 0.64 : 0.76, density)
     const cloudLight = Math.round(THREE.MathUtils.lerp(
-      102,
-      244,
-      Math.pow(photographicDensity, 0.72),
+      82,
+      226,
+      Math.pow(photographicDensity, 0.78),
     ))
-    pixels[index] = cloudLight
+    pixels[index] = Math.max(0, cloudLight - 4)
     pixels[index + 1] = cloudLight
-    pixels[index + 2] = Math.min(255, cloudLight + 4)
+    pixels[index + 2] = Math.min(255, cloudLight + 7)
     pixels[index + 3] = Math.round(alpha * 255)
   }
   context.putImageData(image, 0, 0)
@@ -2412,6 +2412,7 @@ uniform float uJourneySunset;
 uniform float uJourneyNight;
 uniform float uJourneyRiverLight;
 uniform float uJourneyDiscovery;
+uniform float uJourneyTime;
 uniform float uJourneyEntranceReveal;
 uniform sampler2D uJourneyBiomeMacro;
 uniform sampler2D uJourneyAlpineNormal;
@@ -2480,6 +2481,12 @@ float journeyProductionSteepness = smoothstep(0.2, 0.88, 1.0 - abs(journeyProduc
 float journeyProductionAltitude = smoothstep(24.0, 132.0, vJourneyWorldPosition.y);
 float journeyProductionMacro = vJourneyProductionMacro;
 float journeyProductionMeso = vJourneyProductionMeso;
+float journeyProductionFine = journeyProductionNoise(vec2(
+  vJourneyWorldPosition.x * 0.19 + vJourneyWorldPosition.z * 0.071 +
+    vJourneyWorldPosition.y * 0.047,
+  vJourneyWorldPosition.z * 0.16 - vJourneyWorldPosition.x * 0.083 +
+    vJourneyWorldPosition.y * 0.061
+) + vec2(171.0, -84.0));
 vec2 journeyProductionWarp = vec2(
   (journeyProductionMacro - 0.5) * 0.1,
   (journeyProductionMeso - 0.5) * 0.085
@@ -2496,10 +2503,12 @@ vec3 journeyProductionBiome = texture2D(
   journeyProductionSourceDomain * journeyProductionBiomeScale + journeyProductionBiomeWarp
 ).rgb;
 float journeyProductionRock = smoothstep(
-  0.25,
-  0.62,
-  journeyProductionSteepness * 0.82 + journeyProductionAltitude * 0.56 +
-    (journeyProductionBiome.r - 0.5) * 0.32
+  0.23,
+  0.6,
+  journeyProductionSteepness * 0.8 + journeyProductionAltitude * 0.56 +
+    (journeyProductionBiome.r - 0.5) * 0.3 +
+    (journeyProductionMacro - 0.5) * 0.16 +
+    (journeyProductionFine - 0.5) * 0.1
 );
 float journeyProductionScree = smoothstep(
   0.56,
@@ -2518,10 +2527,24 @@ float journeyProductionDrainageField = journeyProductionNoise(vec2(
 float journeyProductionDrainage =
   (1.0 - smoothstep(0.035, 0.12, abs(journeyProductionDrainageField - 0.47))) *
   journeyProductionSteepness * (1.0 - smoothstep(0.78, 1.0, journeyProductionAltitude));
+float journeyProductionGrassVariation = clamp(
+  journeyProductionMacro * 0.42 + journeyProductionMeso * 0.38 +
+    journeyProductionFine * 0.2,
+  0.0,
+  1.0
+);
 vec3 journeyProductionGrassColor = mix(
-  vec3(0.19, 0.29, 0.135),
-  vec3(0.36, 0.42, 0.205),
-  journeyProductionMeso
+  vec3(0.105, 0.18, 0.07),
+  vec3(0.31, 0.355, 0.155),
+  journeyProductionGrassVariation
+);
+float journeyProductionDryGrass = smoothstep(0.62, 0.9, journeyProductionFine) *
+  smoothstep(0.24, 0.78, journeyProductionAltitude) *
+  (1.0 - journeyProductionRock);
+journeyProductionGrassColor = mix(
+  journeyProductionGrassColor,
+  vec3(0.31, 0.275, 0.14),
+  journeyProductionDryGrass * 0.22
 );
 float journeyProductionForestVariation = clamp(
   journeyProductionBiome.g * 0.48 + journeyProductionMeso * 0.34 + journeyProductionMacro * 0.18,
@@ -2534,10 +2557,12 @@ vec3 journeyProductionForestColor = mix(
   journeyProductionForestVariation * 0.72
 );
 vec3 journeyProductionRockColor = mix(
-  vec3(0.155, 0.175, 0.18),
-  vec3(0.425, 0.405, 0.365),
-  journeyProductionMeso * 0.68 + journeyProductionMacro * 0.32
+  vec3(0.135, 0.155, 0.165),
+  vec3(0.435, 0.405, 0.35),
+  journeyProductionMeso * 0.52 + journeyProductionMacro * 0.3 +
+    journeyProductionFine * 0.18
 );
+journeyProductionRockColor *= mix(0.93, 1.055, journeyProductionFine);
 vec3 journeyProductionSurface = mix(
   journeyProductionGrassColor,
   journeyProductionForestColor,
@@ -2561,20 +2586,47 @@ journeyProductionSurface = mix(
 vec3 journeyProductionLightDirection = normalize(vec3(-0.55, 0.80, -0.24));
 float journeyProductionFacing = dot(journeyProductionNormal, journeyProductionLightDirection) * 0.5 + 0.5;
 journeyProductionSurface *= mix(
-  ${isFarRidge ? '0.98' : '0.91'},
-  ${isFarRidge ? '1.03' : '1.09'},
-  smoothstep(0.12, 0.9, journeyProductionFacing)
+  ${isFarRidge ? '0.965' : '0.87'},
+  ${isFarRidge ? '1.045' : '1.125'},
+  smoothstep(0.1, 0.92, journeyProductionFacing)
 );
+float journeyProductionCloudShadowField = journeyProductionNoise(
+  vJourneyWorldPosition.xz * 0.0062 +
+  vec2(uJourneyTime * 0.00016, -uJourneyTime * 0.00007) +
+  vec2(38.0, -17.0)
+);
+float journeyProductionCloudShadow = smoothstep(
+  0.57,
+  0.77,
+  journeyProductionCloudShadowField
+) * (1.0 - uJourneyNight) * (1.0 - uJourneySunset * 0.32);
+journeyProductionSurface *= 1.0 - journeyProductionCloudShadow *
+  ${isFarRidge ? '0.012' : '0.027'};
 journeyProductionSurface = mix(
   journeyProductionSurface,
   journeyProductionBiome * vec3(0.82, 0.91, 0.8),
-  ${isFarRidge ? '0.28' : '0.32'}
+  ${isFarRidge ? '0.18' : '0.23'}
 );
 ${hasAlpineMap ? `journeyProductionSurface = mix(
   journeyProductionSurface,
   journeyProductionSurface * journeyProductionSource * 1.38,
-  mix(0.18, 0.42, journeyProductionRock)
+  mix(0.24, 0.5, journeyProductionRock)
 );` : ''}
+journeyProductionSurface *= mix(
+  ${isFarRidge ? '0.99' : '0.955'},
+  ${isFarRidge ? '1.018' : '1.055'},
+  smoothstep(0.14, 0.9, journeyProductionFacing)
+);
+float journeyProductionCoolAspect = smoothstep(
+  0.24,
+  0.82,
+  dot(journeyProductionNormal, normalize(vec3(0.58, 0.12, 0.8))) * 0.5 + 0.5
+);
+journeyProductionSurface = mix(
+  journeyProductionSurface,
+  journeyProductionSurface * vec3(0.82, 0.9, 0.96),
+  journeyProductionCoolAspect * ${isFarRidge ? '0.055' : '0.085'}
+);
 vec3 journeyProductionDayHaze = vec3(0.48, 0.65, 0.66);
 vec3 journeyProductionSunsetHaze = vec3(0.72, 0.50, 0.43);
 vec3 journeyProductionNightHaze = vec3(0.105, 0.17, 0.31);
@@ -2605,9 +2657,35 @@ float journeyProductionRockFracture = 1.0 - smoothstep(
     vJourneyWorldPosition.y * 0.096 - vJourneyWorldPosition.z * 0.052
   )) - 0.48)
 );
+float journeyProductionRockMicroCrack = 1.0 - smoothstep(
+  0.018,
+  0.062,
+  abs(journeyProductionFine - 0.47)
+);
 journeyProductionSurface *= 1.0 - journeyProductionRock * (
   (1.0 - smoothstep(0.16, 0.78, journeyProductionRockStrata)) * 0.13 +
-  journeyProductionRockFracture * 0.11
+  journeyProductionRockFracture * 0.1 +
+  journeyProductionRockMicroCrack * 0.045
+);
+journeyProductionSurface *= mix(0.93, 1.055, journeyProductionFine);
+float journeyProductionAirDepth = smoothstep(125.0, 390.0, journeyProductionDistance);
+float journeyProductionAirDesaturation = journeyProductionAirDepth *
+  ${isFarRidge ? '0.17' : '0.028'};
+float journeyProductionLuminance = dot(
+  journeyProductionSurface,
+  vec3(0.2126, 0.7152, 0.0722)
+);
+journeyProductionSurface = mix(
+  journeyProductionSurface,
+  vec3(journeyProductionLuminance),
+  journeyProductionAirDesaturation
+);
+float journeyProductionValleyAir = journeyProductionAirDepth *
+  (1.0 - smoothstep(72.0, 148.0, vJourneyWorldPosition.y));
+journeyProductionSurface = mix(
+  journeyProductionSurface,
+  journeyProductionAtmosphere,
+  journeyProductionValleyAir * ${isFarRidge ? '0.11' : '0.018'}
 );
 float journeyProductionSummit =
   exp(-pow((vJourneyWorldPosition.x - 54.0) / 46.0, 2.0)) *
@@ -2632,8 +2710,10 @@ diffuseColor.rgb = mix(
         `#include <normal_fragment_maps>
 float journeyProductionRelief =
   (journeyProductionMeso - 0.5) * 1.6 +
+  (journeyProductionFine - 0.5) * 0.72 +
   (journeyProductionRockStrata - 0.5) * 0.82 +
-  journeyProductionRockFracture * 0.58;
+  journeyProductionRockFracture * 0.54 +
+  journeyProductionRockMicroCrack * 0.2;
 vec3 journeyProductionReliefPosition = vJourneyWorldPosition +
   normalize(vJourneyWorldNormal) * journeyProductionRelief * journeyProductionRock;
 vec3 journeyProductionReliefNormal = normalize(mat3(viewMatrix) * cross(
@@ -2698,7 +2778,7 @@ totalEmissiveRadiance += vec3(0.01, 0.024, 0.055) * uJourneyNight;`,
       )
   }
   material.customProgramCacheKey = () =>
-    `journey-alpine-production-${material.type}-${isFarRidge ? 'far' : 'near'}-v8-rock-relief`
+    `journey-alpine-production-${material.type}-${isFarRidge ? 'far' : 'near'}-v9-natural-surface`
   material.needsUpdate = true
 }
 
@@ -3814,13 +3894,13 @@ function DriftingClouds({ groupRef, materialRefs }) {
     {
       key: 'left-ridge-front', type: 'sprite', texture: 'ridgeLeft',
       position: [-138, 124, -207], scale: [232, 82, 1], rotation: -0.052,
-      dayOpacity: 0.54, nightOpacity: 0.002, nightTone: 0.7,
+      dayOpacity: 0.46, nightOpacity: 0.002, nightTone: 0.7,
       drift: [0.42, 0.13, 0.009, 1.24], depthTest: false, renderOrder: 2,
     },
     {
       key: 'left-ridge-wisp', type: 'sprite', texture: 'ridgeWisp',
       position: [-106, 114, -198], scale: [186, 38, 1], rotation: -0.025,
-      dayOpacity: 0.14, nightOpacity: 0.001, nightTone: 0.68,
+      dayOpacity: 0.12, nightOpacity: 0.001, nightTone: 0.68,
       drift: [0.34, 0.1, 0.008, 1.92], depthTest: false, renderOrder: 3,
     },
     {
@@ -3832,13 +3912,13 @@ function DriftingClouds({ groupRef, materialRefs }) {
     {
       key: 'right-ridge-front', type: 'sprite', texture: 'ridgeRight',
       position: [202, 155, -257], scale: [306, 90, 1], rotation: 0.045,
-      dayOpacity: 0.58, nightOpacity: 0.014, nightTone: 0.8,
+      dayOpacity: 0.49, nightOpacity: 0.014, nightTone: 0.8,
       drift: [0.52, 0.16, 0.008, 3.25], depthTest: false, renderOrder: 2,
     },
     {
       key: 'right-ridge-wisp', type: 'sprite', texture: 'ridgeWisp',
       position: [154, 140, -244], scale: [226, 44, 1], rotation: 0.02,
-      dayOpacity: 0.17, nightOpacity: 0.007, nightTone: 0.82,
+      dayOpacity: 0.14, nightOpacity: 0.007, nightTone: 0.82,
       drift: [0.42, 0.12, 0.007, 4.05], depthTest: false, renderOrder: 3,
     },
     // This far layer sits below the saddle, opening a milky distance cue
@@ -3846,13 +3926,13 @@ function DriftingClouds({ groupRef, materialRefs }) {
     {
       key: 'far-valley', type: 'mesh', texture: 'valley',
       position: [-12, 88, -268], scale: [146, 38, 1], yaw: -0.012,
-      dayOpacity: 0.28, nightOpacity: 0.02, nightTone: 0.86,
+      dayOpacity: 0.2, nightOpacity: 0.02, nightTone: 0.86,
       drift: [0.36, 0.12, 0.008, 4.2], depthTest: false, renderOrder: 1,
     },
     {
       key: 'far-valley-rear', type: 'mesh', texture: 'valley',
       position: [4, 101, -312], scale: [112, 30, 1], yaw: 0.018,
-      dayOpacity: 0.18, nightOpacity: 0.014, nightTone: 0.88,
+      dayOpacity: 0.12, nightOpacity: 0.014, nightTone: 0.88,
       drift: [0.24, 0.08, 0.007, 5.05], depthTest: false, renderOrder: 0,
     },
     // Fine cirrus lives high behind the valley. It is deliberately separate
@@ -3875,6 +3955,8 @@ function DriftingClouds({ groupRef, materialRefs }) {
         const userData = {
           baseX: cloud.position[0],
           baseY: cloud.position[1],
+          baseScaleX: cloud.scale[0],
+          baseScaleY: cloud.scale[1],
           dayOpacity: cloud.dayOpacity,
           nightOpacity: cloud.nightOpacity,
           nightTone: cloud.nightTone,
@@ -7648,13 +7730,14 @@ export default function JourneyScene({
       const cloudsVisible = atmosphereReveal > 0.002
       cloudGroupRef.current.visible = cloudsVisible
       if (cloudsVisible) {
+        const cloudMotionTime = reduceMotion ? 0 : state.clock.elapsedTime
         cloudGroupRef.current.children.forEach((cloud, index) => {
           const material = cloudMaterialRefs.current[index]
           const [driftX, driftY, driftSpeed, phase] = cloud.userData.drift ?? [0, 0, 0, 0]
           const dayOpacity = cloud.userData.dayOpacity ?? 0
           const nightOpacity = cloud.userData.nightOpacity ?? 0
           const nightTone = cloud.userData.nightTone ?? 0
-          const pulse = 0.93 + Math.sin(state.clock.elapsedTime * 0.032 + phase) * 0.07
+          const pulse = 0.93 + Math.sin(cloudMotionTime * 0.032 + phase) * 0.07
           if (material) {
             // Sunset changes the cloud hue with the sky; retain enough density
             // for the ridge veil to stay legible without reverting to white.
@@ -7671,11 +7754,18 @@ export default function JourneyScene({
           }
           cloud.position.x =
             cloud.userData.baseX +
-            Math.sin(state.clock.elapsedTime * driftSpeed + phase) * driftX
+            Math.sin(cloudMotionTime * driftSpeed + phase) * driftX
           cloud.position.y =
             cloud.userData.baseY + Math.sin(
-              state.clock.elapsedTime * driftSpeed * 0.71 + index * 1.17 + phase,
+              cloudMotionTime * driftSpeed * 0.71 + index * 1.17 + phase,
             ) * driftY
+          const shapePhase = cloudMotionTime * 0.01 + phase * 1.37
+          cloud.scale.x = cloud.userData.baseScaleX * (
+            1 + Math.sin(shapePhase) * 0.006
+          )
+          cloud.scale.y = cloud.userData.baseScaleY * (
+            1 + Math.sin(shapePhase * 0.73 + index * 0.91) * 0.008
+          )
         })
       }
     }
