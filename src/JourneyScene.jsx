@@ -3747,7 +3747,6 @@ function DriftingClouds({ groupRef, materialRefs }) {
           nightOpacity: cloud.nightOpacity,
           nightTone: cloud.nightTone,
           flow: cloud.flow,
-          flowPhase: cloud.flow[3],
         }
         if (cloud.type === 'mesh') {
           return (
@@ -6767,6 +6766,7 @@ export default function JourneyScene({
   const seatedFigureSilhouetteMaterialRef = useRef(null)
   const cloudGroupRef = useRef(null)
   const cloudMaterialRefs = useRef([])
+  const cloudFlowPhasesRef = useRef([])
   const cloudbreakRef = useRef(null)
   const cloudbreakMaterialRef = useRef(null)
   const skyAtmosphereRef = useRef(null)
@@ -7529,19 +7529,23 @@ export default function JourneyScene({
           const dayOpacity = cloud.userData.dayOpacity ?? 0
           const nightOpacity = cloud.userData.nightOpacity ?? 0
           const nightTone = cloud.userData.nightTone ?? 0
-          // Integrate a long, one-direction cycle instead of mapping position
-          // directly from story progress. Scroll reversal can change the air's
-          // character, but can never make a cloud jump or run backwards.
+          // Keep phase outside the React-managed Three.js userData object.
+          // Progress renders reconcile that object on every scroll frame; the
+          // former userData phase was consequently reset to its initial value,
+          // which made clouds move only while the story itself was stationary.
           const flowRate =
             timeOfDay.dayWeight +
             sunset * sunsetFlowRate +
             night * nightFlowRate
-          cloud.userData.flowPhase = THREE.MathUtils.euclideanModulo(
-            (cloud.userData.flowPhase ?? initialPhase) +
+          const previousPhase = Number.isFinite(cloudFlowPhasesRef.current[index])
+            ? cloudFlowPhasesRef.current[index]
+            : initialPhase
+          const flowPhase = THREE.MathUtils.euclideanModulo(
+            previousPhase +
               delta * flowRate / Math.max(periodSeconds, 1),
             1,
           )
-          const flowPhase = cloud.userData.flowPhase
+          cloudFlowPhasesRef.current[index] = flowPhase
           // Each layer disappears softly before it wraps to the upwind side.
           // Paired summit/valley layers use staggered phases, so one layer
           // always carries the ridge while the other renews invisibly.
@@ -7570,6 +7574,15 @@ export default function JourneyScene({
             cloud.userData.baseY +
             Math.sin(flowPhase * Math.PI * 2 * 1.37 + index * 1.17) * meanderY
         })
+        if (qaCaptureEnabled) {
+          document.documentElement.dataset.journeyCloudMotion = JSON.stringify(
+            cloudGroupRef.current.children.map((cloud, index) => ({
+              index,
+              x: Number(cloud.position.x.toFixed(4)),
+              phase: Number((cloudFlowPhasesRef.current[index] ?? 0).toFixed(6)),
+            })),
+          )
+        }
       }
     }
 
