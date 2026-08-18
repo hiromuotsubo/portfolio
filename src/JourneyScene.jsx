@@ -3689,25 +3689,25 @@ function DriftingClouds({ groupRef, materialRefs }) {
       key: 'left-ridge-base', type: 'sprite', texture: 'ridgePhotoLeft',
       position: [-136, 143, -218], scale: [220, 86, 1],
       dayOpacity: 0.38, nightOpacity: 0.004, nightTone: 0.72,
-      drift: [0.64, 0.2, 0.012, 0.4], depthTest: false, renderOrder: 2,
+      flow: [9.6, 0.75, 78, 0.26, 0.86, 0.62], depthTest: false, renderOrder: 2,
     },
     {
       key: 'left-ridge-wisp', type: 'sprite', texture: 'ridgePhotoRight',
       position: [-105, 133, -226], scale: [158, 38, 1],
       dayOpacity: 0.13, nightOpacity: 0.002, nightTone: 0.7,
-      drift: [0.46, 0.14, 0.01, 1.24], depthTest: false, renderOrder: 3,
+      flow: [13.4, 1.1, 64, 0.71, 0.9, 0.65], depthTest: false, renderOrder: 3,
     },
     {
       key: 'right-ridge-base', type: 'sprite', texture: 'ridgePhotoRight',
       position: [210, 194, -269], scale: [320, 96, 1],
       dayOpacity: 0.43, nightOpacity: 0.022, nightTone: 0.78,
-      drift: [0.8, 0.24, 0.01, 2.1], depthTest: false, renderOrder: 2,
+      flow: [11.2, 0.85, 84, 0.18, 0.84, 0.58], depthTest: false, renderOrder: 2,
     },
     {
       key: 'right-ridge-wisp', type: 'sprite', texture: 'ridgePhotoLeft',
       position: [184, 160, -280], scale: [224, 50, 1],
       dayOpacity: 0.18, nightOpacity: 0.01, nightTone: 0.82,
-      drift: [0.54, 0.16, 0.009, 3.25], depthTest: false, renderOrder: 3,
+      flow: [15, 1.2, 69, 0.64, 0.9, 0.65], depthTest: false, renderOrder: 3,
     },
     // This far layer sits below the saddle, opening a milky distance cue
     // without reintroducing a horizontal fog-bank treatment.
@@ -3715,25 +3715,25 @@ function DriftingClouds({ groupRef, materialRefs }) {
       key: 'far-valley', type: 'mesh', texture: 'valley',
       position: [-9, 104, -255], scale: [170, 46, 1], yaw: 0,
       dayOpacity: 0.65, nightOpacity: 0.025, nightTone: 0.86,
-      drift: [0.36, 0.12, 0.008, 4.2], depthTest: false, renderOrder: 1,
+      flow: [7.6, 0.55, 96, 0.34, 0.72, 0.45], depthTest: false, renderOrder: 1,
     },
     {
       key: 'far-valley-rear', type: 'mesh', texture: 'valley',
       position: [22, 118, -300], scale: [105, 28, 1], yaw: 0.018,
       dayOpacity: 0.32, nightOpacity: 0.016, nightTone: 0.88,
-      drift: [0.24, 0.08, 0.007, 5.05], depthTest: false, renderOrder: 0,
+      flow: [6.2, 0.42, 108, 0.82, 0.72, 0.44], depthTest: false, renderOrder: 0,
     },
     // Fine cirrus lives high behind the valley. It is deliberately separate
     // from the ridge wisps so it can fade away before the night sky arrives.
     {
       key: 'cirrus-left', type: 'sprite', texture: 'cirrus', position: [-176, 270, -339], scale: [282, 30, 1],
       dayOpacity: 0.2, nightOpacity: 0.001, nightTone: 0.65,
-      drift: [0.38, 0.1, 0.006, 0.95], depthTest: false, renderOrder: -2,
+      flow: [22, 1.2, 112, 0.12, 1.05, 0.35], depthTest: false, renderOrder: -2,
     },
     {
       key: 'cirrus-right', type: 'sprite', texture: 'cirrus', position: [120, 270, -372], scale: [300, 28, 1],
       dayOpacity: 0.16, nightOpacity: 0.001, nightTone: 0.64,
-      drift: [0.3, 0.08, 0.007, 3.35], depthTest: false, renderOrder: -2,
+      flow: [18, 1, 126, 0.56, 1.05, 0.35], depthTest: false, renderOrder: -2,
     },
   ], [])
 
@@ -3746,7 +3746,8 @@ function DriftingClouds({ groupRef, materialRefs }) {
           dayOpacity: cloud.dayOpacity,
           nightOpacity: cloud.nightOpacity,
           nightTone: cloud.nightTone,
-          drift: cloud.drift,
+          flow: cloud.flow,
+          flowPhase: cloud.flow[3],
         }
         if (cloud.type === 'mesh') {
           return (
@@ -7517,11 +7518,37 @@ export default function JourneyScene({
       if (cloudsVisible) {
         cloudGroupRef.current.children.forEach((cloud, index) => {
           const material = cloudMaterialRefs.current[index]
-          const [driftX, driftY, driftSpeed, phase] = cloud.userData.drift ?? [0, 0, 0, 0]
+          const [
+            travelX,
+            meanderY,
+            periodSeconds,
+            initialPhase,
+            sunsetFlowRate,
+            nightFlowRate,
+          ] = cloud.userData.flow ?? [0, 0, 90, 0.5, 1, 1]
           const dayOpacity = cloud.userData.dayOpacity ?? 0
           const nightOpacity = cloud.userData.nightOpacity ?? 0
           const nightTone = cloud.userData.nightTone ?? 0
-          const pulse = 0.93 + Math.sin(state.clock.elapsedTime * 0.032 + phase) * 0.07
+          // Integrate a long, one-direction cycle instead of mapping position
+          // directly from story progress. Scroll reversal can change the air's
+          // character, but can never make a cloud jump or run backwards.
+          const flowRate =
+            timeOfDay.dayWeight +
+            sunset * sunsetFlowRate +
+            night * nightFlowRate
+          cloud.userData.flowPhase = THREE.MathUtils.euclideanModulo(
+            (cloud.userData.flowPhase ?? initialPhase) +
+              delta * flowRate / Math.max(periodSeconds, 1),
+            1,
+          )
+          const flowPhase = cloud.userData.flowPhase
+          // Each layer disappears softly before it wraps to the upwind side.
+          // Paired summit/valley layers use staggered phases, so one layer
+          // always carries the ridge while the other renews invisibly.
+          const flowEnvelope = smootherstep(0, 0.12, flowPhase) * (
+            1 - smootherstep(0.86, 0.985, flowPhase)
+          )
+          const pulse = 0.96 + Math.sin(flowPhase * Math.PI * 2 + index * 0.91) * 0.04
           if (material) {
             // Sunset changes the cloud hue with the sky; retain enough density
             // for the ridge veil to stay legible without reverting to white.
@@ -7530,7 +7557,7 @@ export default function JourneyScene({
               dayOpacity,
               nightOpacity,
               night,
-            ) * sunsetOpacity * pulse
+            ) * sunsetOpacity * pulse * flowEnvelope
             material.color
               .copy(frameColors.cloudBase)
               .lerp(frameColors.cloudSunset, sunsetColorMix * (1 - night * 0.72))
@@ -7538,11 +7565,10 @@ export default function JourneyScene({
           }
           cloud.position.x =
             cloud.userData.baseX +
-            Math.sin(state.clock.elapsedTime * driftSpeed + phase) * driftX
+            (flowPhase - 0.5) * travelX
           cloud.position.y =
-            cloud.userData.baseY + Math.sin(
-              state.clock.elapsedTime * driftSpeed * 0.71 + index * 1.17 + phase,
-            ) * driftY
+            cloud.userData.baseY +
+            Math.sin(flowPhase * Math.PI * 2 * 1.37 + index * 1.17) * meanderY
         })
       }
     }
