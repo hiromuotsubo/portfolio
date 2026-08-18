@@ -970,35 +970,86 @@ function createCloudTexture(seed) {
   return texture
 }
 
-function createPhotographicCloudTexture(sourceTexture, reverse = false) {
+function createOrographicCloudTexture(sourceTexture, seed, reverse = false, slender = false) {
   const source = sourceTexture.image
-  const width = source?.naturalWidth ?? source?.videoWidth ?? source?.width ?? 1024
-  const height = source?.naturalHeight ?? source?.videoHeight ?? source?.height ?? 684
+  const sourceWidth = source?.naturalWidth ?? source?.videoWidth ?? source?.width ?? 1024
+  const sourceHeight = source?.naturalHeight ?? source?.videoHeight ?? source?.height ?? 684
   const canvas = document.createElement('canvas')
-  canvas.width = width
-  canvas.height = height
+  canvas.width = 1024
+  canvas.height = slender ? 256 : 320
   const context = canvas.getContext('2d', { willReadFrequently: true })
 
   context.save()
   if (reverse) {
-    context.translate(width, 0)
+    context.translate(canvas.width, 0)
     context.scale(-1, 1)
   }
-  context.drawImage(source, 0, 0, width, height)
+  // Use the photographed vapour as microstructure, but crop away most of the
+  // tall cumulus body. Orographic cloud is a low, wind-sheared layer that
+  // catches on a ridge rather than a detached cotton-like cloud.
+  context.drawImage(
+    source,
+    sourceWidth * 0.035,
+    sourceHeight * 0.235,
+    sourceWidth * 0.93,
+    sourceHeight * 0.59,
+    0,
+    slender ? -28 : -16,
+    canvas.width,
+    canvas.height + (slender ? 62 : 42),
+  )
   context.restore()
 
-  // The source is an additive cloud photograph on black. Convert luminance
-  // into transparency once at load time so the fine vapour edge survives,
-  // while the rectangular source background disappears completely.
-  const image = context.getImageData(0, 0, width, height)
+  // Preserve the photographed vapour's real lobes and internal shadowing for
+  // summit clouds. Valley haze still receives a shallower, wind-sheared
+  // envelope, but the ridge layers must remain visibly cloud-like instead of
+  // collapsing into a translucent horizontal stripe.
+  const image = context.getImageData(0, 0, canvas.width, canvas.height)
   const pixels = image.data
   for (let index = 0; index < pixels.length; index += 4) {
+    const pixelIndex = index / 4
+    const x = pixelIndex % canvas.width
+    const y = Math.floor(pixelIndex / canvas.width)
+    const normalizedX = x / (canvas.width - 1)
+    const normalizedY = y / (canvas.height - 1)
     const luminance = Math.max(pixels[index], pixels[index + 1], pixels[index + 2]) / 255
-    const threshold = THREE.MathUtils.clamp((luminance - 0.018) / 0.82, 0, 1)
-    const alpha = threshold * threshold * (3 - 2 * threshold)
-    pixels[index] = 255
-    pixels[index + 1] = 255
-    pixels[index + 2] = 255
+    const photographicDensity = THREE.MathUtils.clamp((luminance - 0.014) / 0.76, 0, 1)
+    const horizontalEdge = smoothstep(0, 0.105, normalizedX) *
+      (1 - smoothstep(0.88, 1, normalizedX))
+    const breakup = THREE.MathUtils.clamp(
+      0.67 +
+        Math.sin(normalizedX * 47 + normalizedY * 21 + seed) * 0.16 +
+        Math.sin(normalizedX * 91 - normalizedY * 37 + seed * 0.37) * 0.12,
+      0.34,
+      1,
+    )
+    let envelope = smoothstep(0, 0.12, normalizedY) *
+      (1 - smoothstep(0.88, 1, normalizedY))
+    if (slender) {
+      const flow =
+        Math.sin(normalizedX * 13.7 + seed * 0.013) * 0.052 +
+        Math.sin(normalizedX * 31.1 - seed * 0.007) * 0.026
+      const bandCenter = 0.55 + flow
+      const bandHalfHeight = 0.22 * (
+        0.68 +
+        Math.sin(normalizedX * 9.2 + seed * 0.021) * 0.2 +
+        Math.sin(normalizedX * 23.4 - seed * 0.011) * 0.1
+      )
+      const bandDistance = Math.abs(normalizedY - bandCenter) /
+        Math.max(0.08, bandHalfHeight)
+      envelope *= 1 - smoothstep(0.46, 1, bandDistance)
+    }
+    const density = Math.pow(photographicDensity, slender ? 0.98 : 0.78) *
+      envelope * horizontalEdge * breakup
+    const alpha = smoothstep(0.02, slender ? 0.62 : 0.72, density)
+    const cloudLight = Math.round(THREE.MathUtils.lerp(
+      102,
+      244,
+      Math.pow(photographicDensity, 0.72),
+    ))
+    pixels[index] = cloudLight
+    pixels[index + 1] = cloudLight
+    pixels[index + 2] = Math.min(255, cloudLight + 4)
     pixels[index + 3] = Math.round(alpha * 255)
   }
   context.putImageData(image, 0, 0)
@@ -1020,14 +1071,14 @@ function createCirrusTexture(seed) {
   const context = canvas.getContext('2d')
   context.clearRect(0, 0, canvas.width, canvas.height)
   context.save()
-  context.filter = 'blur(2px)'
+  context.filter = 'blur(1.6px)'
   context.lineCap = 'round'
 
-  for (let index = 0; index < 5; index += 1) {
-    const y = 28 + seededRandom(seed + index * 31) * 82
+  for (let index = 0; index < 7; index += 1) {
+    const y = 12 + seededRandom(seed + index * 31) * 120
     const start = -54 + seededRandom(seed + index * 43) * 96
     const end = 492 + seededRandom(seed + index * 59) * 156
-    const bend = (seededRandom(seed + index * 71) - 0.5) * 42
+    const bend = (seededRandom(seed + index * 71) - 0.5) * 104
     context.beginPath()
     context.moveTo(start, y)
     context.bezierCurveTo(
@@ -1038,8 +1089,8 @@ function createCirrusTexture(seed) {
       end,
       y + bend * 0.3,
     )
-    context.strokeStyle = `rgba(242, 247, 246, ${0.16 + seededRandom(seed + index * 83) * 0.09})`
-    context.lineWidth = 2.2 + seededRandom(seed + index * 97) * 2.1
+    context.strokeStyle = `rgba(242, 247, 246, ${0.34 + seededRandom(seed + index * 83) * 0.2})`
+    context.lineWidth = 2.4 + seededRandom(seed + index * 97) * 2.8
     context.stroke()
   }
   context.restore()
@@ -2314,6 +2365,7 @@ function applyAlpineProduction(material, isFarRidge, biomeMacroTexture) {
     !material.isMeshPhysicalMaterial
   ) return
   const hasAlpineMap = Boolean(material.map)
+  const alpineNormalMap = material.normalMap
   material.normalMap = null
   material.roughnessMap = null
   material.metalnessMap = null
@@ -2325,6 +2377,7 @@ function applyAlpineProduction(material, isFarRidge, biomeMacroTexture) {
     uJourneyTime: { value: 0 },
     uJourneyEntranceReveal: { value: 1 },
     uJourneyBiomeMacro: { value: biomeMacroTexture },
+    uJourneyAlpineNormal: { value: alpineNormalMap },
   }
   material.userData.journeyAlpineUniforms = uniforms
   material.onBeforeCompile = (shader) => {
@@ -2361,6 +2414,7 @@ uniform float uJourneyRiverLight;
 uniform float uJourneyDiscovery;
 uniform float uJourneyEntranceReveal;
 uniform sampler2D uJourneyBiomeMacro;
+uniform sampler2D uJourneyAlpineNormal;
 
 float journeyProductionHash(vec2 point) {
   return fract(sin(dot(point, vec2(127.1, 311.7))) * 43758.5453123);
@@ -2442,9 +2496,9 @@ vec3 journeyProductionBiome = texture2D(
   journeyProductionSourceDomain * journeyProductionBiomeScale + journeyProductionBiomeWarp
 ).rgb;
 float journeyProductionRock = smoothstep(
-  0.32,
-  0.7,
-  journeyProductionSteepness * 0.78 + journeyProductionAltitude * 0.48 +
+  0.25,
+  0.62,
+  journeyProductionSteepness * 0.82 + journeyProductionAltitude * 0.56 +
     (journeyProductionBiome.r - 0.5) * 0.32
 );
 float journeyProductionScree = smoothstep(
@@ -2480,9 +2534,9 @@ vec3 journeyProductionForestColor = mix(
   journeyProductionForestVariation * 0.72
 );
 vec3 journeyProductionRockColor = mix(
-  vec3(0.205, 0.225, 0.215),
-  vec3(0.45, 0.42, 0.355),
-  journeyProductionMeso
+  vec3(0.155, 0.175, 0.18),
+  vec3(0.425, 0.405, 0.365),
+  journeyProductionMeso * 0.68 + journeyProductionMacro * 0.32
 );
 vec3 journeyProductionSurface = mix(
   journeyProductionGrassColor,
@@ -2501,8 +2555,8 @@ journeyProductionSurface = mix(
 );
 journeyProductionSurface = mix(
   journeyProductionSurface,
-  vec3(0.075, 0.13, 0.112),
-  journeyProductionDrainage * ${isFarRidge ? '0.025' : '0.105'}
+  vec3(0.055, 0.075, 0.073),
+  journeyProductionDrainage * ${isFarRidge ? '0.04' : '0.17'}
 );
 vec3 journeyProductionLightDirection = normalize(vec3(-0.55, 0.80, -0.24));
 float journeyProductionFacing = dot(journeyProductionNormal, journeyProductionLightDirection) * 0.5 + 0.5;
@@ -2535,7 +2589,25 @@ float journeyProductionHaze = smoothstep(70.0, 350.0, journeyProductionDistance)
 journeyProductionSurface = mix(
   journeyProductionSurface,
   journeyProductionAtmosphere,
-  journeyProductionHaze * ${isFarRidge ? '0.56' : '0.14'}
+  journeyProductionHaze * ${isFarRidge ? '0.48' : '0.09'}
+);
+float journeyProductionRockStrata = 0.5 + 0.5 * sin(
+  vJourneyWorldPosition.y * 0.29 +
+  vJourneyWorldPosition.x * 0.074 -
+  vJourneyWorldPosition.z * 0.047 +
+  journeyProductionMeso * 5.6
+);
+float journeyProductionRockFracture = 1.0 - smoothstep(
+  0.035,
+  0.14,
+  abs(journeyProductionNoise(vec2(
+    vJourneyWorldPosition.x * 0.085 + vJourneyWorldPosition.z * 0.026,
+    vJourneyWorldPosition.y * 0.096 - vJourneyWorldPosition.z * 0.052
+  )) - 0.48)
+);
+journeyProductionSurface *= 1.0 - journeyProductionRock * (
+  (1.0 - smoothstep(0.16, 0.78, journeyProductionRockStrata)) * 0.13 +
+  journeyProductionRockFracture * 0.11
 );
 float journeyProductionSummit =
   exp(-pow((vJourneyWorldPosition.x - 54.0) / 46.0, 2.0)) *
@@ -2551,10 +2623,55 @@ journeyProductionSurface += vec3(0.055, 0.16, 0.22) * uJourneyRiverLight *
 diffuseColor.rgb = mix(
   diffuseColor.rgb,
   journeyProductionSurface,
-  ${isFarRidge ? '0.84' : '0.72'}
+  ${isFarRidge ? '0.88' : '0.84'}
 );`,
     )
     shader.fragmentShader = shader.fragmentShader
+      .replace(
+        '#include <normal_fragment_maps>',
+        `#include <normal_fragment_maps>
+float journeyProductionRelief =
+  (journeyProductionMeso - 0.5) * 1.6 +
+  (journeyProductionRockStrata - 0.5) * 0.82 +
+  journeyProductionRockFracture * 0.58;
+vec3 journeyProductionReliefPosition = vJourneyWorldPosition +
+  normalize(vJourneyWorldNormal) * journeyProductionRelief * journeyProductionRock;
+vec3 journeyProductionReliefNormal = normalize(mat3(viewMatrix) * cross(
+  dFdx(journeyProductionReliefPosition),
+  dFdy(journeyProductionReliefPosition)
+));
+journeyProductionReliefNormal *= sign(dot(journeyProductionReliefNormal, normal));
+${alpineNormalMap ? `vec3 journeyProductionNormalSample = texture2D(
+  uJourneyAlpineNormal,
+  journeyProductionSourceDomain * journeyProductionTextureScale
+).xyz * 2.0 - 1.0;
+vec3 journeyProductionWorldDetail = journeyProductionNormalSample;
+if (journeyProductionDominantAxis < 0.5) {
+  journeyProductionWorldDetail = vec3(
+    journeyProductionNormalSample.z,
+    journeyProductionNormalSample.y,
+    journeyProductionNormalSample.x
+  );
+} else if (journeyProductionDominantAxis < 1.5) {
+  journeyProductionWorldDetail = vec3(
+    journeyProductionNormalSample.x,
+    journeyProductionNormalSample.z,
+    journeyProductionNormalSample.y
+  );
+}
+vec3 journeyProductionTextureNormal = normalize(mat3(viewMatrix) * journeyProductionWorldDetail);
+journeyProductionTextureNormal *= sign(dot(journeyProductionTextureNormal, normal));
+journeyProductionReliefNormal = normalize(mix(
+  journeyProductionReliefNormal,
+  journeyProductionTextureNormal,
+  0.42
+));` : ''}
+normal = normalize(mix(
+  normal,
+  journeyProductionReliefNormal,
+  journeyProductionRock * ${isFarRidge ? '0.2' : '0.38'}
+));`,
+      )
       .replace(
         '#include <roughnessmap_fragment>',
         `#include <roughnessmap_fragment>
@@ -2581,7 +2698,7 @@ totalEmissiveRadiance += vec3(0.01, 0.024, 0.055) * uJourneyNight;`,
       )
   }
   material.customProgramCacheKey = () =>
-    `journey-alpine-production-${material.type}-${isFarRidge ? 'far' : 'near'}-v7-precomputed-macro-noise`
+    `journey-alpine-production-${material.type}-${isFarRidge ? 'far' : 'near'}-v8-rock-relief`
   material.needsUpdate = true
 }
 
@@ -3667,15 +3784,17 @@ function SkyBridge({ meshRef }) {
 function DriftingClouds({ groupRef, materialRefs }) {
   const ridgeSourceTexture = useTexture('/journey/textures/phase3/alpine-cloud-additive.webp')
   const textures = useMemo(() => ({
-    ridgePhotoLeft: createPhotographicCloudTexture(ridgeSourceTexture),
-    ridgePhotoRight: createPhotographicCloudTexture(ridgeSourceTexture, true),
-    valley: createCloudTexture(68431),
+    ridgeLeft: createOrographicCloudTexture(ridgeSourceTexture, 41017),
+    ridgeRight: createOrographicCloudTexture(ridgeSourceTexture, 72611, true),
+    ridgeWisp: createOrographicCloudTexture(ridgeSourceTexture, 93607),
+    valley: createOrographicCloudTexture(ridgeSourceTexture, 68431, true),
     cirrus: createCirrusTexture(68767),
   }), [ridgeSourceTexture])
   useEffect(
     () => () => {
-      textures.ridgePhotoLeft.dispose()
-      textures.ridgePhotoRight.dispose()
+      textures.ridgeLeft.dispose()
+      textures.ridgeRight.dispose()
+      textures.ridgeWisp.dispose()
       textures.valley.dispose()
       textures.cirrus.dispose()
     },
@@ -3683,56 +3802,69 @@ function DriftingClouds({ groupRef, materialRefs }) {
   )
 
   const clouds = useMemo(() => [
-    // Paired ridge layers overlap the summit silhouettes so the mountain edge
-    // dissolves into the air instead of reading as a hard model boundary.
+    // Each summit has a depth-tested rear cap and a lower-opacity foreground
+    // veil. Together they let the ridge pass through the cloud rather than
+    // making a single flat sprite sit entirely in front of the mountain.
     {
-      key: 'left-ridge-base', type: 'sprite', texture: 'ridgePhotoLeft',
-      position: [-136, 143, -218], scale: [220, 86, 1],
-      dayOpacity: 0.38, nightOpacity: 0.004, nightTone: 0.72,
-      drift: [0.64, 0.2, 0.012, 0.4], depthTest: false, renderOrder: 2,
+      key: 'left-ridge-rear', type: 'sprite', texture: 'ridgeLeft',
+      position: [-143, 116, -238], scale: [254, 78, 1], rotation: -0.035,
+      dayOpacity: 0.035, nightOpacity: 0.003, nightTone: 0.72,
+      drift: [0.5, 0.16, 0.01, 0.4], depthTest: true, renderOrder: -1,
     },
     {
-      key: 'left-ridge-wisp', type: 'sprite', texture: 'ridgePhotoRight',
-      position: [-105, 133, -226], scale: [158, 38, 1],
-      dayOpacity: 0.13, nightOpacity: 0.002, nightTone: 0.7,
-      drift: [0.46, 0.14, 0.01, 1.24], depthTest: false, renderOrder: 3,
+      key: 'left-ridge-front', type: 'sprite', texture: 'ridgeLeft',
+      position: [-138, 124, -207], scale: [232, 82, 1], rotation: -0.052,
+      dayOpacity: 0.54, nightOpacity: 0.002, nightTone: 0.7,
+      drift: [0.42, 0.13, 0.009, 1.24], depthTest: false, renderOrder: 2,
     },
     {
-      key: 'right-ridge-base', type: 'sprite', texture: 'ridgePhotoRight',
-      position: [210, 194, -269], scale: [320, 96, 1],
-      dayOpacity: 0.43, nightOpacity: 0.022, nightTone: 0.78,
-      drift: [0.8, 0.24, 0.01, 2.1], depthTest: false, renderOrder: 2,
+      key: 'left-ridge-wisp', type: 'sprite', texture: 'ridgeWisp',
+      position: [-106, 114, -198], scale: [186, 38, 1], rotation: -0.025,
+      dayOpacity: 0.14, nightOpacity: 0.001, nightTone: 0.68,
+      drift: [0.34, 0.1, 0.008, 1.92], depthTest: false, renderOrder: 3,
     },
     {
-      key: 'right-ridge-wisp', type: 'sprite', texture: 'ridgePhotoLeft',
-      position: [184, 160, -280], scale: [224, 50, 1],
-      dayOpacity: 0.18, nightOpacity: 0.01, nightTone: 0.82,
-      drift: [0.54, 0.16, 0.009, 3.25], depthTest: false, renderOrder: 3,
+      key: 'right-ridge-rear', type: 'sprite', texture: 'ridgeRight',
+      position: [196, 148, -306], scale: [334, 94, 1], rotation: 0.032,
+      dayOpacity: 0.045, nightOpacity: 0.02, nightTone: 0.78,
+      drift: [0.62, 0.2, 0.009, 2.1], depthTest: true, renderOrder: -1,
+    },
+    {
+      key: 'right-ridge-front', type: 'sprite', texture: 'ridgeRight',
+      position: [202, 155, -257], scale: [306, 90, 1], rotation: 0.045,
+      dayOpacity: 0.58, nightOpacity: 0.014, nightTone: 0.8,
+      drift: [0.52, 0.16, 0.008, 3.25], depthTest: false, renderOrder: 2,
+    },
+    {
+      key: 'right-ridge-wisp', type: 'sprite', texture: 'ridgeWisp',
+      position: [154, 140, -244], scale: [226, 44, 1], rotation: 0.02,
+      dayOpacity: 0.17, nightOpacity: 0.007, nightTone: 0.82,
+      drift: [0.42, 0.12, 0.007, 4.05], depthTest: false, renderOrder: 3,
     },
     // This far layer sits below the saddle, opening a milky distance cue
     // without reintroducing a horizontal fog-bank treatment.
     {
       key: 'far-valley', type: 'mesh', texture: 'valley',
-      position: [-9, 104, -255], scale: [170, 46, 1], yaw: 0,
-      dayOpacity: 0.65, nightOpacity: 0.025, nightTone: 0.86,
+      position: [-12, 88, -268], scale: [146, 38, 1], yaw: -0.012,
+      dayOpacity: 0.28, nightOpacity: 0.02, nightTone: 0.86,
       drift: [0.36, 0.12, 0.008, 4.2], depthTest: false, renderOrder: 1,
     },
     {
       key: 'far-valley-rear', type: 'mesh', texture: 'valley',
-      position: [22, 118, -300], scale: [105, 28, 1], yaw: 0.018,
-      dayOpacity: 0.32, nightOpacity: 0.016, nightTone: 0.88,
+      position: [4, 101, -312], scale: [112, 30, 1], yaw: 0.018,
+      dayOpacity: 0.18, nightOpacity: 0.014, nightTone: 0.88,
       drift: [0.24, 0.08, 0.007, 5.05], depthTest: false, renderOrder: 0,
     },
     // Fine cirrus lives high behind the valley. It is deliberately separate
     // from the ridge wisps so it can fade away before the night sky arrives.
     {
-      key: 'cirrus-left', type: 'sprite', texture: 'cirrus', position: [-176, 270, -339], scale: [282, 30, 1],
-      dayOpacity: 0.2, nightOpacity: 0.001, nightTone: 0.65,
+      key: 'cirrus-left', type: 'sprite', texture: 'cirrus', position: [-18, 230, -356], scale: [430, 92, 1], rotation: -0.025,
+      dayOpacity: 0.04, nightOpacity: 0.001, nightTone: 0.65,
       drift: [0.38, 0.1, 0.006, 0.95], depthTest: false, renderOrder: -2,
     },
     {
-      key: 'cirrus-right', type: 'sprite', texture: 'cirrus', position: [120, 270, -372], scale: [300, 28, 1],
-      dayOpacity: 0.16, nightOpacity: 0.001, nightTone: 0.64,
+      key: 'cirrus-right', type: 'sprite', texture: 'cirrus', position: [142, 202, -398], scale: [264, 58, 1], rotation: 0.018,
+      dayOpacity: 0.025, nightOpacity: 0.001, nightTone: 0.64,
       drift: [0.3, 0.08, 0.007, 3.35], depthTest: false, renderOrder: -2,
     },
   ], [])
@@ -3789,11 +3921,12 @@ function DriftingClouds({ groupRef, materialRefs }) {
             frustumCulled={false}
             userData={userData}
           >
-            <spriteMaterial
+              <spriteMaterial
               ref={(material) => {
                 materialRefs.current[index] = material
               }}
               map={textures[cloud.texture]}
+              rotation={cloud.rotation ?? 0}
               color="#dce6e4"
               transparent
               opacity={0}
