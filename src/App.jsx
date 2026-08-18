@@ -1753,6 +1753,9 @@ function LegacyApp() {
   const [entered, setEntered] = useState(
     PREVIEW_ENTERED || INITIAL_VIEW === 'portfolio',
   )
+  const [scrollInstructionAcknowledged, setScrollInstructionAcknowledged] = useState(
+    PREVIEW_PROGRESS > 0 || INITIAL_VIEW === 'portfolio',
+  )
   const [progress, setProgress] = useState(PREVIEW_PROGRESS)
   const [activeGate, setActiveGate] = useState(PREVIEW_GATE)
   const [holdProgress, setHoldProgress] = useState(PREVIEW_HOLD_PROGRESS)
@@ -2363,6 +2366,7 @@ function LegacyApp() {
       if (PUBLIC_SHOWCASE) return
       if (portfolioRef.current) return
       event.preventDefault()
+      if (enteredRef.current && event.deltaY !== 0) setScrollInstructionAcknowledged(true)
       const multiplier = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? window.innerHeight : 1
       if (
         endingCapturePreparing &&
@@ -2403,6 +2407,7 @@ function LegacyApp() {
           touchRef.current.mode = 'ignore'
         } else if (vertical >= horizontal * 1.08) {
           touchRef.current.mode = 'scroll'
+          if (enteredRef.current) setScrollInstructionAcknowledged(true)
         }
       }
       if (!touchRef.current.mode) return
@@ -2622,7 +2627,7 @@ function LegacyApp() {
   const messageOpacity = activeMessage && messageVisible ? 1 : 0
   const operationState = activeGate
     ? `hold-${activeGate}`
-    : 'scroll'
+    : scrollInstructionAcknowledged ? 'scroll' : 'scroll-instruction'
 
   const enterExperience = useCallback(() => {
     ensureAudio()
@@ -2658,6 +2663,7 @@ function LegacyApp() {
     window.clearTimeout(messageTimers.hide)
     window.clearTimeout(messageTimers.clear)
     setEntered(false)
+    setScrollInstructionAcknowledged(false)
     setShowPortfolio(false)
     setPortfolioScrolled(false)
     setMemoryHome(false)
@@ -2924,7 +2930,7 @@ function LegacyApp() {
 
       <div
         key={operationState}
-        className={`journey-ui__operation ${activeGate ? 'is-hold' : ''} ${activeGate && holdProgress > 0 ? 'is-holding' : ''} ${activeMessage && !activeGate ? 'is-quiet' : ''} ${progress >= 99 ? 'is-complete' : ''}`}
+        className={`journey-ui__operation ${activeGate ? 'is-hold' : ''} ${!activeGate && !scrollInstructionAcknowledged ? 'is-scroll-instruction' : ''} ${activeGate && holdProgress > 0 ? 'is-holding' : ''} ${activeMessage && !activeGate ? 'is-quiet' : ''} ${progress >= 99 ? 'is-complete' : ''}`}
         role="status"
         aria-live="polite"
         aria-hidden={progress >= 99 ? 'true' : undefined}
@@ -2940,7 +2946,7 @@ function LegacyApp() {
           </>
         ) : (
           <>
-            <span>SCROLL</span>
+            <span>{scrollInstructionAcknowledged ? 'SCROLL' : 'SCROLL TO MOVE THROUGH TIME'}</span>
             <i className="scroll-mark" aria-hidden="true" />
           </>
         )}

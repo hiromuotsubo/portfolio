@@ -3199,6 +3199,12 @@ textarea,
   opacity: 0.68;
 }
 
+.journey-ui__operation.is-scroll-instruction {
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  white-space: nowrap;
+}
+
 .journey-ui__operation.is-quiet {
   gap: 0;
   opacity: 0.3;
