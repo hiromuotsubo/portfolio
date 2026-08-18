@@ -63,6 +63,11 @@ const LOOKDEV_V2_COMPOSITION = {
   revealStart: 14.8,
   vistaStart: 14.8,
   vistaFull: 24,
+  // Establish the readable valley first, then reserve a restrained part of
+  // the same pull-back for the long day-to-night observation. This keeps the
+  // camera responding to scroll without changing the final vista or the
+  // authored River close-up that begins once night is complete.
+  vistaArrivalShare: 0.78,
   atmosphereFull: 20,
   vistaFadeStart: 56,
   vistaFadeEnd: 68,
@@ -7250,16 +7255,23 @@ export default function JourneyScene({
           .slerp(cameraScratch.authoredQuaternion, introRelease)
       }
 
-      const openVista = smoothstep(
+      const vistaArrival = smoothstep(
         LOOKDEV_V2_COMPOSITION.revealStart,
         LOOKDEV_V2_COMPOSITION.vistaFull,
         progress,
       )
-      const vistaComposition = smoothstep(
-        LOOKDEV_V2_COMPOSITION.vistaStart,
-        LOOKDEV_V2_COMPOSITION.vistaFull,
-        progress,
-      ) * (1 - smoothstep(
+      const vistaSettle = clamp01(
+        (progress - JOURNEY_NIGHT_SEQUENCE.fixedVistaCameraProgress) /
+        Math.max(
+          JOURNEY_NIGHT_SEQUENCE.fullNight -
+            JOURNEY_NIGHT_SEQUENCE.fixedVistaCameraProgress,
+          Number.EPSILON,
+        ),
+      )
+      const openVista =
+        vistaArrival * LOOKDEV_V2_COMPOSITION.vistaArrivalShare +
+        vistaSettle * (1 - LOOKDEV_V2_COMPOSITION.vistaArrivalShare)
+      const vistaComposition = openVista * (1 - smoothstep(
         LOOKDEV_V2_COMPOSITION.vistaFadeStart,
         LOOKDEV_V2_COMPOSITION.vistaFadeEnd,
         cameraProgress,
