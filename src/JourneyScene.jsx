@@ -3689,25 +3689,25 @@ function DriftingClouds({ groupRef, materialRefs }) {
       key: 'left-ridge-base', type: 'sprite', texture: 'ridgePhotoLeft',
       position: [-136, 143, -218], scale: [220, 86, 1],
       dayOpacity: 0.38, nightOpacity: 0.004, nightTone: 0.72,
-      flow: [28, 0.8, 64, 0.26, 0.9, 0.68], depthTest: false, renderOrder: 2,
+      flow: [60, 0.8, 54, 0.26, 0.9, 0.68], depthTest: false, renderOrder: 2,
     },
     {
       key: 'left-ridge-wisp', type: 'sprite', texture: 'ridgePhotoRight',
       position: [-105, 133, -226], scale: [158, 38, 1],
       dayOpacity: 0.13, nightOpacity: 0.002, nightTone: 0.7,
-      flow: [38, 1.15, 54, 0.71, 0.94, 0.7], depthTest: false, renderOrder: 3,
+      flow: [72, 1.15, 48, 0.71, 0.94, 0.7], depthTest: false, renderOrder: 3,
     },
     {
       key: 'right-ridge-base', type: 'sprite', texture: 'ridgePhotoRight',
       position: [210, 194, -269], scale: [320, 96, 1],
       dayOpacity: 0.43, nightOpacity: 0.022, nightTone: 0.78,
-      flow: [32, 0.9, 70, 0.18, 0.9, 0.64], depthTest: false, renderOrder: 2,
+      flow: [70, 0.9, 58, 0.18, 0.9, 0.64], depthTest: false, renderOrder: 2,
     },
     {
       key: 'right-ridge-wisp', type: 'sprite', texture: 'ridgePhotoLeft',
       position: [184, 160, -280], scale: [224, 50, 1],
       dayOpacity: 0.18, nightOpacity: 0.01, nightTone: 0.82,
-      flow: [42, 1.25, 58, 0.64, 0.94, 0.7], depthTest: false, renderOrder: 3,
+      flow: [84, 1.25, 50, 0.64, 0.94, 0.7], depthTest: false, renderOrder: 3,
     },
     // This far layer sits below the saddle, opening a milky distance cue
     // without reintroducing a horizontal fog-bank treatment.
