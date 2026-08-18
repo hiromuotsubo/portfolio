@@ -75,10 +75,13 @@ export const getJourneyCameraProgress = (progress) => {
     ) * smootherstep(sequence.fullNight, sequence.riverGate, progress)
   }
   if (progress <= sequence.postHoldTravelStart) return sequence.closeUpCameraProgress
-  if (progress <= sequence.postHoldLookUpStart) {
+  if (progress <= sequence.postHoldLiftEnd) {
+    // The authored camera travel and the procedural look-up now share one
+    // progress curve. Keeping both on 78→86 removes the former stop/restart at
+    // 82.5 without changing either endpoint or the following wide shot.
     return sequence.closeUpCameraProgress + (
       sequence.finalCameraProgress - sequence.closeUpCameraProgress
-    ) * smootherstep(sequence.postHoldTravelStart, sequence.postHoldLookUpStart, progress)
+    ) * smootherstep(sequence.postHoldTravelStart, sequence.postHoldLiftEnd, progress)
   }
   return sequence.finalCameraProgress
 }

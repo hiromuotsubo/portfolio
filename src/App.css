@@ -565,6 +565,8 @@
      the Fog HOLD; keep the same haze composition without that raster pass. */
   transform: translate3d(calc(var(--valley-mist) * -1.2%), 0, 0) scale(1.04);
   transition: opacity 120ms linear, transform 160ms linear;
+  contain: strict;
+  will-change: opacity, transform;
   -webkit-mask-image: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, .34) 22%, #000 52%, rgba(0, 0, 0, .74) 100%);
   mask-image: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, .34) 22%, #000 52%, rgba(0, 0, 0, .74) 100%);
   /* WebGL supplies the living atmosphere. Repainting three viewport-sized
@@ -4790,28 +4792,6 @@ textarea,
   color: var(--paper);
   border-color: var(--green-ink);
   background: var(--green-ink);
-}
-
-/* HOLD changes the atmosphere itself instead of leaving interface-like markers. */
-.journey-3d.is-gate-fog.is-holding .valley-mist {
-  -webkit-mask-image:
-    radial-gradient(
-      circle var(--hold-radius) at calc(var(--hold-x) + 9vw) calc(var(--hold-y) - 40vh),
-      transparent 0%,
-      rgba(0, 0, 0, 0.08) 38%,
-      #000 76%
-    ),
-    linear-gradient(to bottom, transparent, #000 18%, #000 100%);
-  -webkit-mask-composite: source-in;
-  mask-image:
-    radial-gradient(
-      circle var(--hold-radius) at calc(var(--hold-x) + 9vw) calc(var(--hold-y) - 40vh),
-      transparent 0%,
-      rgba(0, 0, 0, 0.08) 38%,
-      #000 76%
-    ),
-    linear-gradient(to bottom, transparent, #000 18%, #000 100%);
-  mask-composite: intersect;
 }
 
 /* Home: one intentional content group, without decorative project numbering. */

@@ -1756,7 +1756,6 @@ function LegacyApp() {
   const [progress, setProgress] = useState(PREVIEW_PROGRESS)
   const [activeGate, setActiveGate] = useState(PREVIEW_GATE)
   const [holdProgress, setHoldProgress] = useState(PREVIEW_HOLD_PROGRESS)
-  const [holdOrigin, setHoldOrigin] = useState({ x: 50, y: 50 })
   const [skyConnectionProgress, setSkyConnectionProgress] = useState(
     DEV_PREVIEW === 'riverhold'
       ? PREVIEW_HOLD_PROGRESS
@@ -2486,10 +2485,6 @@ function LegacyApp() {
       if (PUBLIC_SHOWCASE || !type || holdRef.current.frame) return
       if (Number.isFinite(event?.button) && event.button !== 0) return
       if (event?.cancelable) event.preventDefault()
-      setHoldOrigin({
-        x: Number.isFinite(event?.clientX) ? event.clientX : window.innerWidth / 2,
-        y: Number.isFinite(event?.clientY) ? event.clientY : window.innerHeight / 2,
-      })
       ensureAudio()
       const captureTarget = event?.target
       if (captureTarget?.setPointerCapture && Number.isFinite(event?.pointerId)) {
@@ -2790,9 +2785,6 @@ function LegacyApp() {
         '--open-air': openAir,
         '--night-weight': nightWeight,
         '--valley-mist': valleyMist,
-        '--hold-x': `${holdOrigin.x}px`,
-        '--hold-y': `${holdOrigin.y}px`,
-        '--hold-radius': `${80 + holdProgress * 360}px`,
       }}
     >
       {!showPortfolio ? (

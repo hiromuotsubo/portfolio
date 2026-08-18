@@ -6,9 +6,9 @@ import JourneyScene from './JourneyScene.jsx'
 
 const QUALITY_PRESETS = {
   low: { name: 'low', dpr: 0.65, particles: 0.52, shadows: false, fogLayers: 3 },
-  medium: { name: 'medium', dpr: 0.9, particles: 0.76, shadows: false, fogLayers: 5 },
-  mobile: { name: 'mobile', dpr: 1.3, particles: 1, shadows: true, fogLayers: 7 },
-  high: { name: 'high', dpr: 0.9, particles: 1, shadows: true, fogLayers: 7 },
+  medium: { name: 'medium', dpr: 0.75, particles: 0.76, shadows: false, fogLayers: 5 },
+  mobile: { name: 'mobile', dpr: 1, particles: 0.85, shadows: true, fogLayers: 7 },
+  high: { name: 'high', dpr: 0.75, particles: 0.85, shadows: true, fogLayers: 7 },
 }
 
 const getInitialQuality = () => {

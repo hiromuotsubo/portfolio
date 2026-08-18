@@ -38,7 +38,7 @@ const MEADOW_WIND_POINTER_PAUSE_RESET = 0.18
 const MEADOW_WIND_MAX_AGE = 2.6
 
 const ENDING_CAMERA = {
-  liftStart: JOURNEY_NIGHT_SEQUENCE.postHoldLookUpStart,
+  liftStart: JOURNEY_NIGHT_SEQUENCE.postHoldTravelStart,
   liftEnd: JOURNEY_NIGHT_SEQUENCE.postHoldLiftEnd,
   wideStart: JOURNEY_NIGHT_SEQUENCE.postHoldWidenStart,
   wideEnd: JOURNEY_NIGHT_SEQUENCE.postHoldWidenEnd,
@@ -3689,25 +3689,25 @@ function DriftingClouds({ groupRef, materialRefs }) {
       key: 'left-ridge-base', type: 'sprite', texture: 'ridgePhotoLeft',
       position: [-136, 143, -218], scale: [220, 86, 1],
       dayOpacity: 0.38, nightOpacity: 0.004, nightTone: 0.72,
-      flow: [9.6, 0.75, 78, 0.26, 0.86, 0.62], depthTest: false, renderOrder: 2,
+      flow: [28, 0.8, 64, 0.26, 0.9, 0.68], depthTest: false, renderOrder: 2,
     },
     {
       key: 'left-ridge-wisp', type: 'sprite', texture: 'ridgePhotoRight',
       position: [-105, 133, -226], scale: [158, 38, 1],
       dayOpacity: 0.13, nightOpacity: 0.002, nightTone: 0.7,
-      flow: [13.4, 1.1, 64, 0.71, 0.9, 0.65], depthTest: false, renderOrder: 3,
+      flow: [38, 1.15, 54, 0.71, 0.94, 0.7], depthTest: false, renderOrder: 3,
     },
     {
       key: 'right-ridge-base', type: 'sprite', texture: 'ridgePhotoRight',
       position: [210, 194, -269], scale: [320, 96, 1],
       dayOpacity: 0.43, nightOpacity: 0.022, nightTone: 0.78,
-      flow: [11.2, 0.85, 84, 0.18, 0.84, 0.58], depthTest: false, renderOrder: 2,
+      flow: [32, 0.9, 70, 0.18, 0.9, 0.64], depthTest: false, renderOrder: 2,
     },
     {
       key: 'right-ridge-wisp', type: 'sprite', texture: 'ridgePhotoLeft',
       position: [184, 160, -280], scale: [224, 50, 1],
       dayOpacity: 0.18, nightOpacity: 0.01, nightTone: 0.82,
-      flow: [15, 1.2, 69, 0.64, 0.9, 0.65], depthTest: false, renderOrder: 3,
+      flow: [42, 1.25, 58, 0.64, 0.94, 0.7], depthTest: false, renderOrder: 3,
     },
     // This far layer sits below the saddle, opening a milky distance cue
     // without reintroducing a horizontal fog-bank treatment.
@@ -3715,25 +3715,25 @@ function DriftingClouds({ groupRef, materialRefs }) {
       key: 'far-valley', type: 'mesh', texture: 'valley',
       position: [-9, 104, -255], scale: [170, 46, 1], yaw: 0,
       dayOpacity: 0.65, nightOpacity: 0.025, nightTone: 0.86,
-      flow: [7.6, 0.55, 96, 0.34, 0.72, 0.45], depthTest: false, renderOrder: 1,
+      flow: [18, 0.6, 80, 0.34, 0.82, 0.52], depthTest: false, renderOrder: 1,
     },
     {
       key: 'far-valley-rear', type: 'mesh', texture: 'valley',
       position: [22, 118, -300], scale: [105, 28, 1], yaw: 0.018,
       dayOpacity: 0.32, nightOpacity: 0.016, nightTone: 0.88,
-      flow: [6.2, 0.42, 108, 0.82, 0.72, 0.44], depthTest: false, renderOrder: 0,
+      flow: [15, 0.45, 92, 0.82, 0.82, 0.5], depthTest: false, renderOrder: 0,
     },
     // Fine cirrus lives high behind the valley. It is deliberately separate
     // from the ridge wisps so it can fade away before the night sky arrives.
     {
       key: 'cirrus-left', type: 'sprite', texture: 'cirrus', position: [-176, 270, -339], scale: [282, 30, 1],
       dayOpacity: 0.2, nightOpacity: 0.001, nightTone: 0.65,
-      flow: [22, 1.2, 112, 0.12, 1.05, 0.35], depthTest: false, renderOrder: -2,
+      flow: [58, 1.3, 86, 0.12, 1.05, 0.42], depthTest: false, renderOrder: -2,
     },
     {
       key: 'cirrus-right', type: 'sprite', texture: 'cirrus', position: [120, 270, -372], scale: [300, 28, 1],
       dayOpacity: 0.16, nightOpacity: 0.001, nightTone: 0.64,
-      flow: [18, 1, 126, 0.56, 1.05, 0.35], depthTest: false, renderOrder: -2,
+      flow: [50, 1.1, 98, 0.56, 1.05, 0.42], depthTest: false, renderOrder: -2,
     },
   ], [])
 
@@ -4409,8 +4409,8 @@ function NaturalRiverCorridor({ progress, qualityScale = 1, reflectionDisabled =
     () => new URLSearchParams(window.location.search).get('capture') === '1',
     [],
   )
-  const planarReflectionEnabled = qualityScale >= 0.9 && !reflectionDisabled
-  const reflectionResolution = planarReflectionEnabled ? 320 : 2
+  const planarReflectionEnabled = qualityScale >= 0.8 && !reflectionDisabled
+  const reflectionResolution = planarReflectionEnabled ? 256 : 2
   const bedGeometry = useMemo(
     () => buildNaturalRiverGeometry({ count: 100, widthScale: 1.025, yOffset: -0.24 }),
     [],
@@ -4421,7 +4421,7 @@ function NaturalRiverCorridor({ progress, qualityScale = 1, reflectionDisabled =
   )
   const reflectionTarget = useMemo(() => new THREE.WebGLRenderTarget(
     reflectionResolution,
-    planarReflectionEnabled ? 200 : 2,
+    planarReflectionEnabled ? 160 : 2,
     {
       minFilter: THREE.LinearFilter,
       magFilter: THREE.LinearFilter,
@@ -4625,17 +4625,17 @@ function NaturalRiverCorridor({ progress, qualityScale = 1, reflectionDisabled =
     reflectionUniforms.uJourneyTime.value = state.clock.elapsedTime
 
     const reflectionState = reflectionStateRef.current
-    // Refresh on every perceptible camera/story movement. The previous coarse
-    // thresholds let the frozen render target lag for several scroll frames,
-    // then snap to a new reflection even though the live camera was continuous.
+    // The reflection is a soft, distorted secondary cue. Updating it at 12fps
+    // keeps its motion continuous while avoiding a second full scene render on
+    // nearly every display frame during camera travel.
     const cameraChanged = !reflectionState.initialized ||
       reflectionState.position.distanceToSquared(camera.position) > 0.000001 ||
       1 - Math.abs(reflectionState.quaternion.dot(camera.quaternion)) > 0.00000001 ||
       Math.abs(reflectionState.fov - camera.fov) > 0.001 ||
       Math.abs(reflectionState.aspect - camera.aspect) > 0.00001
     const storyChanged = Math.abs(reflectionState.progress - progress) > 0.0001
-    const movingRefreshDue = state.clock.elapsedTime - reflectionState.time >= 1 / 30
-    const idleRefreshDue = state.clock.elapsedTime - reflectionState.time > 0.38
+    const movingRefreshDue = state.clock.elapsedTime - reflectionState.time >= 1 / 12
+    const idleRefreshDue = state.clock.elapsedTime - reflectionState.time > 0.65
     if (
       planarReflectionEnabled &&
       reveal > 0.01 &&
