@@ -8353,6 +8353,16 @@ html[data-portfolio-route-transition='reveal'] .journey-3d::after {
   font-size: clamp(14px, 0.94vw, 16px);
 }
 
+.portfolio-site.is-page-about .portfolio-profile-facts dt,
+.portfolio-site.is-page-about .portfolio-profile-facts dd {
+  font-size: clamp(12px, 0.85vw, 14px);
+}
+
+.portfolio-site.is-page-about #research .portfolio-panel__copy > a,
+.portfolio-site.is-page-project #emotion .portfolio-panel__copy > button {
+  font-size: clamp(16px, 1.1vw, 18px);
+}
+
 .portfolio-site.is-page-about .portfolio-story__end button,
 .portfolio-site.is-page-project .portfolio-story__end button {
   white-space: nowrap;
