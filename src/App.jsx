@@ -834,8 +834,8 @@ const PROJECT_PINNED_VISUALS = {
   contrast: [
     {
       type: 'video',
-      src: '/portfolio/project-v5/cave-to-fog.mp4',
-      poster: '/portfolio/project-v5/cave-to-fog-poster.jpg',
+      src: '/portfolio/project-v5/space-cave.mp4',
+      poster: '/portfolio/project-v5/space-cave-poster.jpg',
       alt: 'The camera moving through the dark Journey cave toward the fog-covered open valley',
       label: 'CAVE → OPEN AIR',
     },
@@ -848,10 +848,10 @@ const PROJECT_PINNED_VISUALS = {
   interaction: [
     {
       type: 'video',
-      src: '/portfolio/project-v5/hold-fog-reveal.mp4',
-      poster: '/portfolio/project-v5/hold-fog-reveal-poster.jpg',
-      alt: 'The fog gradually clearing as the visitor holds the Journey interaction',
-      label: 'HOLD / FOG REVEAL',
+      src: '/portfolio/project-v5/interaction-grass.mp4',
+      poster: '/portfolio/project-v5/interaction-grass-poster.jpg',
+      alt: 'The Journey meadow grass rippling as the visitor moves the cursor',
+      label: 'CURSOR / WIND / GRASS',
     },
   ],
   emotion: [
@@ -1537,8 +1537,8 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
             items={[
               {
                 type: 'video',
-                src: '/portfolio/project-v5/cave-to-fog.mp4',
-                poster: '/portfolio/project-v5/cave-to-fog-poster.jpg',
+                src: '/portfolio/project-v5/space-cave.mp4',
+                poster: '/portfolio/project-v5/space-cave-poster.jpg',
                 alt: 'The camera moving through the dark Journey cave toward the fog-covered open valley',
                 label: 'CAVE → OPEN AIR',
               },
@@ -1565,16 +1565,16 @@ function PortfolioSite({ onReplay, onNavigate, onScrolledChange, page = 'home' }
             items={[
               {
                 type: 'video',
-                src: '/portfolio/project-v5/hold-fog-reveal.mp4',
-                poster: '/portfolio/project-v5/hold-fog-reveal-poster.jpg',
-                alt: 'The fog gradually clearing as the visitor holds the Journey interaction',
-                label: 'HOLD / FOG REVEAL',
+                src: '/portfolio/project-v5/interaction-grass.mp4',
+                poster: '/portfolio/project-v5/interaction-grass-poster.jpg',
+                alt: 'The Journey meadow grass rippling as the visitor moves the cursor',
+                label: 'CURSOR / WIND / GRASS',
               },
             ]}
             caption="THE LANDSCAPE RESPONDS"
             className="is-interaction-cinema"
           /> : null}
-          <div className="portfolio-panel__copy"><span className="portfolio-kicker">INTERACTION</span><h3>The landscape responds when you slow down.</h3><p>Scroll moves you forward.<br />HOLD lets the moment linger.<br />Move the cursor to stir the wind, and the grass moves with it.</p></div>
+          <div className="portfolio-panel__copy"><span className="portfolio-kicker">INTERACTION</span><h3>The landscape responds when you slow down.</h3><p>Scroll moves you forward.<br />HOLD lets the moment linger.<br />Cursor movement becomes wind, sending subtle ripples through the grass.</p></div>
         </article>
         <article id="emotion" className={panelClassName('emotion', 'is-emotion-panel')} data-story-panel="emotion">
           {!pinnedVisualDesktop ? <PortfolioMediaFigure
