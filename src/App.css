@@ -399,7 +399,7 @@
   display: flex;
   align-items: center;
   gap: clamp(24px, 3vw, 52px);
-  font-size: clamp(13px, 1.25vw, 20px);
+  font-size: clamp(14px, 1.25vw, 20px);
   letter-spacing: 0.015em;
 }
 
@@ -430,7 +430,7 @@
 .portfolio-home__index {
   display: block;
   margin-bottom: clamp(16px, 2.4vh, 30px);
-  font-size: 8px;
+  font-size: clamp(14px, 1.35vw, 17px);
   font-weight: 700;
   letter-spacing: 0.19em;
 }
@@ -469,7 +469,7 @@
 .portfolio-home__copy dt,
 .portfolio-home__copy dd {
   margin: 0;
-  font-size: 7px;
+  font-size: clamp(14px, 1vw, 15px);
   line-height: 1.5;
   letter-spacing: 0.1em;
 }
@@ -489,7 +489,7 @@
   border-bottom: 1px solid var(--green);
   background: transparent;
   font: inherit;
-  font-size: 9px;
+  font-size: clamp(14px, 1vw, 15px);
   font-weight: 700;
   letter-spacing: 0.12em;
   cursor: pointer;
@@ -510,7 +510,7 @@
   justify-content: space-between;
   width: var(--portfolio-card-width);
   opacity: 0;
-  font-size: 7px;
+  font-size: clamp(14px, 1.08vw, 16px);
   letter-spacing: 0.12em;
   animation: portfolio-content-in 900ms ease 1.05s both;
 }
@@ -1719,12 +1719,12 @@
   gap: 11px;
   padding: 0;
   font-family: Baskerville, Georgia, serif !important;
-  font-size: 13px !important;
+  font-size: 20px !important;
   letter-spacing: 0.08em;
 }
 
 .portfolio-nav__brand .hiromu-logo {
-  width: 27px;
+  width: 31px;
 }
 
 .portfolio-nav nav {
@@ -1736,7 +1736,7 @@
   position: relative;
   padding: 8px 0;
   text-transform: capitalize;
-  font-size: 13px;
+  font-size: 14px;
   letter-spacing: 0.045em;
 }
 
@@ -8305,4 +8305,65 @@ html[data-portfolio-route-transition='reveal'] .journey-3d::after {
   .pinned-visual-stage__visual {
     will-change: auto;
   }
+}
+
+/* Readability pass: Home / About / Project small text should stay at least 14px
+   while preserving existing visual hierarchy and layout. */
+.portfolio-site.is-page-home .portfolio-home__landscape figcaption {
+  font-size: clamp(14px, 0.9vw, 16px);
+}
+
+.portfolio-site.is-page-home .portfolio-home__type {
+  font-size: clamp(14px, 0.82vw, 16px);
+}
+
+.portfolio-site.is-page-home .portfolio-home__copy > button {
+  font-size: clamp(14px, 1vw, 16px);
+}
+
+.portfolio-site.is-page-home .portfolio-home__copy > p {
+  font-size: clamp(14px, 1.02vw, 17px);
+}
+
+.portfolio-site.is-page-home .portfolio-home__meta dt,
+.portfolio-site.is-page-home .portfolio-home__meta dd {
+  font-size: clamp(14px, 0.9vw, 15px);
+}
+
+.portfolio-site.is-page-about .portfolio-figure figcaption,
+.portfolio-site.is-page-project .portfolio-figure figcaption,
+.portfolio-site.is-page-about .portfolio-kicker,
+.portfolio-site.is-page-project .portfolio-kicker,
+.portfolio-site.is-page-about .portfolio-figure--pair .portfolio-figure__image > span,
+.portfolio-site.is-page-project .portfolio-figure--pair .portfolio-figure__image > span,
+.portfolio-site.is-page-about .portfolio-story__end > span,
+.portfolio-site.is-page-project .portfolio-story__end > span,
+.portfolio-site.is-page-about .portfolio-story__end button,
+.portfolio-site.is-page-project .portfolio-story__end button {
+  font-size: clamp(14px, 0.95vw, 16px);
+}
+
+.portfolio-site.is-page-about .portfolio-profile-facts dt,
+.portfolio-site.is-page-about .portfolio-profile-facts dd,
+.portfolio-site.is-page-project .portfolio-profile-facts dt,
+.portfolio-site.is-page-project .portfolio-profile-facts dd,
+.portfolio-media-v5__item > span,
+.portfolio-media-v5 figcaption,
+.portfolio-story__hint {
+  font-size: clamp(14px, 0.94vw, 16px);
+}
+
+.portfolio-site.is-page-about .portfolio-profile-facts dt,
+.portfolio-site.is-page-about .portfolio-profile-facts dd {
+  font-size: clamp(12px, 0.85vw, 14px);
+}
+
+.portfolio-site.is-page-about #research .portfolio-panel__copy > a,
+.portfolio-site.is-page-project #emotion .portfolio-panel__copy > button {
+  font-size: clamp(16px, 1.1vw, 18px);
+}
+
+.portfolio-site.is-page-about .portfolio-story__end button,
+.portfolio-site.is-page-project .portfolio-story__end button {
+  white-space: nowrap;
 }
