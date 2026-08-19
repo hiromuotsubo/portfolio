@@ -8306,3 +8306,54 @@ html[data-portfolio-route-transition='reveal'] .journey-3d::after {
     will-change: auto;
   }
 }
+
+/* Readability pass: Home / About / Project small text should stay at least 14px
+   while preserving existing visual hierarchy and layout. */
+.portfolio-site.is-page-home .portfolio-home__landscape figcaption {
+  font-size: clamp(14px, 0.9vw, 16px);
+}
+
+.portfolio-site.is-page-home .portfolio-home__type {
+  font-size: clamp(14px, 0.82vw, 16px);
+}
+
+.portfolio-site.is-page-home .portfolio-home__copy > button {
+  font-size: clamp(14px, 1vw, 16px);
+}
+
+.portfolio-site.is-page-home .portfolio-home__copy > p {
+  font-size: clamp(14px, 1.02vw, 17px);
+}
+
+.portfolio-site.is-page-home .portfolio-home__meta dt,
+.portfolio-site.is-page-home .portfolio-home__meta dd {
+  font-size: clamp(14px, 0.9vw, 15px);
+}
+
+.portfolio-site.is-page-about .portfolio-figure figcaption,
+.portfolio-site.is-page-project .portfolio-figure figcaption,
+.portfolio-site.is-page-about .portfolio-kicker,
+.portfolio-site.is-page-project .portfolio-kicker,
+.portfolio-site.is-page-about .portfolio-figure--pair .portfolio-figure__image > span,
+.portfolio-site.is-page-project .portfolio-figure--pair .portfolio-figure__image > span,
+.portfolio-site.is-page-about .portfolio-story__end > span,
+.portfolio-site.is-page-project .portfolio-story__end > span,
+.portfolio-site.is-page-about .portfolio-story__end button,
+.portfolio-site.is-page-project .portfolio-story__end button {
+  font-size: clamp(14px, 0.95vw, 16px);
+}
+
+.portfolio-site.is-page-about .portfolio-profile-facts dt,
+.portfolio-site.is-page-about .portfolio-profile-facts dd,
+.portfolio-site.is-page-project .portfolio-profile-facts dt,
+.portfolio-site.is-page-project .portfolio-profile-facts dd,
+.portfolio-media-v5__item > span,
+.portfolio-media-v5 figcaption,
+.portfolio-story__hint {
+  font-size: clamp(14px, 0.94vw, 16px);
+}
+
+.portfolio-site.is-page-about .portfolio-story__end button,
+.portfolio-site.is-page-project .portfolio-story__end button {
+  white-space: nowrap;
+}
